@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractLinkToken, toOilChangeInsert } from '../../supabase/functions/_shared/ledra-records.ts';
+import { extractLinkToken, toOilChangeInsert, voidedRecordId } from '../../supabase/functions/_shared/ledra-records.ts';
 
 const link = { id: 'link-1', vehicle_id: 'veh-1', user_id: 'user-1' };
 
@@ -41,8 +41,32 @@ describe('Ledra の記録の取り込み', () => {
   });
 });
 
+describe('取り消された記録', () => {
+  it('voided: true の記録は取り込まず、記録IDを削除の対象として返す', () => {
+    const raw = { record_id: 'rec_9', work_date: '2026-10-01', odo_km: 1000, oil_changed: true, filter_changed: false, shop_name: 'x', voided: true };
+    expect(toOilChangeInsert(raw, link)).toBeNull();
+    expect(voidedRecordId(raw)).toBe('rec_9');
+  });
+
+  it('通常の記録は削除の対象にしない', () => {
+    expect(voidedRecordId({ record_id: 'rec_1', voided: false })).toBeNull();
+    expect(voidedRecordId({ record_id: 'rec_1' })).toBeNull();
+    expect(voidedRecordId(null)).toBeNull();
+  });
+
+  it('ODO の無い記録は取り込まない', () => {
+    expect(toOilChangeInsert({ record_id: 'r', work_date: '2026-10-01', odo_km: null, oil_changed: true, voided: false }, link)).toBeNull();
+  });
+});
+
 describe('QR からトークンを取り出す', () => {
   const token = 'abcDEF123_-.~abcdefgh';
+  it('Ledra のトークン（lct_ + 43文字）を読める', () => {
+    const ledra = 'lct_' + 'aB3_-'.repeat(8) + 'xyz';
+    expect(ledra).toHaveLength(47);
+    expect(extractLinkToken(ledra)).toBe(ledra);
+  });
+
   it('トークンだけ・URL のどちらにも対応する', () => {
     expect(extractLinkToken(token)).toBe(token);
     expect(extractLinkToken(` ${token}\n`)).toBe(token);

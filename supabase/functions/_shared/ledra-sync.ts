@@ -1,5 +1,5 @@
 import { LedraLinkInactiveError, type LedraClient } from './ledra-client.ts';
-import { toOilChangeInsert } from './ledra-records.ts';
+import { toOilChangeInsert, voidedRecordId } from './ledra-records.ts';
 import type { SupabaseClient } from './supabase.ts';
 
 export interface LedraLinkRow {
@@ -16,7 +16,7 @@ export interface LedraLinkRow {
 const MAX_PAGES = 20;
 
 export type SyncResult =
-  | { status: 'ok'; imported: number; skipped: number }
+  | { status: 'ok'; imported: number; skipped: number; removed: number }
   | { status: 'inactive' }
   | { status: 'error'; message: string };
 
@@ -25,10 +25,25 @@ export async function syncLink(admin: SupabaseClient, ledra: LedraClient, link: 
   let cursor = link.sync_cursor;
   let imported = 0;
   let skipped = 0;
+  let removed = 0;
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
       const { records, nextCursor, hasMore } = await ledra.fetchOilRecords(link.ledra_link_id, cursor);
-      const rows = records.map((r) => toOilChangeInsert(r, link));
+      // 整備工場が取り消した記録は消す（紐づく金額の支出も外部キーの連鎖で消える）
+      const voided = records.map(voidedRecordId).filter((id) => id !== null);
+      if (voided.length > 0) {
+        const { data: gone, error } = await admin
+          .from('oil_changes')
+          .delete()
+          .eq('vehicle_id', link.vehicle_id)
+          .eq('source', 'ledra')
+          .in('ledra_record_id', voided)
+          .select('id');
+        if (error) throw new Error(`取り消された記録の削除に失敗しました: ${error.message}`);
+        removed += gone?.length ?? 0;
+      }
+      const live = records.filter((r) => voidedRecordId(r) === null);
+      const rows = live.map((r) => toOilChangeInsert(r, link));
       const valid = rows.filter((r) => r !== null);
       skipped += rows.length - valid.length;
       if (valid.length > 0) {
@@ -46,7 +61,7 @@ export async function syncLink(admin: SupabaseClient, ledra: LedraClient, link: 
       if (!hasMore) break;
     }
     if (skipped > 0) console.warn(`ledra link ${link.id}: 不正な記録 ${skipped} 件を取り込みませんでした`);
-    return { status: 'ok', imported, skipped };
+    return { status: 'ok', imported, skipped, removed };
   } catch (e) {
     if (e instanceof LedraLinkInactiveError) {
       // 所有者移転・店舗側での解除など。以後は取得しない
