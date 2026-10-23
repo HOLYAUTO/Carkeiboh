@@ -13,7 +13,8 @@
 - 接続先 `LEDRA_API_BASE_URL` は `https://<Ledra のホスト>/api`（下のパスはこの後ろに付く）
 - `Authorization: Bearer <LEDRA_API_KEY>`
 - キーはカーケイボー専用に、Ledra の外部API管理画面（`/admin/platform/passport-consumers`）で発行したもの。
-  スコープは `passport:oil_records`（2026-10-23 確定。Ledra の既存の命名 `passport:verify` 等に合わせた）
+  スコープは `passport:oil_records`（2026-10-23 確定。Ledra の既存の命名 `passport:verify` 等に合わせた）。
+  **このスコープを明示した鍵が要る**（全スコープ `*` の鍵では `403`）
 - 成功の応答には `ok: true` が付く（読まなくてよい）。エラーは `{ error, message }`
 - `401`（鍵が無効）・`403`（スコープ不足）・`429`（レート制限・月間上限）は**設定や回数の問題**で、連携の状態とは関係ない
 - キーはカーケイボーのサーバー（Supabase Edge Functions の secrets）だけに置き、アプリには埋め込まない
@@ -95,7 +96,8 @@ GET /v1/consumer-links/{link_id}/oil-records?since=<cursor>
 
 - 初回は `since` なし。以後は前回の `next_cursor` を渡す（中身は不透明。`has_more: true` のときは続けて取得する）
 - 同じ `record_id` が再度来たら、訂正として上書きする（Ledra は取りこぼし防止のため、前回の位置より少し前から返すことがある）
-- `voided: true` の記録は、整備工場が証明書を取り消したもの。こちらの記録を消す（2026-10-23 確定）
+- `voided: true` の記録は、整備工場が証明書を取り消した・非表示にしたもの。こちらの記録を消す（2026-10-23 確定）。
+  後から非表示を戻すと、同じ `record_id` が `voided: false` でまた届く（そのときは取り込み直す）
 - `odo_km` が `null` の記録は取り込まない（次回の目安を計算できないため）
 - 上の項目以外が含まれていても取り込まない（氏名・住所・電話番号・他の整備・写真・金額は受け取らない）
 - 返るのは、QR を出した店舗のその車両の記録だけ（2026-10-23 確定）
