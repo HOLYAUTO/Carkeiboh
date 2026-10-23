@@ -1,9 +1,10 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS, summarizeCosts, type CostPeriod } from '@domain/costs.ts';
 import { monthKey } from '@domain/dates.ts';
 import { MonthlyBarChart } from '../../components/BarChart';
-import { AppText, Card, Divider, ErrorView, Loading, Num, Screen, Segmented } from '../../components/ui';
+import { AppText, Card, Divider, ErrorView, IconButton, Num, Screen, ScreenHeader, Segmented, Skeleton } from '../../components/ui';
 import { useVehicleBundle } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
 import { colors, spacing } from '../../theme';
@@ -28,11 +29,19 @@ export default function Costs() {
     );
   }, [bundle.data, period]);
 
-  if (bundle.isPending) return <Loading />;
+  const header = <ScreenHeader title="維持費" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />;
+  if (bundle.isPending) {
+    return (
+      <Screen header={header}>
+        <Skeleton height={200} />
+        <Skeleton height={160} />
+      </Screen>
+    );
+  }
   if (bundle.isError || !summary) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
 
   return (
-    <Screen>
+    <Screen header={header}>
       <Segmented options={PERIODS} value={period} onChange={setPeriod} />
       <Card>
         <AppText variant="label">登録済みの合計</AppText>

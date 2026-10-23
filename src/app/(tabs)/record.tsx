@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { EXPENSE_CATEGORIES } from '@domain/costs.ts';
 import { KindPicker, kindLabel, RecordForm, type RecordKind } from '../../components/RecordForm';
-import { AppText, Button, ErrorView, ListRow, Loading, Screen, Card } from '../../components/ui';
+import { AppText, Button, Card, ErrorView, IconButton, ListRow, Screen, ScreenHeader, Skeleton } from '../../components/ui';
 import { useVehicleBundle } from '../../lib/data';
 
 function isKind(v: unknown): v is RecordKind {
@@ -22,11 +22,19 @@ export default function Record() {
     setSelected(k);
   };
 
-  if (bundle.isPending) return <Loading />;
+  const header = <ScreenHeader title="記録する" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />;
+  if (bundle.isPending) {
+    return (
+      <Screen header={header}>
+        <Skeleton height={200} />
+        <Skeleton height={160} />
+      </Screen>
+    );
+  }
   if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
 
   return (
-    <Screen>
+    <Screen header={header}>
       {kind == null ? (
         <>
           <AppText variant="label">何を記録しますか</AppText>

@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
 import { REMINDER_LABELS, type ReminderKind } from '@domain/reminders.ts';
-import { AppText, Button, Card, Divider, ErrorView, ListRow, Loading, Notice, Screen, SectionTitle, ToggleRow } from '../../components/ui';
+import { AppText, Button, Card, Divider, ErrorView, IconButton, ListRow, Notice, Screen, ScreenHeader, SectionTitle, Skeleton, ToggleRow } from '../../components/ui';
 import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
 import { daysLeft, fullDate, km } from '../../lib/format';
 import { getPushStatus, registerForPush, type PushStatus } from '../../lib/push';
@@ -28,7 +28,15 @@ export default function Notifications() {
     }, []),
   );
 
-  if (bundle.isPending) return <Loading />;
+  const header = <ScreenHeader title="通知" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />;
+  if (bundle.isPending) {
+    return (
+      <Screen header={header}>
+        <Skeleton height={200} />
+        <Skeleton height={160} />
+      </Screen>
+    );
+  }
   if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
   const { vehicle, state, notifications } = bundle.data;
   const alerts = state.upcoming.filter((u) => u.level !== 'normal');
@@ -58,7 +66,7 @@ export default function Notifications() {
   };
 
   return (
-    <Screen>
+    <Screen header={header}>
       {push && push !== 'granted' && push !== 'unsupported' && (
         <Card>
           <AppText variant="heading">通知を受け取る</AppText>

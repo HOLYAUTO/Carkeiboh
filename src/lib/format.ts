@@ -47,3 +47,12 @@ export function parseInteger(text: string): number | null {
   if (!/^\d+$/.test(normalized)) return NaN;
   return Number(normalized);
 }
+
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+/** '2026-10-23' → '10月23日（金）' */
+export function longDate(d: IsoDate): string {
+  const [y, m, day] = d.split('-').map(Number);
+  const w = WEEKDAYS[new Date(Date.UTC(y, m - 1, day)).getUTCDay()];
+  return `${m}月${day}日（${w}）`;
+}

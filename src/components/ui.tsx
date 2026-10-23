@@ -1,8 +1,10 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
+import Svg, { Circle } from 'react-native-svg';
 import {
   ActivityIndicator,
+  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -17,7 +19,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, cardShadow, fonts, MIN_TAP, radius, spacing } from '../theme';
 import { dateToIso, fullDate, isoToDate } from '../lib/format';
 
@@ -45,15 +47,30 @@ export function Num({ size = 15, style, ...rest }: TextProps & { size?: number }
   );
 }
 
-export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
+export function Screen({
+  children,
+  scroll = true,
+  header,
+  refreshControl,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  /** タブ画面の見出し（ScreenHeader）。スクロールと一緒に流れる */
+  header?: ReactNode;
+  refreshControl?: ComponentProps<typeof ScrollView>['refreshControl'];
+}) {
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right']}>
       {scroll ? (
-        <ScrollView contentContainerStyle={styles.screenContent} keyboardShouldPersistTaps="handled">
-          {children}
+        <ScrollView keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
+          {header}
+          <View style={styles.screenContent}>{children}</View>
         </ScrollView>
       ) : (
-        <View style={[styles.screenContent, { flex: 1 }]}>{children}</View>
+        <View style={{ flex: 1 }}>
+          {header}
+          <View style={[styles.screenContent, { flex: 1 }]}>{children}</View>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -80,11 +97,17 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function SectionTitle({ children }: { children: ReactNode }) {
+/** セクション見出し。右に「すべて見る」などの導線を置ける */
+export function SectionTitle({ children, action }: { children: ReactNode; action?: { label: string; onPress: () => void } }) {
   return (
-    <AppText variant="label" style={{ marginTop: spacing.lg, marginBottom: spacing.sm, marginLeft: spacing.xs }}>
-      {children}
-    </AppText>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md }}>
+      <AppText variant="heading" style={{ fontSize: 16 }}>{children}</AppText>
+      {action && (
+        <Pressable accessibilityRole="button" onPress={action.onPress} style={{ minHeight: MIN_TAP, justifyContent: 'center' }}>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary }}>{action.label} →</Text>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -145,12 +168,13 @@ export function Notice({ children, title }: { children: ReactNode; title?: strin
   );
 }
 
+/** 状態の小さなピル。色だけでなく必ず文字で状態を書く */
 export function Badge({ label, tone = 'accent' }: { label: string; tone?: 'accent' | 'caution' | 'neutral' }) {
   const fg = tone === 'accent' ? colors.accent : tone === 'caution' ? colors.caution : colors.textSecondary;
-  const bg = tone === 'accent' ? colors.accentSoft : tone === 'caution' ? colors.cautionBackground : colors.track;
+  const bg = tone === 'accent' ? colors.accentSoft : tone === 'caution' ? colors.cautionBackground : colors.surfaceVariant;
   return (
-    <View style={{ backgroundColor: bg, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' }}>
-      <Text style={{ color: fg, fontFamily: fonts.medium, fontSize: 11 }}>{label}</Text>
+    <View style={{ backgroundColor: bg, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3, alignSelf: 'flex-start' }}>
+      <Text style={{ color: fg, fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16 }}>{label}</Text>
     </View>
   );
 }
@@ -190,7 +214,9 @@ export function Segmented<T extends string>({
             onPress={() => onChange(o.value)}
             style={[styles.segment, selected && styles.segmentSelected]}
           >
-            <Text style={{ fontFamily: selected ? fonts.semibold : fonts.regular, fontSize: 14, color: colors.text }}>{o.label}</Text>
+            <Text style={{ fontFamily: selected ? fonts.semibold : fonts.medium, fontSize: 14, color: selected ? colors.text : colors.textSecondary }}>
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -330,14 +356,21 @@ export function Divider() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  screenContent: { padding: spacing.lg, paddingBottom: spacing.xl * 2, gap: spacing.md },
+  screenContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxxl * 2, gap: spacing.md },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-  card: { backgroundColor: colors.card, borderRadius: radius.card, padding: spacing.lg, gap: spacing.md, ...cardShadow },
+  card: { backgroundColor: colors.card, borderRadius: radius.card, padding: spacing.xl, gap: spacing.md, ...cardShadow },
   button: { minHeight: MIN_TAP + 4, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg },
   notice: { flexDirection: 'row', gap: spacing.sm, backgroundColor: colors.cautionBackground, borderRadius: radius.control, padding: spacing.md },
-  segmented: { flexDirection: 'row', backgroundColor: colors.track, borderRadius: radius.control, padding: 2 },
-  segment: { flex: 1, minHeight: MIN_TAP - 4, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control - 2 },
-  segmentSelected: { backgroundColor: colors.card, ...cardShadow },
+  segmented: { flexDirection: 'row', backgroundColor: colors.surfaceVariant, borderRadius: radius.control, padding: 3 },
+  segment: { flex: 1, minHeight: MIN_TAP, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control - 2 },
+  segmentSelected: {
+    backgroundColor: colors.card,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
   inputWrap: {
     minHeight: MIN_TAP + 4,
     flexDirection: 'row',
@@ -353,3 +386,189 @@ const styles = StyleSheet.create({
   iconButton: { minWidth: MIN_TAP, minHeight: MIN_TAP, alignItems: 'center', justifyContent: 'center' },
   row: { minHeight: MIN_TAP + 8, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
 });
+
+/** 四角いアイコンボタン（44px）。読み上げ用のラベル必須 */
+export function IconButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        width: MIN_TAP,
+        height: MIN_TAP,
+        borderRadius: radius.control,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.border,
+        backgroundColor: colors.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <Ionicons name={icon} size={20} color={colors.textSecondary} />
+    </Pressable>
+  );
+}
+
+/**
+ * タブ画面の見出し。ナビゲーションの帯は出さず、画面の上端に小さな補足と大きな見出しを置く。
+ * 右上は設定などのアイコンボタン。
+ */
+export function ScreenHeader({ overline, title, subtitle, right }: { overline?: string; title: string; subtitle?: string; right?: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.md }}>
+      <View style={{ flex: 1 }}>
+        {overline && (
+          <Text style={{ fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, color: colors.textSecondary, letterSpacing: 0.5 }}>{overline}</Text>
+        )}
+        <Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontSize: 24, lineHeight: 32, color: colors.text }}>
+          {title}
+        </Text>
+        {subtitle && <Text style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: colors.textSecondary }}>{subtitle}</Text>}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+/** 円形の進み具合。中央に割合を文字でも出す */
+export function ProgressRing({
+  value,
+  size = 72,
+  strokeWidth = 6,
+  tone = 'accent',
+  label,
+}: {
+  value: number;
+  size?: number;
+  strokeWidth?: number;
+  tone?: 'accent' | 'caution';
+  label: string;
+}) {
+  const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
+  const r = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * r;
+  const color = tone === 'caution' ? colors.caution : colors.accent;
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: 100, now: pct }}
+      style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.track} strokeWidth={strokeWidth} fill="none" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - pct / 100)}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <Num size={13} style={{ color }}>{`${pct}%`}</Num>
+    </View>
+  );
+}
+
+/**
+ * 「次にすること」。いま一番やるべきことを1つだけ、理由とボタン付きで出す。
+ */
+export function NextActionCard({
+  title,
+  reason,
+  cta,
+  onPress,
+  tone = 'accent',
+}: {
+  title: string;
+  reason: string;
+  cta: string;
+  onPress: () => void;
+  tone?: 'accent' | 'caution';
+}) {
+  const color = tone === 'caution' ? colors.caution : colors.accent;
+  const soft = tone === 'caution' ? colors.cautionBackground : colors.accentSoft;
+  return (
+    <View style={[styles.card, { borderWidth: 1.5, borderColor: color }]}>
+      <Text style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 1, color }}>次にすること</Text>
+      <AppText variant="heading">{title}</AppText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: soft, borderRadius: radius.chip, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
+        <Ionicons name={tone === 'caution' ? 'warning-outline' : 'information-circle-outline'} size={16} color={color} />
+        <Text style={{ flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color }}>{reason}</Text>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [styles.button, { backgroundColor: tone === 'caution' ? colors.caution : pressed ? colors.accentPressed : colors.accent }]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text style={{ color: colors.white, fontFamily: fonts.semibold, fontSize: 16 }}>{cta}</Text>
+          <Ionicons name="arrow-forward" size={18} color={colors.white} />
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
+/** 一覧が空のときの表示 */
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  description?: string;
+  action?: { label: string; onPress: () => void };
+}) {
+  return (
+    <View style={{ alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+      <Ionicons name={icon} size={36} color={colors.textTertiary} />
+      <AppText variant="heading" style={{ textAlign: 'center' }}>{title}</AppText>
+      {description && <AppText variant="caption" style={{ textAlign: 'center' }}>{description}</AppText>}
+      {action && (
+        <View style={{ alignSelf: 'stretch', marginTop: spacing.md }}>
+          <Button title={action.label} variant="secondary" onPress={action.onPress} />
+        </View>
+      )}
+    </View>
+  );
+}
+
+/** 読み込み中の形だけの表示（実際の中身と同じ形に置く） */
+export function Skeleton({ height, style }: { height: number; style?: StyleProp<ViewStyle> }) {
+  const [opacity] = useState(() => new Animated.Value(0.5));
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.5, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return (
+    <Animated.View
+      accessibilityLabel="読み込み中"
+      style={[{ height, borderRadius: radius.card, backgroundColor: colors.surfaceVariant, opacity }, style]}
+    />
+  );
+}

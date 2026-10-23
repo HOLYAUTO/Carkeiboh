@@ -15,7 +15,7 @@ import {
   type VehicleBundle,
 } from '../lib/data';
 import { parseInteger } from '../lib/format';
-import { colors, fonts, radius, spacing } from '../theme';
+import { cardShadow, colors, fonts, radius, spacing } from '../theme';
 import { AppText, Button, Card, DateField, Field, ToggleRow } from './ui';
 
 /** 「記録する」で選ぶ項目。オイル交換・支出の各項目に加え、走行距離だけの記録もできる */
@@ -49,9 +49,10 @@ export function KindPicker({ onSelect }: { onSelect: (k: RecordKind) => void }) 
           onPress={() => onSelect(kind)}
           style={({ pressed }) => ({
             width: '31%',
-            minHeight: 84,
+            minHeight: 88,
             borderRadius: radius.card,
             backgroundColor: colors.card,
+            ...cardShadow,
             alignItems: 'center',
             justifyContent: 'center',
             gap: 6,
@@ -59,7 +60,9 @@ export function KindPicker({ onSelect }: { onSelect: (k: RecordKind) => void }) 
             opacity: pressed ? 0.6 : 1,
           })}
         >
-          <Ionicons name={icon} size={24} color={colors.accent} />
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name={icon} size={22} color={colors.accent} />
+          </View>
           <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.text, textAlign: 'center' }}>{kindLabel(kind)}</Text>
         </Pressable>
       ))}
