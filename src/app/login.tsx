@@ -2,7 +2,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { AppText, Button, Card, Field, Screen } from '../components/ui';
-import { APP_OWNER, config } from '../lib/config';
+import { APP_OWNER } from '../lib/config';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../lib/auth';
 import { colors, radius, spacing } from '../theme';
 
@@ -46,9 +46,6 @@ export default function Login() {
             <Button title="Appleでサインイン" variant="secondary" icon="logo-apple" loading={busy === 'apple'} onPress={() => run('apple', signInWithApple)} />
           )}
           <Button title="Googleでログイン" variant="secondary" icon="logo-google" loading={busy === 'google'} onPress={() => run('google', signInWithGoogle)} />
-          {config.enableLineLogin && (
-            <Button title="LINEでログイン" variant="secondary" onPress={() => Alert.alert('準備中です')} />
-          )}
         </Card>
 
         <Card>

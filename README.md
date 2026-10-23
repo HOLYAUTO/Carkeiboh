@@ -7,7 +7,7 @@ Ledra のコードは含みません。Ledra とは Ledra が公開する外部A
 - 依頼書：01 カーケイボー開発依頼書（初期版）、02 Ledra 側開発依頼書（Ledra リポジトリで実装）
 - 要確認一覧：[docs/open-questions.md](docs/open-questions.md)
 - セットアップと配布：[docs/setup.md](docs/setup.md)
-- Ledra API の想定：[docs/ledra-api-contract.md](docs/ledra-api-contract.md)
+- Ledra API の仕様：[docs/ledra-api-contract.md](docs/ledra-api-contract.md)（Ledra 側がこの形に合わせる）
 
 ## 構成
 
@@ -22,6 +22,7 @@ Ledra のコードは含みません。Ledra とは Ledra が公開する外部A
 
 | 関数 | 呼び出し元 | 役割 |
 | --- | --- | --- |
+| `ledra-preview` | アプリ（同意画面の表示前） | QR を表示した整備工場の店舗名を確かめる（トークンは消費しない） |
 | `ledra-link` | アプリ（同意画面） | QR のトークンと同意で Ledra に連携を確定し、初回の取り込み |
 | `ledra-unlink` | アプリ（設定） | 連携の解除 |
 | `ledra-sync` | pg_cron（毎時） | 前回以降の差分を取り込み。所有者移転などで無効になった連携を止める |
@@ -54,6 +55,6 @@ npm run check:functions   # Edge Functions の型チェック（Deno が必要�
 | オイル交換の次回目安（距離と期間の早い方）がペース計算込みで正しく出る。計算部分に単体テスト | 実装済み・単体テストあり（`tests/domain`） |
 | 5.4 の通知がタイミングどおりにテスト端末へ届く | タイミングの計算は単体テスト済み。**端末への到達は未確認**（Supabase・Expo の本番設定後に `docs/setup.md` 4章の手順で確認） |
 | 他人のデータが読めない（RLS のテスト） | 実装済み・試験あり（`tests/rls`、CI でも実行） |
-| Ledra のテスト環境から、連携した車両のオイル交換記録が「証明付き」で取り込まれる | 受け取り側は実装済み。**Ledra 側 API（02）の実装待ち**。API の形は要確認 |
+| Ledra のテスト環境から、連携した車両のオイル交換記録が「証明付き」で取り込まれる | 受け取り側は実装済み。**Ledra 側 API（02）の実装待ち**。API の形は `docs/ledra-api-contract.md` で確定 |
 | アカウント削除でデータが消える | 実装済み。外部キーの連鎖削除を RLS 試験で確認 |
 | TestFlight と Google Play 内部テストで配布できる | `eas.json` を用意。**各ストア・Expo のアカウント作成後に実施** |

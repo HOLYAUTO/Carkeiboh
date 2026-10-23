@@ -1,8 +1,9 @@
+import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { CONSENT_ITEMS, CONSENT_RECIPIENT, CONSENT_VERSION } from '@shared/ledra-records.ts';
-import { AppText, Button, Card, Divider, Screen } from '../../components/ui';
+import { AppText, Button, Card, Divider, ErrorView, Loading, Notice, Screen } from '../../components/ui';
 import { useInvalidate, useVehicle } from '../../lib/data';
 import { invokeFunction } from '../../lib/supabase';
 import { spacing } from '../../theme';
@@ -16,6 +17,14 @@ export default function Consent() {
   const vehicle = useVehicle();
   const invalidate = useInvalidate();
   const [busy, setBusy] = useState(false);
+  // 提供元（QR を表示した整備工場）を同意の前に確かめる。トークンは消費しない
+  const preview = useQuery({
+    queryKey: ['ledra-preview', qr],
+    enabled: !!qr,
+    retry: false,
+    staleTime: Infinity,
+    queryFn: () => invokeFunction<{ shopName: string; expiresAt: string | null }>('ledra-preview', { qrData: qr }),
+  });
 
   const agree = async () => {
     if (!vehicle.data || !qr) return;
@@ -28,7 +37,7 @@ export default function Consent() {
       });
       await invalidate();
       const imported = result.sync.status === 'ok' ? `${result.sync.imported ?? 0}件の記録を取り込みました。` : '記録はこのあと順次取り込みます。';
-      Alert.alert('連携しました', `${result.shopName ? `${result.shopName}と` : ''}連携しました。${imported}`, [
+      Alert.alert('連携しました', `${result.shopName ?? shopName}と連携しました。${imported}`, [
         { text: 'OK', onPress: () => router.dismissTo('/settings') },
       ]);
     } catch (e) {
@@ -38,13 +47,26 @@ export default function Consent() {
     }
   };
 
+  if (!qr) return <ErrorView message="QRコードを読み取れませんでした。" />;
+  if (preview.isPending) return <Loading />;
+  if (preview.isError) {
+    return (
+      <Screen>
+        <Notice title="連携できません">{preview.error.message}</Notice>
+        <Button title="QRコードを読み取り直す" onPress={() => router.replace('/ledra/scan')} />
+        <Button title="やめる" variant="plain" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
+  const shopName = preview.data.shopName;
+
   return (
     <Screen>
       <AppText>
         整備工場で記録したオイル交換を、カーケイボーに自動で取り込みます。内容を確認して、同意する場合のみ連携してください。
       </AppText>
       <Card>
-        <Item label="提供元">QRコードを表示した整備工場（車両履歴サービス「Ledra」を利用する店舗）</Item>
+        <Item label="提供元">{`${shopName}\n（車両履歴サービス「Ledra」を利用する整備工場）`}</Item>
         <Divider />
         <Item label="提供先">{`${CONSENT_RECIPIENT}（カーケイボーの運営者）`}</Item>
         <Divider />
@@ -62,7 +84,7 @@ export default function Consent() {
         取り込んだ記録は「証明付き」として表示し、アプリでは内容を変更できません。カーケイボーの開発・管理は株式会社HOLY（{CONSENT_RECIPIENT}の委託先）が行います。
       </AppText>
       <View style={{ gap: spacing.sm }}>
-        <Button title="同意して連携する" loading={busy} disabled={!qr || !vehicle.data} onPress={agree} />
+        <Button title={`同意して${shopName}と連携する`} loading={busy} disabled={!vehicle.data} onPress={agree} />
         <Button title="やめる" variant="plain" onPress={() => router.back()} />
       </View>
     </Screen>

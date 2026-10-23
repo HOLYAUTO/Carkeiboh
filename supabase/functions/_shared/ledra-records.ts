@@ -1,7 +1,6 @@
 /**
  * Ledra の外部API（別紙02で Ledra 側に追加）の応答を、カーケイボーの記録に変換する。
- * 【要確認】API の形は 02 に定義がないため、docs/ledra-api-contract.md の想定に合わせている。
- * Ledra 側の実装が決まったら、この変換と ledra-client.ts だけを直せばよい。
+ * API の形は docs/ledra-api-contract.md（2026-10-23 確定：Ledra 側がこの形に合わせる）。
  */
 import { isIsoDate } from './domain/dates.ts';
 
@@ -59,7 +58,7 @@ export function toOilChangeInsert(
 
 /**
  * QR の中身から連携用トークンを取り出す。
- * 【要確認】QR の形式は Ledra 側で決まる。トークンだけ／?token= 付きの URL のどちらにも対応する。
+ * QR はトークンだけ／?token= 付きの URL のどちらでもよい（docs/ledra-api-contract.md）。
  */
 export function extractLinkToken(qrData: string): string | null {
   const text = qrData.trim();
@@ -76,6 +75,9 @@ export function extractLinkToken(qrData: string): string | null {
 }
 
 /** 同意画面に出す内容。同意の記録として控えを残す（文面を変えたら版を上げる） */
-export const CONSENT_VERSION = '2026-10-23';
+export const CONSENT_VERSION = '2026-10-23.2';
 export const CONSENT_RECIPIENT = '株式会社たにぐち自動車';
 export const CONSENT_ITEMS = ['作業日', '走行距離（ODO）', 'オイル交換の有無', 'オイルフィルター交換の有無', '店舗名'] as const;
+
+export const TOKEN_INVALID_MESSAGE =
+  'QRコードの有効期限（15分）が切れたか、すでに使われています。店舗で新しいQRコードを表示してもらってください。';

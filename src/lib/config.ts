@@ -5,8 +5,6 @@ export const config = {
   /** 【要確認】利用規約・プライバシーポリシーの文面は別途用意される。URL が決まったら設定する */
   termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? '',
   privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? '',
-  /** 【要確認】LINEログインは Supabase の標準対応がないため、判断が出るまで表示しない */
-  enableLineLogin: process.env.EXPO_PUBLIC_ENABLE_LINE_LOGIN === 'true',
 };
 
 export const APP_OWNER = '株式会社たにぐち自動車';

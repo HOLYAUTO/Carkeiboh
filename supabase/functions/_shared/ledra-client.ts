@@ -1,6 +1,6 @@
 /**
  * Ledra の外部API の呼び出し。API キーはサーバー側だけに置く（アプリに埋め込まない）。
- * 【要確認】エンドポイントの形は docs/ledra-api-contract.md の想定。Ledra 側の実装に合わせて直す。
+ * エンドポイントの形は docs/ledra-api-contract.md（2026-10-23 確定：Ledra 側がこの形に合わせる）。
  */
 import { requireEnv } from './http.ts';
 
@@ -16,9 +16,18 @@ export interface LedraConsent {
   agreed_at: string;
   /** 利用者を特定しない、連携ごとの参照ID（カーケイボー側の ledra_links.id） */
   consumer_link_ref: string;
+  /** 同意画面に提供元として表示した店舗名 */
+  provider_shop_name: string;
+}
+
+export interface LedraTokenPreview {
+  shopName: string;
+  expiresAt: string | null;
 }
 
 export interface LedraClient {
+  /** 同意の前に、QR を表示した店舗名を確かめる（トークンは消費しない） */
+  previewToken(token: string): Promise<LedraTokenPreview>;
   confirmLink(token: string, consent: LedraConsent): Promise<{ linkId: string; shopName: string | null }>;
   fetchOilRecords(linkId: string, cursor: string | null): Promise<{ records: unknown[]; nextCursor: string | null; hasMore: boolean }>;
   revokeLink(linkId: string): Promise<void>;
@@ -48,6 +57,20 @@ export function ledraClientFromEnv(): LedraClient {
   };
 
   return {
+    async previewToken(token) {
+      const res = await call(`/v1/consumer-link-tokens/${encodeURIComponent(token)}`);
+      if ([400, 404, 409, 410].includes(res.status)) throw new LedraTokenError(`HTTP ${res.status}`);
+      if (!res.ok) throw await fail(res, 'トークンの照会');
+      const body = await res.json();
+      if (typeof body?.shop_name !== 'string' || !body.shop_name.trim()) {
+        throw new Error('Ledra の応答に shop_name がありません');
+      }
+      return {
+        shopName: body.shop_name.trim().slice(0, 100),
+        expiresAt: typeof body.expires_at === 'string' ? body.expires_at : null,
+      };
+    },
+
     async confirmLink(token, consent) {
       const res = await call('/v1/consumer-links', { method: 'POST', body: JSON.stringify({ token, consent }) });
       if ([400, 404, 409, 410].includes(res.status)) throw new LedraTokenError(`HTTP ${res.status}`);
