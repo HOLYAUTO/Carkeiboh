@@ -1,6 +1,6 @@
 // 連携の確定：アプリで読み取った QR のトークンと同意を受け、Ledra に連携を確定させる
 import { handle, HttpError, json, readJson, requirePost } from '../_shared/http.ts';
-import { ledraClientFromEnv, LedraTokenError, type LedraConsent } from '../_shared/ledra-client.ts';
+import { LedraAlreadyLinkedError, ledraClientFromEnv, LedraTokenError, type LedraConsent } from '../_shared/ledra-client.ts';
 import {
   CONSENT_ITEMS,
   CONSENT_RECIPIENT,
@@ -67,6 +67,13 @@ Deno.serve(
     } catch (e) {
       if (e instanceof LedraTokenError) {
         throw new HttpError(410, 'token_invalid', TOKEN_INVALID_MESSAGE);
+      }
+      if (e instanceof LedraAlreadyLinkedError) {
+        throw new HttpError(
+          409,
+          'already_linked',
+          'この車両は、すでにカーケイボーと連携しています（別のアカウントで連携している可能性があります）。前の連携を解除してからお試しください。',
+        );
       }
       throw e;
     }

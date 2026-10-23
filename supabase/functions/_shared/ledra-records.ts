@@ -4,14 +4,23 @@
  */
 import { isIsoDate } from './domain/dates.ts';
 
-/** 受け取る項目はこれだけ（日付、ODO、オイル交換・フィルター交換の有無、店舗名） */
+/** 受け取る項目はこれだけ（日付、ODO、オイル交換・フィルター交換の有無、店舗名）と、取消の印 */
 export interface LedraOilRecord {
   record_id: string;
   work_date: string;
-  odo_km: number;
+  odo_km: number | null;
   oil_changed: boolean;
   filter_changed: boolean;
   shop_name: string | null;
+  /** 整備工場が証明書を取り消した。こちらの記録も消す */
+  voided: boolean;
+}
+
+/** 取り消された記録なら、その記録IDを返す */
+export function voidedRecordId(raw: unknown): string | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  return r.voided === true && typeof r.record_id === 'string' && r.record_id.trim() ? r.record_id.trim().slice(0, 200) : null;
 }
 
 export interface OilChangeInsert {
@@ -27,13 +36,14 @@ export interface OilChangeInsert {
   shop_name: string | null;
 }
 
-/** 想定外の項目が来ても取り込まない（受け取る項目を絞る）。不正な記録は null */
+/** 想定外の項目が来ても取り込まない（受け取る項目を絞る）。不正な記録・取り消された記録・ODO の無い記録は null */
 export function toOilChangeInsert(
   raw: unknown,
   link: { id: string; vehicle_id: string; user_id: string },
 ): OilChangeInsert | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const r = raw as Record<string, unknown>;
+  if (r.voided === true) return null;
   const recordId = typeof r.record_id === 'string' ? r.record_id.trim() : '';
   const workDate = typeof r.work_date === 'string' ? r.work_date.slice(0, 10) : '';
   const odo = typeof r.odo_km === 'number' ? Math.round(r.odo_km) : NaN;

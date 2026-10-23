@@ -8,6 +8,8 @@ import { requireEnv } from './http.ts';
 export class LedraTokenError extends Error {}
 /** 連携が Ledra 側で無効（解除済み・所有者移転など） */
 export class LedraLinkInactiveError extends Error {}
+/** この車両は Ledra 側で、すでにカーケイボーと連携している（別のアカウントの連携が残っているなど） */
+export class LedraAlreadyLinkedError extends Error {}
 
 export interface LedraConsent {
   version: string;
@@ -59,7 +61,7 @@ export function ledraClientFromEnv(): LedraClient {
   return {
     async previewToken(token) {
       const res = await call(`/v1/consumer-link-tokens/${encodeURIComponent(token)}`);
-      if ([400, 404, 409, 410].includes(res.status)) throw new LedraTokenError(`HTTP ${res.status}`);
+      if ([400, 404, 410].includes(res.status)) throw new LedraTokenError(`HTTP ${res.status}`);
       if (!res.ok) throw await fail(res, 'トークンの照会');
       const body = await res.json();
       if (typeof body?.shop_name !== 'string' || !body.shop_name.trim()) {
@@ -73,7 +75,8 @@ export function ledraClientFromEnv(): LedraClient {
 
     async confirmLink(token, consent) {
       const res = await call('/v1/consumer-links', { method: 'POST', body: JSON.stringify({ token, consent }) });
-      if ([400, 404, 409, 410].includes(res.status)) throw new LedraTokenError(`HTTP ${res.status}`);
+      if (res.status === 409) throw new LedraAlreadyLinkedError(`HTTP ${res.status}`);
+      if ([400, 404, 410].includes(res.status)) throw new LedraTokenError(`HTTP ${res.status}`);
       if (!res.ok) throw await fail(res, '連携の確定');
       const body = await res.json();
       if (typeof body?.link_id !== 'string') throw new Error('Ledra の応答に link_id がありません');
@@ -83,7 +86,8 @@ export function ledraClientFromEnv(): LedraClient {
     async fetchOilRecords(linkId, cursor) {
       const q = cursor ? `?since=${encodeURIComponent(cursor)}` : '';
       const res = await call(`/v1/consumer-links/${encodeURIComponent(linkId)}/oil-records${q}`);
-      if ([403, 404, 410].includes(res.status)) throw new LedraLinkInactiveError(`HTTP ${res.status}`);
+      // 403 は「鍵のスコープ不足」で設定ミス。連携を切らずにエラーとして残す
+      if ([404, 410].includes(res.status)) throw new LedraLinkInactiveError(`HTTP ${res.status}`);
       if (!res.ok) throw await fail(res, '記録の取得');
       const body = await res.json();
       return {

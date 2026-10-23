@@ -17,11 +17,14 @@ Deno.serve(
       .eq('status', 'active');
     if (error) throw error;
 
-    const summary = { ok: 0, inactive: 0, error: 0, imported: 0, revokeRetried: 0 };
+    const summary = { ok: 0, inactive: 0, error: 0, imported: 0, removed: 0, revokeRetried: 0 };
     for (const link of (links ?? []) as LedraLinkRow[]) {
       const r = await syncLink(admin, ledra, link);
       summary[r.status]++;
-      if (r.status === 'ok') summary.imported += r.imported;
+      if (r.status === 'ok') {
+        summary.imported += r.imported;
+        summary.removed += r.removed;
+      }
     }
 
     const { data: pending } = await admin
