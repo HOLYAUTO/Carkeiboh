@@ -1,0 +1,33 @@
+# Supabase CLI の設定（ローカル開発用）。本番の値はダッシュボードと secrets で設定する。docs/setup.md を参照
+project_id = "carkeibo"
+
+[api]
+schemas = ["public"]
+
+[auth]
+site_url = "carkeibo://"
+additional_redirect_urls = ["carkeibo://**"]
+
+[auth.email]
+enable_signup = true
+# メール＋確認コード（OTP）でログインする
+otp_length = 6
+otp_expiry = 600
+
+[auth.external.apple]
+enabled = true
+client_id = "app.carkeibo"
+secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
+
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false
+
+# 定期実行から呼ぶ関数は利用者の JWT を持たないので、x-cron-secret で確認する
+[functions.ledra-sync]
+verify_jwt = false
+
+[functions.notify-dispatch]
+verify_jwt = false
