@@ -1,0 +1,38 @@
+/** デザイン（依頼書 6章）。色は画面イメージに合わせ、アクセントは青の1色だけ */
+export const colors = {
+  background: '#f5f5f7',
+  card: '#ffffff',
+  text: '#1d1d1f',
+  textSecondary: '#6e6e73',
+  border: '#e5e5ea',
+  accent: '#0071e3',
+  accentSoft: 'rgba(0,113,227,0.08)',
+  caution: '#b35c00',
+  cautionBackground: 'rgba(240,147,0,0.08)',
+  track: '#e8e8ed',
+  white: '#ffffff',
+} as const;
+
+/** 文字は Noto Sans JP（太さは600まで）。金額・距離・日付は等幅数字 */
+export const fonts = {
+  regular: 'NotoSansJP_400Regular',
+  medium: 'NotoSansJP_500Medium',
+  semibold: 'NotoSansJP_600SemiBold',
+  mono: 'GeistMono_400Regular',
+  monoMedium: 'GeistMono_500Medium',
+} as const;
+
+export const radius = { card: 14, control: 10, pill: 999 } as const;
+
+/** タップ領域は44px以上 */
+export const MIN_TAP = 44;
+
+export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const;
+
+export const cardShadow = {
+  shadowColor: '#000',
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 1,
+} as const;
