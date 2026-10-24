@@ -1,5 +1,5 @@
 // 写真（レシート・メーター・整備明細）から記録の下書きを読み取る。画像は保存せず、読み取り後すぐ捨てる
-import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0';
+import Anthropic from 'npm:@anthropic-ai/sdk@0.132.1';
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS } from '../_shared/domain/costs.ts';
 import { toJstDate } from '../_shared/domain/dates.ts';
 import { handle, HttpError, json, readJson, requireEnv, requirePost } from '../_shared/http.ts';
