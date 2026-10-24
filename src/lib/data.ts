@@ -2,7 +2,8 @@
  * 画面から使うデータの読み書き。読み取りは react-query でまとめ、書き込み後に再取得する。
  * RLS により、ここで読めるのは本人のデータだけ。
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { toJstDate, type IsoDate } from '@domain/dates.ts';
 import type { ExpenseCategory } from '@domain/costs.ts';
 import type { DeadlineKind } from '@domain/reminders.ts';
@@ -80,17 +81,64 @@ function unwrap<T>(res: { data: T | null; error: { message: string } | null }): 
   return res.data as T;
 }
 
-/** 初期版は1アカウント1台。データ構造は複数台を持てるので、先頭の1台を使う */
-export function useVehicle() {
+export function useVehicles() {
   const { session } = useAuth();
   const userId = session?.user.id;
   return useQuery({
     // 利用者ごとに分け、ログインし直したときに前のアカウントのデータを使わない
-    queryKey: ['vehicle', userId],
+    queryKey: ['vehicles', userId],
+    enabled: !!userId,
+    queryFn: async () => unwrap(await supabase.from('vehicles').select('*').order('created_at')) as VehicleRow[],
+  });
+}
+
+const SELECTED_VEHICLE_KEY = 'carkeibo.selectedVehicleId';
+
+function useSelectedVehicleId() {
+  return useQuery({
+    queryKey: ['selectedVehicleId'],
+    staleTime: Infinity,
+    queryFn: async () => (await AsyncStorage.getItem(SELECTED_VEHICLE_KEY).catch(() => null)) ?? null,
+  });
+}
+
+/** 表示する車両を切り替える。端末に覚えておき、次に開いたときも同じ車両を出す */
+export async function selectVehicle(qc: QueryClient, vehicleId: string) {
+  qc.setQueryData(['selectedVehicleId'], vehicleId);
+  await AsyncStorage.setItem(SELECTED_VEHICLE_KEY, vehicleId).catch(() => {});
+}
+
+/**
+ * いま表示している1台。選んだ車両が見つからなければ（削除した・別のアカウントで選んだ）最初に登録した1台を使う。
+ * data は読み込み中が undefined、車両が1台もなければ null
+ */
+export function useVehicle() {
+  const vehicles = useVehicles();
+  const selected = useSelectedVehicleId();
+  const list = vehicles.data;
+  const data = list ? (list.find((v) => v.id === selected.data) ?? list[0] ?? null) : undefined;
+  return {
+    data,
+    isPending: vehicles.isPending || selected.isPending,
+    isError: vehicles.isError,
+    refetch: vehicles.refetch,
+  };
+}
+
+export type Plan = 'free' | 'plus';
+
+/** プランと、そのプランで登録できる台数（上限は DB の vehicle_limit と同じものを使う） */
+export function usePlan() {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+  return useQuery({
+    queryKey: ['plan', userId],
     enabled: !!userId,
     queryFn: async () => {
-      const rows = unwrap(await supabase.from('vehicles').select('*').order('created_at').limit(1));
-      return (rows as VehicleRow[])[0] ?? null;
+      const profile = unwrap(await supabase.from('profiles').select('plan').eq('id', userId!).maybeSingle()) as { plan: Plan } | null;
+      const plan = profile?.plan ?? 'free';
+      const limit = unwrap(await supabase.rpc('vehicle_limit', { p_plan: plan })) as number;
+      return { plan, vehicleLimit: limit };
     },
   });
 }
@@ -98,11 +146,12 @@ export function useVehicle() {
 export function useVehicleBundle() {
   const vehicle = useVehicle();
   const vehicleId = vehicle.data?.id;
+  const v = vehicle.data;
   const bundle = useQuery({
-    queryKey: ['bundle', vehicle.data?.user_id, vehicleId],
+    queryKey: ['bundle', v?.user_id, vehicleId],
     enabled: !!vehicleId,
     queryFn: async (): Promise<VehicleBundle> => {
-      const v = vehicle.data!;
+      if (!v) throw new Error('vehicle_not_loaded');
       const [oil, expenses, readings, points, meters, deadlines, links, logs] = await Promise.all([
         supabase.from('oil_changes').select('*').eq('vehicle_id', v.id).order('performed_on', { ascending: false }),
         supabase.from('expenses').select('*').eq('vehicle_id', v.id).order('spent_on', { ascending: false }),
@@ -184,6 +233,11 @@ export async function createVehicle(input: OnboardingInput) {
   return vehicle;
 }
 
+/** 車両と、その車両の記録・期限・連携をすべて削除する（子テーブルは外部キーの連鎖で消える） */
+export async function deleteVehicle(id: string) {
+  unwrap(await supabase.from('vehicles').delete().eq('id', id));
+}
+
 export async function updateVehicle(id: string, patch: Partial<Omit<VehicleRow, 'id' | 'user_id'>>) {
   unwrap(await supabase.from('vehicles').update(patch).eq('id', id));
 }
@@ -259,7 +313,8 @@ export interface ExpenseInput {
   note: string | null;
 }
 
-export async function saveExpense(input: ExpenseInput) {
+/** 保存した記録の ID を返す（保存直後に「内容を直す」から編集画面を開くため） */
+export async function saveExpense(input: ExpenseInput): Promise<{ id: string }> {
   const row = {
     vehicle_id: input.vehicleId,
     category: input.category,
@@ -268,24 +323,24 @@ export async function saveExpense(input: ExpenseInput) {
     odo_km: input.odoKm,
     note: input.note,
   };
-  unwrap(
+  return unwrap(
     input.id
-      ? await supabase.from('expenses').update(row).eq('id', input.id)
-      : await supabase.from('expenses').insert(row),
-  );
+      ? await supabase.from('expenses').update(row).eq('id', input.id).select('id').single()
+      : await supabase.from('expenses').insert(row).select('id').single(),
+  ) as { id: string };
 }
 
 export async function deleteExpense(id: string) {
   unwrap(await supabase.from('expenses').delete().eq('id', id));
 }
 
-export async function saveOdoReading(input: { id?: string; vehicleId: string; date: IsoDate; odoKm: number }) {
+export async function saveOdoReading(input: { id?: string; vehicleId: string; date: IsoDate; odoKm: number }): Promise<{ id: string }> {
   const row = { vehicle_id: input.vehicleId, read_on: input.date, odo_km: input.odoKm };
-  unwrap(
+  return unwrap(
     input.id
-      ? await supabase.from('odometer_readings').update(row).eq('id', input.id)
-      : await supabase.from('odometer_readings').insert({ ...row, source: 'manual' }),
-  );
+      ? await supabase.from('odometer_readings').update(row).eq('id', input.id).select('id').single()
+      : await supabase.from('odometer_readings').insert({ ...row, source: 'manual' }).select('id').single(),
+  ) as { id: string };
 }
 
 export async function deleteOdoReading(id: string) {
@@ -310,4 +365,52 @@ export async function addMeterReplacement(input: {
 
 export async function deleteMeterReplacement(id: string) {
   unwrap(await supabase.from('meter_replacements').delete().eq('id', id));
+}
+
+// ---------------------------------------------------------------------------
+// 整備工場（掲載店）
+// ---------------------------------------------------------------------------
+
+export interface ShopRow {
+  id: string;
+  name: string;
+  address: string;
+  phone: string | null;
+  latitude: number;
+  longitude: number;
+  business_hours: string | null;
+  description: string | null;
+  website_url: string | null;
+  services: string[];
+  display_priority: number;
+}
+
+/** 掲載中の整備工場（掲載期間外・非公開の店舗は RLS で返らない） */
+export function useShops() {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+  return useQuery({
+    queryKey: ['shops', userId],
+    enabled: !!userId,
+    staleTime: 10 * 60_000,
+    queryFn: async () =>
+      unwrap(
+        await supabase
+          .from('shops')
+          .select('id, name, address, phone, latitude, longitude, business_hours, description, website_url, services, display_priority')
+          .order('name'),
+      ) as ShopRow[],
+  });
+}
+
+export type ShopAction = 'view' | 'route' | 'call' | 'website';
+
+/** 送客の記録（掲載店への報告に使う）。記録できなくても利用者の操作は止めない */
+export function logShopAction(shopId: string, action: ShopAction) {
+  supabase
+    .from('shop_referrals')
+    .insert({ shop_id: shopId, action })
+    .then(({ error }) => {
+      if (error) console.warn('送客の記録に失敗しました', error.message);
+    });
 }

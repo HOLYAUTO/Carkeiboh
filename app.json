@@ -40,8 +40,9 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "整備工場の連携用QRコードを読み取るためにカメラを使います。",
-          "recordAudioAndroid": false
+          "cameraPermission": "整備工場の連携用QRコードの読み取りと、レシートやメーターの撮影にカメラを使います。",
+          "recordAudioAndroid": false,
+          "microphonePermission": "話した内容から記録を入力するためにマイクを使います。"
         }
       ],
       [
@@ -51,7 +52,32 @@
         }
       ],
       "expo-web-browser",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "話した内容から記録を入力するためにマイクを使います。",
+          "speechRecognitionPermission": "話した内容を文字にして、日付・金額・走行距離を入力するために音声認識を使います。"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "撮っておいたレシートやメーターの写真から記録を入力するために写真を使います。",
+          "cameraPermission": "整備工場の連携用QRコードの読み取りと、レシートやメーターの撮影にカメラを使います。",
+          "microphonePermission": "話した内容から記録を入力するためにマイクを使います。"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "近くの整備工場を距離の近い順に表示するために、現在地を使います。",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "motionUsagePermission": false,
+          "locationFullAccuracyPermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

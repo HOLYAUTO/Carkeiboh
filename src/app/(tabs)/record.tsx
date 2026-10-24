@@ -1,63 +1,17 @@
-import { useLocalSearchParams, router } from 'expo-router';
-import { useState } from 'react';
-import { Alert } from 'react-native';
-import { EXPENSE_CATEGORIES } from '@domain/costs.ts';
-import { KindPicker, kindLabel, RecordForm, type RecordKind } from '../../components/RecordForm';
-import { AppText, Button, Card, ErrorView, IconButton, ListRow, Screen, ScreenHeader, Skeleton } from '../../components/ui';
-import { useVehicleBundle } from '../../lib/data';
+import { router } from 'expo-router';
+import { KindPicker } from '../../components/RecordForm';
+import { AppText, Card, IconButton, ListRow, Screen, ScreenHeader } from '../../components/ui';
 
-function isKind(v: unknown): v is RecordKind {
-  return v === 'odometer' || (typeof v === 'string' && (EXPENSE_CATEGORIES as readonly string[]).includes(v));
-}
-
+/** 項目を選ぶと入力画面（/records/new）を開く。入力画面からは「戻る」やスワイプでここに戻れる */
 export default function Record() {
-  const params = useLocalSearchParams<{ category?: string }>();
-  const { bundle } = useVehicleBundle();
-  const [selected, setSelected] = useState<RecordKind | null>(null);
-  const [formKey, setFormKey] = useState(0);
-  // ホームの「オイル交換を記録する」から来た場合は、その項目を選んだ状態で開く
-  const kind = isKind(params.category) ? params.category : selected;
-  const setKind = (k: RecordKind | null) => {
-    if (params.category) router.setParams({ category: undefined });
-    setSelected(k);
-  };
-
-  const header = <ScreenHeader title="記録する" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />;
-  if (bundle.isPending) {
-    return (
-      <Screen header={header}>
-        <Skeleton height={200} />
-        <Skeleton height={160} />
-      </Screen>
-    );
-  }
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
-
   return (
-    <Screen header={header}>
-      {kind == null ? (
-        <>
-          <AppText variant="label">何を記録しますか</AppText>
-          <KindPicker onSelect={setKind} />
-          <Card style={{ paddingVertical: 4 }}>
-            <ListRow title="記録の一覧" detail="編集・削除はこちらから" onPress={() => router.push('/records')} />
-          </Card>
-        </>
-      ) : (
-        <>
-          <RecordForm
-            key={`${kind}-${formKey}`}
-            bundle={bundle.data}
-            kind={kind}
-            onSaved={() => {
-              Alert.alert('記録しました', `${kindLabel(kind)}を記録しました。`);
-              setKind(null);
-              setFormKey((k) => k + 1);
-            }}
-          />
-          <Button title="項目を選び直す" variant="plain" onPress={() => setKind(null)} />
-        </>
-      )}
+    <Screen header={<ScreenHeader title="記録する" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />}>
+      <AppText variant="label">何を記録しますか</AppText>
+      <AppText variant="caption">入力画面では、写真（レシート・メーター）や音声からも入力できます。</AppText>
+      <KindPicker onSelect={(kind) => router.push({ pathname: '/records/new', params: { kind } })} />
+      <Card style={{ paddingVertical: 4 }}>
+        <ListRow title="記録の一覧" detail="編集・削除はこちらから" onPress={() => router.push('/records')} />
+      </Card>
     </Screen>
   );
 }

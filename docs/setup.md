@@ -19,8 +19,9 @@
 4. Edge Functions をデプロイし、secrets を設定する
    ```sh
    npx supabase functions deploy
-   npx supabase secrets set LEDRA_API_BASE_URL=... LEDRA_API_KEY=... CRON_SECRET=... EXPO_ACCESS_TOKEN=...
+   npx supabase secrets set LEDRA_API_BASE_URL=... LEDRA_API_KEY=... CRON_SECRET=... EXPO_ACCESS_TOKEN=... ANTHROPIC_API_KEY=...
    ```
+   - `ANTHROPIC_API_KEY` は「写真で入力」（`read-record-photo`）で使う。カーケイボー専用の Claude API キーを発行する
 5. 定期実行を登録する：拡張 `pg_cron`・`pg_net` を有効にし、Vault に `project_url`・`cron_secret` を登録してから `supabase/cron.example.sql` を実行
    - Ledra 取得：毎時（`ledra-sync`）
    - 事前通知：毎日 UTC 0:00 = 日本時間 9:00（`notify-dispatch`）
@@ -32,6 +33,7 @@
 3. 環境変数（EAS の Environment variables）に `.env.example` の `EXPO_PUBLIC_*` を設定する
 4. プッシュ通知の資格情報：iOS は APNs キー、Android は FCM v1 のサービスアカウントキーを EAS に登録する
 5. 開発ビルド：`npx eas-cli@latest build --profile development`
+   - 音声入力（`expo-speech-recognition`）・位置情報・写真の読み取りはネイティブモジュールを使うため、Expo Go では動かない（音声入力は「使えません」と案内する）。開発ビルドで確かめる
 
 ## 3. 限定配布（TestFlight・Google Play 内部テスト）
 
@@ -62,7 +64,36 @@ curl -X POST "$SUPABASE_URL/functions/v1/notify-dispatch" \
 
 同じ段階の通知は `notification_log` に記録され、二度は送られません。やり直す場合はその利用者の `notification_log` を削除してください。
 
-## 5. たにぐち自動車への移管に備えて
+## 5. 整備工場の掲載（送客）
+
+掲載料の契約ができた整備工場を、Supabase の SQL エディタ（service_role）で登録します。利用者からは掲載中の店舗だけが見えます。
+
+```sql
+insert into public.shops (name, address, phone, latitude, longitude, business_hours, services, is_published, listing_starts_on, listing_ends_on, display_priority)
+values ('株式会社たにぐち自動車', '（住所）', '0000-00-0000', 35.0000, 135.0000, '9:00〜18:00（日曜定休）',
+        array['オイル交換', '車検', '一般整備'], true, '2026-11-01', null, 100);
+```
+
+- 緯度・経度は Google マップで店舗を長押しすると表示される値を使う
+- 掲載を止めるときは `is_published = false`、契約の終わりは `listing_ends_on` に入れる
+- 送客の実績（掲載店への報告用）：
+
+```sql
+select s.name, r.action, count(*) as times, count(distinct r.user_id) as users
+  from public.shop_referrals r join public.shops s on s.id = r.shop_id
+ where r.created_at >= date_trunc('month', now() at time zone 'Asia/Tokyo')
+ group by s.name, r.action order by s.name, r.action;
+```
+
+## 6. 複数台プラン
+
+2台目からは複数台プラン（`profiles.plan = 'plus'`）が必要です。アプリ内課金の仕組みが決まるまでは、試験用に SQL で切り替えます。
+
+```sql
+update public.profiles set plan = 'plus' where id = '<利用者のID>';
+```
+
+## 7. たにぐち自動車への移管に備えて
 
 - Supabase：専用の組織ごと移管できる（組織のオーナー変更）
 - Expo：専用のプロジェクトをたにぐち自動車のアカウントへ移管できる
