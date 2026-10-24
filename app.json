@@ -58,8 +58,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "4dbab413-c3d8-412d-95d8-1c4f4f7958fb"
       }
-    }
+    },
+    "owner": "cartrust"
   }
 }
