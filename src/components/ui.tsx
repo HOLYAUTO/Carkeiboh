@@ -37,12 +37,12 @@ export function AppText({ variant = 'body', style, ...rest }: TextProps & { vari
   return <Text {...rest} style={[{ color: colors.text }, variantStyles[variant], style]} />;
 }
 
-/** 金額・距離・日付用の等幅数字 */
+/** 金額・距離・日付用の数字（Saira の等幅数字 tnum で桁をそろえる） */
 export function Num({ size = 15, style, ...rest }: TextProps & { size?: number }) {
   return (
     <Text
       {...rest}
-      style={[{ color: colors.text, fontFamily: size >= 20 ? fonts.monoMedium : fonts.mono, fontSize: size, fontVariant: ['tabular-nums'] }, style]}
+      style={[{ color: colors.text, fontFamily: size >= 20 ? fonts.numMedium : fonts.num, fontSize: size, fontVariant: ['tabular-nums'] }, style]}
     />
   );
 }
@@ -238,7 +238,7 @@ export function Field({
           placeholderTextColor={colors.textSecondary}
           accessibilityLabel={label}
           {...input}
-          style={[styles.input, input.keyboardType === 'number-pad' && { fontFamily: fonts.mono }]}
+          style={[styles.input, input.keyboardType === 'number-pad' && { fontFamily: fonts.num }]}
         />
         {suffix && <AppText variant="label">{suffix}</AppText>}
       </View>

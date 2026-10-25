@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@expo-google-fonts/geist-mono": "^0.4.3",
-    "@expo-google-fonts/noto-sans-jp": "^0.4.4",
+    "@expo-google-fonts/m-plus-2": "^0.4.4",
+    "@expo-google-fonts/saira": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.2.1",

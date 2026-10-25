@@ -20,7 +20,7 @@ function Chips<T extends number>({ options, value, onChange, unit }: { options: 
             onPress={() => onChange(o)}
             style={{ minHeight: MIN_TAP, paddingHorizontal: spacing.md, borderRadius: radius.control, justifyContent: 'center', backgroundColor: selected ? colors.accent : colors.accentSoft }}
           >
-            <Text style={{ fontFamily: fonts.mono, color: selected ? colors.white : colors.accent }}>
+            <Text style={{ fontFamily: fonts.num, color: selected ? colors.white : colors.accent }}>
               {o.toLocaleString('ja-JP')}
               {unit}
             </Text>

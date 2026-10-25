@@ -53,7 +53,7 @@
 | # | 項目 | 仮の値・実装 | 判断が必要なこと | 場所 |
 | --- | --- | --- | --- | --- |
 | 25 | 1つ前に戻る | 入力画面をスタックの画面にし、左上に「‹ 戻る」、iOS は画面のどこからでも右スワイプ、Android は端末の戻る操作で戻れる。入力途中で戻るときは破棄の確認を出す。記録した直後の確認に「内容を直す」を置き、そのまま編集画面へ進める | — | `src/app/_layout.tsx`、`src/app/records/new.tsx` |
-| 26 | フォント | 未変更（Noto Sans JP ＋ Geist Mono のまま） | 候補から決める。決まれば `src/theme.ts` と `src/app/_layout.tsx` の読み込みを差し替えるだけ | `src/theme.ts` |
+| 26 | フォント | **決定（2026-10-25）**：和文 M PLUS 2、数字 Saira（金額・距離・日付は等幅数字で桁をそろえる） | — | `src/theme.ts`、`src/app/_layout.tsx` |
 | 27 | 写真で入力の読み取り | Claude API（Anthropic）に写真を送って読み取る。画像はサーバーに保存しない。読み取った値は下書きとして入れ、利用者が確かめてから保存する | 写真を外部（Anthropic）へ送ることをプライバシーポリシーに書く。1人あたりの回数制限・費用の上限（いまは制限なし） | `supabase/functions/read-record-photo` |
 | 28 | 音声で入力 | 端末の音声認識（`expo-speech-recognition`）で文字にし、日付・金額・走行距離・項目を端末内で読み取る（「今日・昨日・おととい・N日前・M月D日」「円」「キロ／km」） | — | `supabase/functions/_shared/record-draft.ts` |
 | 29 | 複数台プランの台数上限 | 5台 | 上限の台数 | `vehicle_limit`（マイグレーション） |

@@ -1,5 +1,5 @@
-import { GeistMono_400Regular } from '@expo-google-fonts/geist-mono/400Regular';
-import { GeistMono_500Medium } from '@expo-google-fonts/geist-mono/500Medium';
+import { Saira_400Regular } from '@expo-google-fonts/saira/400Regular';
+import { Saira_500Medium } from '@expo-google-fonts/saira/500Medium';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -19,13 +19,13 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-  // 日本語フォントは1ウェイト約5MBあるため、使う太さだけ読み込む
+  // 日本語フォントは1ウェイトで約2MBあるため、使う太さ（400・500・600）だけ読み込む
   const [fontsLoaded] = useFonts({
-    [fonts.regular]: require('@expo-google-fonts/noto-sans-jp/400Regular/NotoSansJP_400Regular.ttf'),
-    [fonts.medium]: require('@expo-google-fonts/noto-sans-jp/500Medium/NotoSansJP_500Medium.ttf'),
-    [fonts.semibold]: require('@expo-google-fonts/noto-sans-jp/600SemiBold/NotoSansJP_600SemiBold.ttf'),
-    [fonts.mono]: GeistMono_400Regular,
-    [fonts.monoMedium]: GeistMono_500Medium,
+    [fonts.regular]: require('@expo-google-fonts/m-plus-2/400Regular/MPLUS2_400Regular.ttf'),
+    [fonts.medium]: require('@expo-google-fonts/m-plus-2/500Medium/MPLUS2_500Medium.ttf'),
+    [fonts.semibold]: require('@expo-google-fonts/m-plus-2/600SemiBold/MPLUS2_600SemiBold.ttf'),
+    [fonts.num]: Saira_400Regular,
+    [fonts.numMedium]: Saira_500Medium,
   });
 
   return (

@@ -84,7 +84,7 @@ export function VehicleForm({ submitTitle, onCreated }: { submitTitle: string; o
                   backgroundColor: selected ? colors.accent : colors.accentSoft,
                 }}
               >
-                <Text style={{ fontFamily: fonts.mono, color: selected ? colors.white : colors.accent }}>
+                <Text style={{ fontFamily: fonts.num, color: selected ? colors.white : colors.accent }}>
                   {v.toLocaleString('ja-JP')}km
                 </Text>
               </Pressable>
