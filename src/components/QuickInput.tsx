@@ -215,8 +215,8 @@ function QuickButton({
         opacity: pressed || disabled ? 0.6 : 1,
       })}
     >
-      {busy ? <ActivityIndicator color={colors.accent} /> : <Ionicons name={icon} size={20} color={colors.accent} />}
-      <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.accent }}>{label}</Text>
+      {busy ? <ActivityIndicator color={colors.accent} /> : <Ionicons name={icon} size={20} color={colors.accentText} />}
+      <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.accentText }}>{label}</Text>
     </Pressable>
   );
 }

@@ -27,7 +27,7 @@ export function MonthlyBarChart({ data, currentMonth }: { data: { month: string;
                 width: '70%',
                 height: Math.max(2, (d.totalYen / max) * 100),
                 borderRadius: 4,
-                backgroundColor: current ? colors.accent : 'rgba(0,113,227,0.35)',
+                backgroundColor: current ? colors.accent : colors.surfaceVariant,
               }}
             />
             <AppText variant="caption" style={current ? { color: colors.text } : undefined}>

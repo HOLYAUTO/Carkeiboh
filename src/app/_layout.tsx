@@ -32,7 +32,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <StatusBar style="dark" />
+          <StatusBar style="light" />
           {fontsLoaded ? <RootNavigator /> : null}
         </AuthProvider>
       </QueryClientProvider>
@@ -65,7 +65,7 @@ function RootNavigator() {
   return (
     <Stack
       screenOptions={{
-        headerTintColor: colors.accent,
+        headerTintColor: colors.accentText,
         headerTitleStyle: { fontFamily: fonts.semibold, color: colors.text },
         // 入力ミスに気づいたらすぐ1つ前に戻れるよう、左上に「戻る」を文字付きで出し、
         // iOS は画面のどこからでも右へスワイプして戻れるようにする（Android は端末の戻る操作）

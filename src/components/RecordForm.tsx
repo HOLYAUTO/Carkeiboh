@@ -63,7 +63,7 @@ export function KindPicker({ onSelect }: { onSelect: (k: RecordKind) => void }) 
           })}
         >
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name={icon} size={22} color={colors.accent} />
+            <Ionicons name={icon} size={22} color={colors.accentText} />
           </View>
           <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.text, textAlign: 'center' }}>{kindLabel(kind)}</Text>
         </Pressable>

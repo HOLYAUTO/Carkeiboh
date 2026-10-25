@@ -33,7 +33,7 @@ export default function Vehicles() {
               <ListRow
                 title={v.name}
                 detail={v.plate_number ?? undefined}
-                right={selected ? <Ionicons name="checkmark-circle" size={22} color={colors.accent} accessibilityLabel="表示中" /> : undefined}
+                right={selected ? <Ionicons name="checkmark-circle" size={22} color={colors.accentText} accessibilityLabel="表示中" /> : undefined}
                 onPress={async () => {
                   await selectVehicle(qc, v.id);
                   router.back();

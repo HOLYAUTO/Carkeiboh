@@ -23,7 +23,7 @@ export default function Plan() {
         <View style={{ gap: spacing.sm }}>
           {BENEFITS.map((b) => (
             <View key={b} style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' }}>
-              <Ionicons name="checkmark-circle-outline" size={20} color={colors.accent} style={{ marginTop: 1 }} />
+              <Ionicons name="checkmark-circle-outline" size={20} color={colors.accentText} style={{ marginTop: 1 }} />
               <AppText style={{ flex: 1 }}>{b}</AppText>
             </View>
           ))}

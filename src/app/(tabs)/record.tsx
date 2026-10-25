@@ -5,7 +5,7 @@ import { AppText, Card, IconButton, ListRow, Screen, ScreenHeader } from '../../
 /** 項目を選ぶと入力画面（/records/new）を開く。入力画面からは「戻る」やスワイプでここに戻れる */
 export default function Record() {
   return (
-    <Screen header={<ScreenHeader title="記録する" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />}>
+    <Screen header={<ScreenHeader tag="RECORD" title="記録する" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />}>
       <AppText variant="label">何を記録しますか</AppText>
       <AppText variant="caption">入力画面では、写真（レシート・メーター）や音声からも入力できます。</AppText>
       <KindPicker onSelect={(kind) => router.push({ pathname: '/records/new', params: { kind } })} />

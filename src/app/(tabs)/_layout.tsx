@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerForPush } from '../../lib/push';
-import { cardShadow, colors, fonts, spacing } from '../../theme';
+import { colors, fonts, MIN_TAP, spacing } from '../../theme';
 
 /** タブの定義（01 4章：ホーム／維持費／記録する／通知。整備工場は送客のために追加。「記録する」を真ん中に置く） */
 const TABS = [
@@ -14,8 +14,6 @@ const TABS = [
   { name: 'shops', title: '整備工場', icon: 'construct', outline: 'construct-outline' },
   { name: 'notifications', title: '通知', icon: 'notifications', outline: 'notifications-outline' },
 ] as const;
-
-const CIRCLE = 44;
 
 export default function TabsLayout() {
   // 許可済みなら、起動のたびに端末のトークンを登録し直す（機種変更・再インストールに備える）
@@ -33,7 +31,7 @@ export default function TabsLayout() {
 }
 
 /**
- * タブバー。各タブを丸いボタンにして等幅に並べ、選んでいるタブだけ青で塗る。
+ * タブバー。等幅に並べ、選んでいるタブは上端の赤い線とアイコンの塗り・赤い色で示す。
  * 色だけで伝えないよう、ラベルも必ず出す。
  */
 function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
@@ -47,7 +45,7 @@ function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
         return (
           <Pressable
             key={route.key}
-            style={styles.item}
+            style={[styles.item, focused && styles.itemActive]}
             accessibilityRole="tab"
             accessibilityState={{ selected: focused }}
             accessibilityLabel={tab.title}
@@ -56,9 +54,7 @@ function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
               if (!focused && !event.defaultPrevented) navigateToTab(route.key);
             }}
           >
-            <View style={[styles.circle, focused && styles.circleActive]}>
-              <Ionicons name={focused ? tab.icon : tab.outline} size={22} color={focused ? colors.white : colors.textSecondary} />
-            </View>
+            <Ionicons name={focused ? tab.icon : tab.outline} size={24} color={focused ? colors.accentText : colors.textSecondary} />
             <Text style={[styles.label, focused && styles.labelActive]}>{tab.title}</Text>
           </Pressable>
         );
@@ -71,20 +67,22 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     backgroundColor: colors.background,
-    paddingTop: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.xs,
   },
-  item: { flex: 1, alignItems: 'center', gap: 4 },
-  circle: {
-    width: CIRCLE,
-    height: CIRCLE,
-    borderRadius: CIRCLE / 2,
+  item: {
+    flex: 1,
+    minHeight: MIN_TAP + 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.card,
-    ...cardShadow,
+    gap: 3,
+    paddingTop: spacing.sm,
+    borderTopWidth: 2,
+    borderTopColor: 'transparent',
+    marginTop: -1,
   },
-  circleActive: { backgroundColor: colors.accent },
+  itemActive: { borderTopColor: colors.accent },
   label: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
   labelActive: { fontFamily: fonts.semibold, color: colors.text },
 });

@@ -11,6 +11,7 @@ import { colors, spacing } from '../../theme';
 
 const header = (
   <ScreenHeader
+    tag="PIT"
     overline="近くの掲載店"
     title="整備工場"
     right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />}
@@ -34,7 +35,7 @@ export default function Shops() {
   if (shops.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => shops.refetch()} />;
 
   return (
-    <Screen header={header} refreshControl={<RefreshControl refreshing={shops.isRefetching} onRefresh={() => void shops.refetch()} />}>
+    <Screen header={header} refreshControl={<RefreshControl refreshing={shops.isRefetching} onRefresh={() => void shops.refetch()} tintColor={colors.textSecondary} />}>
       {/* 掲載料をいただいている店舗であることを明示する（広告であることが分かるように） */}
       <AppText variant="caption">【PR】カーケイボーに掲載している整備工場です。距離は現在地からの直線距離です。</AppText>
       {(location.state.status === 'denied' || location.state.status === 'unavailable') && (

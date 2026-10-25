@@ -28,7 +28,7 @@ export default function Notifications() {
     }, []),
   );
 
-  const header = <ScreenHeader title="通知" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />;
+  const header = <ScreenHeader tag="NOTICE" title="通知" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />;
   if (bundle.isPending) {
     return (
       <Screen header={header}>

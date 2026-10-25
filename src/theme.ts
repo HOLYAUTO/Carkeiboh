@@ -1,23 +1,32 @@
 /**
- * デザイン（依頼書 6章）。色・文字・角丸は 6章の指定に従い、
- * 画面の組み立て方は Ledra の UI を参考にカーケイボー側で作り直している（コードは流用しない）。
- * アクセントは青の1色だけ。注意表示だけオレンジ系。
+ * デザイン：ガレージ・ダーク（2026-10-25、docs/design/patterns.html の 01 案）。
+ * たにぐち自動車（ツアラーV専門店・ドリフト・オイル）の雰囲気に合わせ、黒い画面にアクセントの赤を1色だけ使う。
+ * 注意表示だけ琥珀色。赤が「危険」に見えないよう、状態は必ず文字とアイコンでも伝える。
+ * 01 6章の指定（Ledra Web 版のトークン）からの変更のため、発注元の合意待ち（docs/open-questions.md 36）。
  */
 export const colors = {
-  background: '#f5f5f7',
-  card: '#ffffff',
-  surfaceVariant: '#e8e8ed',
-  text: '#1d1d1f',
-  textSecondary: '#555560',
-  textTertiary: '#6e6e73',
-  border: '#e5e5ea',
-  accent: '#0071e3',
-  accentPressed: '#0062c4',
-  accentSoft: 'rgba(0,113,227,0.08)',
-  caution: '#b35c00',
-  cautionBackground: 'rgba(240,147,0,0.08)',
-  track: '#e8e8ed',
+  background: '#0b0b0d',
+  card: '#161619',
+  surfaceVariant: '#232328',
+  text: '#f4f4f5',
+  textSecondary: '#a1a1aa',
+  textTertiary: '#8a8a93',
+  border: '#2a2a30',
+  /** 塗り（ボタン・選択中のタブ・グラフ）。白い文字を載せられる濃さ */
+  accent: '#e60012',
+  accentPressed: '#c2000f',
+  /** 暗い背景に置く赤い文字・アイコン。accent のままだと文字が読みにくいため明るくしている */
+  accentText: '#ff4b55',
+  accentSoft: 'rgba(230,0,18,0.16)',
+  caution: '#ffb020',
+  /** caution で塗った上に載せる文字 */
+  onCaution: '#1a1100',
+  cautionBackground: 'rgba(255,176,32,0.12)',
+  track: '#2a2a30',
   white: '#ffffff',
+  /** ナンバープレート風の表示（自家用の白地に緑の文字） */
+  plateBackground: '#f2f2ee',
+  plateText: '#0f4d2e',
 } as const;
 
 /**
@@ -40,9 +49,10 @@ export const MIN_TAP = 44;
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 } as const;
 
+/** 暗い背景では影がほとんど見えないため、カードは枠線（colors.border）で区切り、影は控えめに残す */
 export const cardShadow = {
-  shadowColor: '#1d1d1f',
-  shadowOpacity: 0.06,
+  shadowColor: '#000000',
+  shadowOpacity: 0.3,
   shadowRadius: 8,
   shadowOffset: { width: 0, height: 2 },
   elevation: 2,
