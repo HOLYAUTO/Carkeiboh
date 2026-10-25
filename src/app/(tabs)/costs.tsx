@@ -29,7 +29,7 @@ export default function Costs() {
     );
   }, [bundle.data, period]);
 
-  const header = <ScreenHeader title="維持費" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />;
+  const header = <ScreenHeader tag="COST" title="維持費" right={<IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />} />;
   if (bundle.isPending) {
     return (
       <Screen header={header}>

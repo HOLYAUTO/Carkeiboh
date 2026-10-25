@@ -20,10 +20,11 @@ import {
   ScreenHeader,
   SectionTitle,
   Skeleton,
+  Tachometer,
 } from '../../components/ui';
 import { VehiclePhoto } from '../../components/VehiclePhoto';
 import { useVehicleBundle, type VehicleBundle } from '../../lib/data';
-import { daysLeft, fullDate, km, longDate, monthDay, yen } from '../../lib/format';
+import { daysLeft, fullDate, km, longDate, monthDay, weekday, yen } from '../../lib/format';
 import { cardShadow, colors, fonts, radius, spacing } from '../../theme';
 
 const settingsButton = <IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />;
@@ -32,7 +33,7 @@ export default function Home() {
   const { bundle } = useVehicleBundle();
   if (bundle.isPending) {
     return (
-      <Screen header={<ScreenHeader overline=" " title="" right={settingsButton} />}>
+      <Screen header={<ScreenHeader tag="GARAGE LOG" title="" right={settingsButton} />}>
         <Skeleton height={220} />
         <Skeleton height={88} />
         <Skeleton height={160} />
@@ -107,15 +108,16 @@ function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; ref
     <Screen
       header={
         <ScreenHeader
+          tag="GARAGE LOG"
           overline={longDate(today)}
           title={vehicle.name}
-          subtitle={vehicle.plate_number ?? undefined}
+          plate={vehicle.plate_number ?? undefined}
           right={settingsButton}
           onTitlePress={() => router.push('/vehicles')}
           titlePressLabel={`${vehicle.name}。クルマを切り替える・追加する`}
         />
       }
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />}
     >
       <VehiclePhoto vehicle={vehicle} />
       <NextAction data={data} />
@@ -164,30 +166,31 @@ function OilCard({ forecast }: { forecast: ServiceForecast }) {
   const near = nearDue(forecast);
   return (
     <Card>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <AppText variant="label">次回のオイル交換まで</AppText>
-            <Badge label="推定" tone="neutral" />
-          </View>
-          {remaining != null ? (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <AppText variant="label">次回のオイル交換まで</AppText>
+        <Badge label="推定" tone="neutral" />
+      </View>
+      <Tachometer value={forecast.progress} label="前回の交換から交換時期までの進み具合">
+        {remaining != null ? (
+          <>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-              {remaining > 0 && <AppText variant="heading">あと</AppText>}
               <Num
-                size={40}
-                style={{ color: near ? colors.caution : colors.text }}
+                size={48}
+                style={{ color: near ? colors.caution : colors.text, lineHeight: 56 }}
                 accessibilityLabel={remaining > 0 ? `推定であと${remaining}キロ` : `推定で${-remaining}キロ超過`}
               >
                 {Math.abs(remaining).toLocaleString('ja-JP')}
               </Num>
-              <AppText variant="heading" style={{ color: colors.textSecondary }}>{remaining > 0 ? 'km' : 'km 超過'}</AppText>
+              <Num size={18} style={{ color: colors.textSecondary }}>km</Num>
             </View>
-          ) : (
-            <Num size={32}>{forecast.remainingDays != null ? daysLeft(forecast.remainingDays) : '—'}</Num>
-          )}
-        </View>
-        <ProgressRing value={forecast.progress} tone={near ? 'caution' : 'accent'} label="前回の交換からの進み具合" />
-      </View>
+            <AppText variant="caption" style={near ? { color: colors.caution } : undefined}>
+              {remaining > 0 ? '次の交換まで' : '目安を超過'}
+            </AppText>
+          </>
+        ) : (
+          <Num size={32}>{forecast.remainingDays != null ? daysLeft(forecast.remainingDays) : '—'}</Num>
+        )}
+      </Tachometer>
 
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <Stat label={`前回 ${monthDay(forecast.baseline.date)}`} value={km(forecast.baseline.odoKm)} />
@@ -274,17 +277,21 @@ function UpcomingRow({ item }: { item: UpcomingItem }) {
       accessibilityRole="button"
       accessibilityLabel={`${item.label} ${fullDate(item.dueOn)} ${daysLeft(item.remainingDays)}`}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, caution && { backgroundColor: colors.cautionBackground, shadowOpacity: 0 }, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [styles.row, caution && { backgroundColor: colors.cautionBackground }, pressed && { opacity: 0.7 }]}
     >
-      <Badge label={badge.label} tone={badge.tone} />
-      <View style={{ flex: 1, gap: 2 }}>
-        <AppText numberOfLines={2}>{item.label}</AppText>
-        <AppText variant="caption">
-          {fullDate(item.dueOn)}
-          {item.estimated ? '（推定）' : ''}
-        </AppText>
+      {/* 予定表のように、日付を左に大きく置く */}
+      <View style={styles.dateBlock}>
+        <Num size={20} style={{ color: caution ? colors.caution : colors.text }}>{monthDay(item.dueOn)}</Num>
+        <Text style={styles.dateWeekday}>{`（${weekday(item.dueOn)}）`}</Text>
       </View>
-      <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: caution ? colors.caution : colors.text }}>{daysLeft(item.remainingDays)}</Text>
+      <View style={{ flex: 1, gap: 2 }}>
+        <AppText numberOfLines={2} style={{ fontFamily: fonts.semibold }}>{item.label}</AppText>
+        <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: caution ? colors.caution : colors.textSecondary }}>
+          {daysLeft(item.remainingDays)}
+          {item.estimated ? '（推定）' : ''}
+        </Text>
+      </View>
+      <Badge label={badge.label} tone={badge.tone} />
       <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
     </Pressable>
   );
@@ -301,8 +308,12 @@ const styles = StyleSheet.create({
     minHeight: 64,
     backgroundColor: colors.card,
     borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     ...cardShadow,
   },
+  dateBlock: { width: 56, alignItems: 'center', paddingRight: spacing.md, borderRightWidth: 1, borderRightColor: colors.border },
+  dateWeekday: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
 });

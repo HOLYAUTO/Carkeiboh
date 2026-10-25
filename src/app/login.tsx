@@ -37,7 +37,7 @@ export default function Login() {
           {Platform.OS === 'ios' ? (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
               cornerRadius={radius.control}
               style={{ height: 48 }}
               onPress={() => run('apple', signInWithApple)}

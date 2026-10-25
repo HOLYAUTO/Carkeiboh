@@ -98,7 +98,7 @@ export function VehiclePhoto({ vehicle }: { vehicle: VehicleRow }) {
         ) : (
           <>
             <View style={styles.emptyIcon}>
-              <Ionicons name="car-sport-outline" size={28} color={colors.accent} />
+              <Ionicons name="car-sport-outline" size={28} color={colors.accentText} />
             </View>
             <Text style={styles.emptyTitle}>愛車の写真を追加</Text>
             <Text style={styles.emptyCaption}>撮影するか、撮っておいた写真から選べます</Text>

@@ -1,7 +1,7 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import {
   ActivityIndicator,
   Animated,
@@ -127,7 +127,7 @@ export function Button({
   icon?: keyof typeof Ionicons.glyphMap;
 }) {
   const fg =
-    variant === 'primary' ? colors.white : variant === 'destructive' ? colors.caution : colors.accent;
+    variant === 'primary' ? colors.white : variant === 'destructive' ? colors.caution : colors.accentText;
   return (
     <Pressable
       accessibilityRole="button"
@@ -170,7 +170,7 @@ export function Notice({ children, title }: { children: ReactNode; title?: strin
 
 /** 状態の小さなピル。色だけでなく必ず文字で状態を書く */
 export function Badge({ label, tone = 'accent' }: { label: string; tone?: 'accent' | 'caution' | 'neutral' }) {
-  const fg = tone === 'accent' ? colors.accent : tone === 'caution' ? colors.caution : colors.textSecondary;
+  const fg = tone === 'accent' ? colors.accentText : tone === 'caution' ? colors.caution : colors.textSecondary;
   const bg = tone === 'accent' ? colors.accentSoft : tone === 'caution' ? colors.cautionBackground : colors.surfaceVariant;
   return (
     <View style={{ backgroundColor: bg, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3, alignSelf: 'flex-start' }}>
@@ -236,6 +236,8 @@ export function Field({
       <View style={styles.inputWrap}>
         <TextInput
           placeholderTextColor={colors.textSecondary}
+          keyboardAppearance="dark"
+          selectionColor={colors.accentText}
           accessibilityLabel={label}
           {...input}
           style={[styles.input, input.keyboardType === 'number-pad' && { fontFamily: fonts.num }]}
@@ -271,7 +273,7 @@ export function DateField({
       <AppText variant="label">{label}</AppText>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         {Platform.OS === 'ios' && value ? (
-          <DateTimePicker value={current} mode="date" display="compact" locale="ja-JP" onValueChange={(_e, d) => onChange(dateToIso(d))} />
+          <DateTimePicker value={current} mode="date" display="compact" locale="ja-JP" themeVariant="dark" accentColor={colors.accentText} onValueChange={(_e, d) => onChange(dateToIso(d))} />
         ) : (
           <Pressable
             accessibilityRole="button"
@@ -315,6 +317,7 @@ export function ToggleRow({
         value={value}
         onValueChange={onChange}
         trackColor={{ true: colors.accent, false: colors.track }}
+        ios_backgroundColor={colors.track}
       />
     </View>
   );
@@ -358,19 +361,21 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   screenContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxxl * 2, gap: spacing.md },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-  card: { backgroundColor: colors.card, borderRadius: radius.card, padding: spacing.xl, gap: spacing.md, ...cardShadow },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.xl,
+    gap: spacing.md,
+    ...cardShadow,
+  },
   button: { minHeight: MIN_TAP + 4, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg },
   notice: { flexDirection: 'row', gap: spacing.sm, backgroundColor: colors.cautionBackground, borderRadius: radius.control, padding: spacing.md },
-  segmented: { flexDirection: 'row', backgroundColor: colors.surfaceVariant, borderRadius: radius.control, padding: 3 },
-  segment: { flex: 1, minHeight: MIN_TAP, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control - 2 },
-  segmentSelected: {
-    backgroundColor: colors.card,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-  },
+  // 選んでいる項目の下に赤い線を引く切り替え
+  segmented: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
+  segment: { flex: 1, minHeight: MIN_TAP, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent', marginBottom: -1 },
+  segmentSelected: { borderBottomColor: colors.accent },
   inputWrap: {
     minHeight: MIN_TAP + 4,
     flexDirection: 'row',
@@ -385,6 +390,16 @@ const styles = StyleSheet.create({
   input: { flex: 1, minHeight: MIN_TAP, fontFamily: fonts.regular, fontSize: 16, color: colors.text },
   iconButton: { minWidth: MIN_TAP, minHeight: MIN_TAP, alignItems: 'center', justifyContent: 'center' },
   row: { minHeight: MIN_TAP + 8, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  plate: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 1,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: colors.plateText,
+    backgroundColor: colors.plateBackground,
+  },
 });
 
 /** 四角いアイコンボタン（44px）。読み上げ用のラベル必須 */
@@ -424,16 +439,22 @@ export function IconButton({
  * 右上は設定などのアイコンボタン。
  */
 export function ScreenHeader({
+  tag,
   overline,
   title,
   subtitle,
+  plate,
   right,
   onTitlePress,
   titlePressLabel,
 }: {
+  /** 見出しの上の英字ラベル（GARAGE LOG など）。飾りなので読み上げない */
+  tag?: string;
   overline?: string;
   title: string;
   subtitle?: string;
+  /** ナンバー。ナンバープレート風に出す */
+  plate?: string;
   right?: ReactNode;
   /** 見出しを押せるようにする（ホームの車名から車両を切り替えるなど）。押せることを ▼ で示す */
   onTitlePress?: () => void;
@@ -448,8 +469,16 @@ export function ScreenHeader({
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.md }}>
       <View style={{ flex: 1 }}>
-        {overline && (
-          <Text style={{ fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, color: colors.textSecondary, letterSpacing: 0.5 }}>{overline}</Text>
+        {(tag || overline) && (
+          <Text style={{ fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, color: colors.textSecondary, letterSpacing: 0.5 }}>
+            {tag && (
+              <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontFamily: fonts.numMedium, color: colors.accentText, letterSpacing: 2.5 }}>
+                {tag}
+                {overline ? '  ' : ''}
+              </Text>
+            )}
+            {overline}
+          </Text>
         )}
         {onTitlePress ? (
           <Pressable
@@ -465,6 +494,11 @@ export function ScreenHeader({
           titleText
         )}
         {subtitle && <Text style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: colors.textSecondary }}>{subtitle}</Text>}
+        {plate && (
+          <View accessibilityLabel={`ナンバー ${plate}`} style={styles.plate}>
+            <Text style={{ fontFamily: fonts.semibold, fontSize: 13, lineHeight: 18, color: colors.plateText }}>{plate}</Text>
+          </View>
+        )}
       </View>
       {right}
     </View>
@@ -489,6 +523,7 @@ export function ProgressRing({
   const r = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * r;
   const color = tone === 'caution' ? colors.caution : colors.accent;
+  const textColor = tone === 'caution' ? colors.caution : colors.accentText;
   return (
     <View
       accessibilityRole="progressbar"
@@ -511,13 +546,14 @@ export function ProgressRing({
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
-      <Num size={13} style={{ color }}>{`${pct}%`}</Num>
+      <Num size={13} style={{ color: textColor }}>{`${pct}%`}</Num>
     </View>
   );
 }
 
 /**
  * 「次にすること」。いま一番やるべきことを1つだけ、理由とボタン付きで出す。
+ * 左端の色の帯で目立たせる（赤＝通常、琥珀色＝期限切れなどの注意）。
  */
 export function NextActionCard({
   title,
@@ -532,26 +568,92 @@ export function NextActionCard({
   onPress: () => void;
   tone?: 'accent' | 'caution';
 }) {
-  const color = tone === 'caution' ? colors.caution : colors.accent;
-  const soft = tone === 'caution' ? colors.cautionBackground : colors.accentSoft;
+  const caution = tone === 'caution';
+  const color = caution ? colors.caution : colors.accentText;
+  const fill = caution ? colors.caution : colors.accent;
+  const onFill = caution ? colors.onCaution : colors.white;
   return (
-    <View style={[styles.card, { borderWidth: 1.5, borderColor: color }]}>
-      <Text style={{ fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 1, color }}>次にすること</Text>
-      <AppText variant="heading">{title}</AppText>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: soft, borderRadius: radius.chip, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
-        <Ionicons name={tone === 'caution' ? 'warning-outline' : 'information-circle-outline'} size={16} color={color} />
-        <Text style={{ flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color }}>{reason}</Text>
+    <View style={[styles.card, { gap: spacing.sm, borderLeftWidth: 3, borderLeftColor: fill }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+        <Ionicons name={caution ? 'warning-outline' : 'flag-outline'} size={14} color={color} />
+        <Text accessibilityLabel="次にすること" style={{ fontFamily: fonts.numMedium, fontSize: 12, letterSpacing: 2.5, color }}>
+          NEXT ACTION
+        </Text>
       </View>
+      <AppText variant="heading">{title}</AppText>
+      <AppText style={{ fontSize: 13, lineHeight: 20, color: caution ? colors.caution : colors.textSecondary }}>{reason}</AppText>
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
-        style={({ pressed }) => [styles.button, { backgroundColor: tone === 'caution' ? colors.caution : pressed ? colors.accentPressed : colors.accent }]}
+        style={({ pressed }) => [styles.button, { marginTop: spacing.xs, backgroundColor: fill }, pressed && { opacity: 0.8 }]}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <Text style={{ color: colors.white, fontFamily: fonts.semibold, fontSize: 16 }}>{cta}</Text>
-          <Ionicons name="arrow-forward" size={18} color={colors.white} />
+          <Text style={{ color: onFill, fontFamily: fonts.semibold, fontSize: 16 }}>{cta}</Text>
+          <Ionicons name="arrow-forward" size={18} color={onFill} />
         </View>
       </Pressable>
+    </View>
+  );
+}
+
+/**
+ * タコメーター風の進み具合（左下＝前回の交換、右下＝交換時期）。最後の2割をレッドゾーンにし、
+ * 今の位置に白い目盛りを立てる。中央（children）に残りの距離などを文字で置く。
+ */
+export function Tachometer({ value, label, children }: { value: number; label: string; children?: ReactNode }) {
+  const pct = Math.min(1, Math.max(0, value));
+  const W = 264;
+  const H = 200;
+  const cx = W / 2;
+  const cy = 128;
+  const r = 106;
+  const start = 150; // 左下から時計回りに 240° 回す
+  const sweep = 240;
+  const at = (deg: number, radius: number) => {
+    const t = (deg * Math.PI) / 180;
+    return { x: cx + radius * Math.cos(t), y: cy + radius * Math.sin(t) };
+  };
+  const arc = (from: number, to: number) => {
+    const a = at(from, r);
+    const b = at(to, r);
+    return `M${a.x} ${a.y} A${r} ${r} 0 ${to - from > 180 ? 1 : 0} 1 ${b.x} ${b.y}`;
+  };
+  const now = start + sweep * pct;
+  const ticks = Array.from({ length: 51 }, (_, i) => {
+    const deg = start + (sweep * i) / 50;
+    const major = i % 5 === 0;
+    const a = at(deg, r - (major ? 22 : 15));
+    const b = at(deg, r - 10);
+    const stroke = i >= 40 ? colors.accent : major ? colors.textTertiary : colors.surfaceVariant;
+    return <Line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={stroke} strokeWidth={major ? 2 : 1} />;
+  });
+  const m0 = at(now, r + 3);
+  const m1 = at(now, r - 20); // 4桁の距離（9,999km）でも中央の数字にかからない長さ
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}
+      style={{ width: W, height: H, alignSelf: 'center' }}
+    >
+      <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
+        <Defs>
+          <LinearGradient id="tach" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={colors.accent} stopOpacity={0.25} />
+            <Stop offset="1" stopColor={colors.accent} stopOpacity={1} />
+          </LinearGradient>
+        </Defs>
+        <Path d={arc(start, start + sweep)} stroke={colors.surfaceVariant} strokeWidth={5} strokeLinecap="round" fill="none" />
+        {pct > 0 && <Path d={arc(start, now)} stroke="url(#tach)" strokeWidth={5} strokeLinecap="round" fill="none" />}
+        {ticks}
+        <Line x1={m0.x} y1={m0.y} x2={m1.x} y2={m1.y} stroke={colors.text} strokeWidth={3} strokeLinecap="round" />
+        <Circle cx={m1.x} cy={m1.y} r={3} fill={colors.text} />
+      </Svg>
+      <View style={{ position: 'absolute', left: 0, right: 0, top: 74, alignItems: 'center' }}>{children}</View>
+      <View style={{ position: 'absolute', left: 18, right: 18, bottom: 0, flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary }}>前回交換</Text>
+        <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.accentText }}>交換時期</Text>
+      </View>
     </View>
   );
 }
