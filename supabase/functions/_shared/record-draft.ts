@@ -177,3 +177,113 @@ export function parseSpokenRecord(text: string, today: IsoDate): RecordDraft {
   if (note && !FILLER.test(note)) draft.note = note.slice(0, 200);
   return draft;
 }
+
+// ---------------------------------------------------------------------------
+// 端末の文字認識（OCR）で読んだ写真の解析
+// ---------------------------------------------------------------------------
+
+/** 支払った合計が書かれた行の目印。小計・税・お預り・お釣りの行は使わない */
+const TOTAL_LINE = /合計|お?買上|領収金額|お支払|ご?請求|総額|現計|税込/;
+const NOT_TOTAL_LINE = /小計|内税|消費税|税額|対象|ポイント|お?預り|お?預かり|釣|割引|値引/;
+const AMOUNT = /[¥￥]?\s*(\d{1,3}(?:,\d{3})+|\d+)\s*円?/g;
+
+function amountsIn(line: string): number[] {
+  return [...line.matchAll(AMOUNT)].map((m) => Number(m[1].replace(/,/g, ''))).filter((n) => n > 0 && n <= MAX_AMOUNT_YEN);
+}
+
+function receiptDate(lines: string[], today: IsoDate): IsoDate | undefined {
+  const build = (y: number, m: number, d: number) => validDate(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`, today);
+  for (const line of lines) {
+    // 2026/10/24・2026-10-24・2026.10.24・2026年10月24日
+    let m = /(20\d{2})\s*[/\-.年]\s*(\d{1,2})\s*[/\-.月]\s*(\d{1,2})/.exec(line);
+    if (m) {
+      const date = build(Number(m[1]), Number(m[2]), Number(m[3]));
+      if (date) return date;
+    }
+    // 令和8年10月24日・R8.10.24
+    m = /(?:令和|R)\s*(\d{1,2}|元)\s*[年.\/]\s*(\d{1,2})\s*[月.\/]\s*(\d{1,2})/.exec(line);
+    if (m) {
+      const date = build(2018 + (m[1] === '元' ? 1 : Number(m[1])), Number(m[2]), Number(m[3]));
+      if (date) return date;
+    }
+    // 26/10/24（年が2桁）。時刻（10:24）と取り違えないよう区切りは / と . だけ
+    m = /(?<!\d)(\d{2})[/.](\d{1,2})[/.](\d{1,2})(?!\d)/.exec(line);
+    if (m) {
+      const date = build(2000 + Number(m[1]), Number(m[2]), Number(m[3]));
+      if (date) return date;
+    }
+  }
+  return undefined;
+}
+
+function receiptOdo(lines: string[], kind: DraftCategory): number | undefined {
+  const toKm = (s: string) => Number(s.replace(/,/g, ''));
+  // 「次回交換 46,200km」のような次の目安は走行距離として使わない
+  const usable = lines.filter((l) => !/次回|目安|交換時期|トリップ|TRIP|航続|燃費/i.test(l));
+  for (const line of usable) {
+    const labeled = /(?:走行距離|ODO|オドメーター|走行)\s*[:：]?\s*(\d{1,3}(?:,\d{3})+|\d{3,7})/i.exec(line);
+    if (labeled) return toKm(labeled[1]);
+  }
+  for (const line of usable) {
+    const withUnit = /(\d{1,3}(?:,\d{3})+|\d{3,7})\s*km/i.exec(line);
+    if (withUnit) return toKm(withUnit[1]);
+  }
+  // メーターの写真：時刻・小数（トリップ）・日付・電話番号・金額でない4〜7桁の数が1つだけなら、それを総走行距離とみなす
+  if (kind === 'odometer') {
+    const candidates = usable
+      .filter((l) => !/[円¥￥]|TEL|電話/i.test(l))
+      .flatMap((l) => [...l.matchAll(/(?<![\d.:,/\-])(\d{4,7})(?![\d.:,/\-年月])/g)].map((m) => Number(m[1])));
+    const unique = [...new Set(candidates)];
+    if (unique.length === 1) return unique[0];
+  }
+  return undefined;
+}
+
+/**
+ * 端末の OCR が返した行から下書きを作る。
+ * 決まった書き方（「合計」「2026/10/24」「走行距離」「km」）だけを拾い、迷うものは入れない（足りなければサーバーで読み直す）
+ */
+export function parseReceiptText(rawLines: string[], kind: DraftCategory, today: IsoDate): RecordDraft {
+  const lines = rawLines.map((l) => normalize(l).replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const text = lines.join('\n');
+  const draft: RecordDraft = {};
+
+  // 合計の行（数字が次の行に分かれていることもある）から金額を拾い、いちばん大きいものを支払額とする
+  const totals: number[] = [];
+  lines.forEach((line, i) => {
+    if (!TOTAL_LINE.test(line) || NOT_TOTAL_LINE.test(line)) return;
+    const here = amountsIn(line.replace(TOTAL_LINE, ' '));
+    totals.push(...(here.length > 0 ? here : amountsIn(lines[i + 1] ?? '')));
+  });
+  if (totals.length > 0) draft.amountYen = Math.max(...totals);
+
+  const date = receiptDate(lines, today);
+  if (date) draft.date = date;
+
+  const odo = receiptOdo(lines, kind);
+  if (odo != null && odo <= MAX_ODO_KM) draft.odoKm = odo;
+
+  if (/エレメント|フィルター|フィルタ/.test(text)) draft.filterChanged = true;
+  for (const [category, re] of CATEGORY_KEYWORDS) {
+    if (re.test(text)) {
+      draft.category = category;
+      break;
+    }
+  }
+  return draft;
+}
+
+/** 端末の読み取りだけで足りるか。足りなければサーバー（AI）で読み直す */
+export function isDraftSufficient(kind: DraftCategory, draft: RecordDraft): boolean {
+  if (kind === 'odometer' || kind === 'oil_change') return draft.odoKm != null;
+  return draft.amountYen != null && draft.date != null;
+}
+
+/** サーバーの結果を優先し、サーバーが読めなかった項目だけ端末の結果で埋める */
+export function mergeDrafts(device: RecordDraft, server: RecordDraft): RecordDraft {
+  const merged: RecordDraft = { ...device };
+  for (const [key, value] of Object.entries(server) as [keyof RecordDraft, RecordDraft[keyof RecordDraft]][]) {
+    if (value != null) (merged as Record<string, unknown>)[key] = value;
+  }
+  return merged;
+}

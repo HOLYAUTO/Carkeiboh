@@ -33,7 +33,8 @@
 3. 環境変数（EAS の Environment variables）に `.env.example` の `EXPO_PUBLIC_*` を設定する
 4. プッシュ通知の資格情報：iOS は APNs キー、Android は FCM v1 のサービスアカウントキーを EAS に登録する
 5. 開発ビルド：`npx eas-cli@latest build --profile development`
-   - 音声入力（`expo-speech-recognition`）・位置情報・写真の読み取りはネイティブモジュールを使うため、Expo Go では動かない（音声入力は「使えません」と案内する）。開発ビルドで確かめる
+   - 音声入力（`expo-speech-recognition`）・位置情報・端末での写真の読み取り（`modules/carkeibo-ocr`）はネイティブモジュールを使うため、Expo Go では動かない（音声入力は「使えません」と案内し、写真はサーバーでの読み取りだけになる）。開発ビルドで確かめる
+   - Android の端末での読み取りは、Google Play 開発者サービスが日本語の文字認識モデルを取得してから使える（インストール直後に取得を始める。取得前はサーバーでの読み取りに回る）
 
 ## 3. 限定配布（TestFlight・Google Play 内部テスト）
 

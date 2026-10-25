@@ -54,7 +54,7 @@
 | --- | --- | --- | --- | --- |
 | 25 | 1つ前に戻る | 入力画面をスタックの画面にし、左上に「‹ 戻る」、iOS は画面のどこからでも右スワイプ、Android は端末の戻る操作で戻れる。入力途中で戻るときは破棄の確認を出す。記録した直後の確認に「内容を直す」を置き、そのまま編集画面へ進める | — | `src/app/_layout.tsx`、`src/app/records/new.tsx` |
 | 26 | フォント | **決定（2026-10-25）**：和文 M PLUS 2、数字 Saira（金額・距離・日付は等幅数字で桁をそろえる） | — | `src/theme.ts`、`src/app/_layout.tsx` |
-| 27 | 写真で入力の読み取り | Claude API（Anthropic）に写真を送って読み取る。画像はサーバーに保存しない。読み取った値は下書きとして入れ、利用者が確かめてから保存する | 写真を外部（Anthropic）へ送ることをプライバシーポリシーに書く。1人あたりの回数制限・費用の上限（いまは制限なし） | `supabase/functions/read-record-photo` |
+| 27 | 写真で入力の読み取り | **端末とAIの併用（2026-10-25 決定）**：まず端末の中で文字を読み（iOS は Apple Vision、Android は ML Kit の日本語。外部に送らない）、決まった書き方（「合計」「2026/10/24」「走行距離」「km」）から拾う。支出は金額と日付、オイル交換・走行距離は走行距離がそろわないときだけ Claude API（Anthropic）で読み直す。画像はサーバーに保存しない | AIで読み直すことがある旨をプライバシーポリシーに書く。AIで読み直す回数の上限（いまは制限なし） | `modules/carkeibo-ocr`、`supabase/functions/_shared/record-draft.ts`、`supabase/functions/read-record-photo` |
 | 28 | 音声で入力 | 端末の音声認識（`expo-speech-recognition`）で文字にし、日付・金額・走行距離・項目を端末内で読み取る（「今日・昨日・おととい・N日前・M月D日」「円」「キロ／km」） | — | `supabase/functions/_shared/record-draft.ts` |
 | 29 | 複数台プランの台数上限 | 5台 | 上限の台数 | `vehicle_limit`（マイグレーション） |
 | 30 | 複数台プランの料金・課金方法 | 案内画面だけ作り、申し込みは「準備中」 | 価格、App Store / Google Play のアプリ内課金（RevenueCat などの利用）、解約後に上限を超えている車両の扱い（いまは追加だけを止め、既存の車両は残る） | `src/app/plan.tsx`、`EXPO_PUBLIC_PLUS_PRICE_LABEL` |
