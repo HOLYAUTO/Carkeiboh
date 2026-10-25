@@ -264,6 +264,29 @@ describe.skipIf(!pool)('RLS', () => {
     }
   });
 
+  it('愛車の写真は本人のフォルダだけ読み書きできる', async () => {
+    await asUser(alice, async (c) => {
+      await c.query(`insert into storage.objects (bucket_id, name) values ('vehicle-photos', $1)`, [`${alice}/${aliceVehicle}-1.jpg`]);
+      await expectFail(c, () =>
+        c.query(`insert into storage.objects (bucket_id, name) values ('vehicle-photos', $1)`, [`${bob}/${bobVehicle}-1.jpg`]),
+        /row-level security/,
+      );
+      const own = await c.query(`select name from storage.objects where bucket_id = 'vehicle-photos'`);
+      expect(own.rows.map((r) => r.name)).toEqual([`${alice}/${aliceVehicle}-1.jpg`]);
+    });
+    await asAdmin(`insert into storage.objects (bucket_id, name, owner) values ('vehicle-photos', $1, $2)`, [`${bob}/${bobVehicle}-1.jpg`, bob]);
+    try {
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select name from storage.objects where name like $1`, [`${bob}/%`]);
+        expect(r.rows).toEqual([]);
+        const d = await c.query(`delete from storage.objects where name like $1`, [`${bob}/%`]);
+        expect(d.rowCount).toBe(0);
+      });
+    } finally {
+      await asAdmin(`delete from storage.objects where name like $1`, [`${bob}/%`]);
+    }
+  });
+
   it('期限の更新を登録すると旧い期限は superseded になる', async () => {
     await asUser(alice, async (c) => {
       await c.query(`select public.register_deadline($1, 'shaken', '2026-12-01')`, [aliceVehicle]);

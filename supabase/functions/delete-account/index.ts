@@ -22,6 +22,16 @@ Deno.serve(
       }
     }
 
+    // 愛車の写真は外部キーの連鎖では消えないため、本人のフォルダを先に空にする
+    const photos = admin.storage.from('vehicle-photos');
+    for (;;) {
+      const { data: files, error: listError } = await photos.list(user.id, { limit: 100 });
+      if (listError) throw listError;
+      if (!files || files.length === 0) break;
+      const { error: removeError } = await photos.remove(files.map((f) => `${user.id}/${f.name}`));
+      if (removeError) throw removeError;
+    }
+
     // auth.users の削除で、各テーブルのデータは外部キーの連鎖で消える
     const { error } = await admin.auth.admin.deleteUser(user.id);
     if (error) throw error;

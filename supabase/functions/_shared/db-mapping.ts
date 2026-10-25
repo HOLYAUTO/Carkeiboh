@@ -20,6 +20,9 @@ export interface VehicleRow {
   notify_inspection: boolean;
   notify_insurance: boolean;
   notify_car_tax: boolean;
+  /** 愛車の写真（Storage の vehicle-photos の中のパス）。未設定は null */
+  photo_path: string | null;
+  photo_updated_at: string | null;
 }
 
 export interface OilChangeRow {

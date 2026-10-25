@@ -21,6 +21,7 @@ import {
   SectionTitle,
   Skeleton,
 } from '../../components/ui';
+import { VehiclePhoto } from '../../components/VehiclePhoto';
 import { useVehicleBundle, type VehicleBundle } from '../../lib/data';
 import { daysLeft, fullDate, km, longDate, monthDay, yen } from '../../lib/format';
 import { cardShadow, colors, fonts, radius, spacing } from '../../theme';
@@ -116,6 +117,7 @@ function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; ref
       }
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      <VehiclePhoto vehicle={vehicle} />
       <NextAction data={data} />
       {/* オイル交換・車検が近いときだけ、近くの整備工場への導線を出す */}
       {((state.oil && nearDue(state.oil.forecast)) || state.upcoming.some((u) => u.kind === 'shaken' || u.kind === 'inspection')) && (

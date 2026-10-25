@@ -97,7 +97,7 @@ function VehicleForm({ vehicle, ledraLinked }: { vehicle: VehicleRow; ledraLinke
         onPress: async () => {
           setBusy(true);
           try {
-            await deleteVehicle(vehicle.id);
+            await deleteVehicle(vehicle);
             await invalidate();
             router.back();
           } catch (e) {

@@ -77,7 +77,8 @@
           "motionUsagePermission": false,
           "locationFullAccuracyPermission": false
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true
