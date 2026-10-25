@@ -318,6 +318,8 @@ export function ToggleRow({
         onValueChange={onChange}
         trackColor={{ true: colors.accent, false: colors.track }}
         ios_backgroundColor={colors.track}
+        // つまみは白に固定する（指定しないと Android・Web は端末やライブラリの色になり、赤の上で緑などに見える）
+        thumbColor={colors.white}
       />
     </View>
   );
