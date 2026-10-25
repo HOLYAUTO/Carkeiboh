@@ -195,13 +195,96 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
-  it('初期版は1アカウント1台', async () => {
+  it('無料プランは1台まで。複数台プランは5台まで', async () => {
     await asUser(alice, async (c) => {
-      await expectFail(c, () => 
+      await expectFail(c, () =>
         c.query(`insert into public.vehicles (name, annual_km_estimate, oil_interval_km) values ('2台目', 5000, 5000)`),
         /vehicle_limit_reached/,
       );
     });
+    await asAdmin(`update public.profiles set plan = 'plus' where id = $1`, [alice]);
+    try {
+      await asUser(alice, async (c) => {
+        for (let i = 2; i <= 5; i++) {
+          await c.query(`insert into public.vehicles (name, annual_km_estimate, oil_interval_km) values ($1, 5000, 5000)`, [`${i}台目`]);
+        }
+        await expectFail(c, () =>
+          c.query(`insert into public.vehicles (name, annual_km_estimate, oil_interval_km) values ('6台目', 5000, 5000)`),
+          /vehicle_limit_reached/,
+        );
+      });
+    } finally {
+      await asAdmin(`update public.profiles set plan = 'free' where id = $1`, [alice]);
+    }
+  });
+
+  it('利用者は自分のプランを変えられない', async () => {
+    await asUser(alice, async (c) => {
+      const u = await c.query(`update public.profiles set plan = 'plus' where id = $1`, [alice]);
+      expect(u.rowCount).toBe(0);
+    });
+    const r = await asAdmin(`select plan from public.profiles where id = $1`, [alice]);
+    expect(r.rows[0].plan).toBe('free');
+  });
+
+  it('整備工場は掲載中の店舗だけ見え、利用者は書き換えられない', async () => {
+    const shops = await asAdmin(
+      `insert into public.shops (name, address, latitude, longitude, is_published, listing_starts_on, listing_ends_on) values
+         ('掲載中', '住所', 35.0, 135.0, true, current_date - 10, null),
+         ('非公開', '住所', 35.0, 135.0, false, current_date - 10, null),
+         ('掲載終了', '住所', 35.0, 135.0, true, current_date - 10, current_date - 1),
+         ('掲載前', '住所', 35.0, 135.0, true, current_date + 5, null)
+       returning id, name`,
+    );
+    const id = (name: string) => shops.rows.find((r) => r.name === name).id;
+    try {
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select name from public.shops`);
+        expect(r.rows.map((x) => x.name)).toEqual(['掲載中']);
+        await expectFail(c, () => c.query(`update public.shops set name = 'x'`), /permission denied/);
+        await expectFail(c, () => c.query(`insert into public.shops (name, address, latitude, longitude) values ('x', 'y', 0, 0)`), /permission denied/);
+      });
+      await asUser(null, async (c) => {
+        await expectFail(c, () => c.query(`select * from public.shops`), /permission denied/);
+      });
+
+      await asUser(alice, async (c) => {
+        await c.query(`insert into public.shop_referrals (shop_id, action) values ($1, 'route')`, [id('掲載中')]);
+        // 掲載していない店舗・他人になりすました記録は書けない
+        await expectFail(c, () => c.query(`insert into public.shop_referrals (shop_id, action) values ($1, 'route')`, [id('非公開')]), /row-level security/);
+        await expectFail(c, () =>
+          c.query(`insert into public.shop_referrals (shop_id, user_id, action) values ($1, $2, 'call')`, [id('掲載中'), bob]),
+          /row-level security/,
+        );
+        // 送客の記録は利用者からは読めない
+        await expectFail(c, () => c.query(`select * from public.shop_referrals`), /permission denied/);
+      });
+    } finally {
+      await asAdmin(`delete from public.shops where id = any($1)`, [shops.rows.map((r) => r.id)]);
+    }
+  });
+
+  it('愛車の写真は本人のフォルダだけ読み書きできる', async () => {
+    await asUser(alice, async (c) => {
+      await c.query(`insert into storage.objects (bucket_id, name) values ('vehicle-photos', $1)`, [`${alice}/${aliceVehicle}-1.jpg`]);
+      await expectFail(c, () =>
+        c.query(`insert into storage.objects (bucket_id, name) values ('vehicle-photos', $1)`, [`${bob}/${bobVehicle}-1.jpg`]),
+        /row-level security/,
+      );
+      const own = await c.query(`select name from storage.objects where bucket_id = 'vehicle-photos'`);
+      expect(own.rows.map((r) => r.name)).toEqual([`${alice}/${aliceVehicle}-1.jpg`]);
+    });
+    await asAdmin(`insert into storage.objects (bucket_id, name, owner) values ('vehicle-photos', $1, $2)`, [`${bob}/${bobVehicle}-1.jpg`, bob]);
+    try {
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select name from storage.objects where name like $1`, [`${bob}/%`]);
+        expect(r.rows).toEqual([]);
+        const d = await c.query(`delete from storage.objects where name like $1`, [`${bob}/%`]);
+        expect(d.rowCount).toBe(0);
+      });
+    } finally {
+      await asAdmin(`delete from storage.objects where name like $1`, [`${bob}/%`]);
+    }
   });
 
   it('期限の更新を登録すると旧い期限は superseded になる', async () => {

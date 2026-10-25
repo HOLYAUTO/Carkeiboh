@@ -73,6 +73,8 @@ export default function Settings() {
     <Screen>
       <SectionTitle>クルマ</SectionTitle>
       <Card style={{ gap: 0, paddingVertical: 4 }}>
+        <ListRow title="クルマの切り替え・追加" detail="2台目からは複数台プラン" onPress={() => router.push('/vehicles')} />
+        <Divider />
         <ListRow title="車両情報と周期" detail={`${vehicle.name}・オイル／フィルターの周期`} onPress={() => router.push('/settings/vehicle')} />
         <Divider />
         <ListRow title="車検・点検・保険の期限" onPress={() => router.push('/settings/deadlines')} />

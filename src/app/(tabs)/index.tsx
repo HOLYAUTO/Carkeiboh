@@ -12,6 +12,7 @@ import {
   Divider,
   ErrorView,
   IconButton,
+  ListRow,
   NextActionCard,
   Num,
   ProgressRing,
@@ -20,6 +21,7 @@ import {
   SectionTitle,
   Skeleton,
 } from '../../components/ui';
+import { VehiclePhoto } from '../../components/VehiclePhoto';
 import { useVehicleBundle, type VehicleBundle } from '../../lib/data';
 import { daysLeft, fullDate, km, longDate, monthDay, yen } from '../../lib/format';
 import { cardShadow, colors, fonts, radius, spacing } from '../../theme';
@@ -67,7 +69,7 @@ function NextAction({ data }: { data: VehicleBundle }) {
         title="前回のオイル交換を記録する"
         reason="記録すると、次の交換まであと何kmかを表示します。"
         cta="オイル交換を記録する"
-        onPress={() => router.push({ pathname: '/record', params: { category: 'oil_change' } })}
+        onPress={() => router.push({ pathname: '/records/new', params: { kind: 'oil_change' } })}
       />
     );
   }
@@ -84,7 +86,7 @@ function NextAction({ data }: { data: VehicleBundle }) {
         title={overdue ? 'オイル交換の目安を過ぎています' : 'オイル交換の時期です'}
         reason={`${parts.join('・')}。交換したら記録すると、次の目安を出し直します。`}
         cta="オイル交換を記録する"
-        onPress={() => router.push({ pathname: '/record', params: { category: 'oil_change' } })}
+        onPress={() => router.push({ pathname: '/records/new', params: { kind: 'oil_change' } })}
       />
     );
   }
@@ -103,10 +105,26 @@ function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; ref
 
   return (
     <Screen
-      header={<ScreenHeader overline={longDate(today)} title={vehicle.name} subtitle={vehicle.plate_number ?? undefined} right={settingsButton} />}
+      header={
+        <ScreenHeader
+          overline={longDate(today)}
+          title={vehicle.name}
+          subtitle={vehicle.plate_number ?? undefined}
+          right={settingsButton}
+          onTitlePress={() => router.push('/vehicles')}
+          titlePressLabel={`${vehicle.name}。クルマを切り替える・追加する`}
+        />
+      }
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      <VehiclePhoto vehicle={vehicle} />
       <NextAction data={data} />
+      {/* オイル交換・車検が近いときだけ、近くの整備工場への導線を出す */}
+      {((state.oil && nearDue(state.oil.forecast)) || state.upcoming.some((u) => u.kind === 'shaken' || u.kind === 'inspection')) && (
+        <Card style={{ paddingVertical: 4 }}>
+          <ListRow title="近くの整備工場を探す" detail="ルート検索や電話での予約ができます" onPress={() => router.push('/shops')} />
+        </Card>
+      )}
       {state.oil && <OilCard forecast={state.oil.forecast} />}
       {state.filter && <FilterRow forecast={state.filter.forecast} />}
 
@@ -249,7 +267,7 @@ function UpcomingRow({ item }: { item: UpcomingItem }) {
   const caution = item.level !== 'normal';
   const onPress = () =>
     item.kind === 'oil' || item.kind === 'filter'
-      ? router.push({ pathname: '/record', params: { category: 'oil_change' } })
+      ? router.push({ pathname: '/records/new', params: { kind: 'oil_change' } })
       : router.push('/settings/deadlines');
   return (
     <Pressable

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { OIL_INTERVAL_KM_CHOICES, OIL_INTERVAL_MONTH_CHOICES } from '@domain/service.ts';
 import { AppText, Button, Card, ErrorView, Field, Loading, Screen, SectionTitle } from '../../components/ui';
-import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
+import { deleteVehicle, updateVehicle, useInvalidate, useVehicleBundle, useVehicles, type VehicleRow } from '../../lib/data';
 import { parseInteger } from '../../lib/format';
 import { colors, fonts, MIN_TAP, radius, spacing } from '../../theme';
 
@@ -20,7 +20,7 @@ function Chips<T extends number>({ options, value, onChange, unit }: { options: 
             onPress={() => onChange(o)}
             style={{ minHeight: MIN_TAP, paddingHorizontal: spacing.md, borderRadius: radius.control, justifyContent: 'center', backgroundColor: selected ? colors.accent : colors.accentSoft }}
           >
-            <Text style={{ fontFamily: fonts.mono, color: selected ? colors.white : colors.accent }}>
+            <Text style={{ fontFamily: fonts.num, color: selected ? colors.white : colors.accent }}>
               {o.toLocaleString('ja-JP')}
               {unit}
             </Text>
@@ -35,11 +35,13 @@ export default function VehicleSettings() {
   const { bundle } = useVehicleBundle();
   if (bundle.isPending) return <Loading />;
   if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
-  return <VehicleForm vehicle={bundle.data.vehicle} />;
+  return <VehicleForm vehicle={bundle.data.vehicle} ledraLinked={bundle.data.ledraLink?.status === 'active'} />;
 }
 
-function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
+function VehicleForm({ vehicle, ledraLinked }: { vehicle: VehicleRow; ledraLinked: boolean }) {
   const invalidate = useInvalidate();
+  const vehicles = useVehicles();
+  const canDelete = (vehicles.data?.length ?? 0) > 1;
   const [name, setName] = useState(vehicle.name);
   const [plate, setPlate] = useState(vehicle.plate_number ?? '');
   const [annual, setAnnual] = useState(String(vehicle.annual_km_estimate));
@@ -81,6 +83,33 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
     }
   };
 
+  const remove = () => {
+    // 連携中のまま消すと、整備工場側に解除が伝わらないため先に解除してもらう
+    if (ledraLinked) {
+      Alert.alert('先に連携を解除してください', 'このクルマは整備工場と連携中です。設定の「整備工場との連携」から解除してから削除してください。');
+      return;
+    }
+    Alert.alert(`「${vehicle.name}」を削除しますか`, 'このクルマの記録・維持費・期限・通知の履歴がすべて削除され、元に戻せません。', [
+      { text: 'キャンセル', style: 'cancel' },
+      {
+        text: '削除する',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(true);
+          try {
+            await deleteVehicle(vehicle);
+            await invalidate();
+            router.back();
+          } catch (e) {
+            Alert.alert('削除できませんでした', e instanceof Error ? e.message : String(e));
+          } finally {
+            setBusy(false);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <Screen>
       <Card>
@@ -106,6 +135,7 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
       </Card>
 
       <Button title="保存する" disabled={!valid} loading={busy} onPress={save} />
+      {canDelete && <Button title="このクルマを削除する" variant="destructive" disabled={busy} onPress={remove} />}
     </Screen>
   );
 }

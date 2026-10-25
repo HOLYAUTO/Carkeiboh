@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { useNavigation, usePreventRemove } from 'expo-router';
+import { useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@domain/costs.ts';
 import { checkOdoEntry } from '@domain/odo.ts';
@@ -15,8 +15,10 @@ import {
   type VehicleBundle,
 } from '../lib/data';
 import { parseInteger } from '../lib/format';
+import type { RecordDraft } from '@shared/record-draft.ts';
 import { cardShadow, colors, fonts, radius, spacing } from '../theme';
-import { AppText, Button, Card, DateField, Field, ToggleRow } from './ui';
+import { QuickInput } from './QuickInput';
+import { AppText, Button, Card, DateField, Field, Notice, ToggleRow } from './ui';
 
 /** 「記録する」で選ぶ項目。オイル交換・支出の各項目に加え、走行距離だけの記録もできる */
 export type RecordKind = ExpenseCategory | 'odometer';
@@ -94,9 +96,11 @@ export function RecordForm({
   bundle: VehicleBundle;
   kind: RecordKind;
   target?: EditTarget;
-  onSaved: () => void;
+  /** 保存した記録を `/records/[id]` で開くための ID（例：`expense:…`）を渡す */
+  onSaved: (recordRef: string) => void;
 }) {
   const invalidate = useInvalidate();
+  const navigation = useNavigation();
   const initialDate =
     target?.type === 'oil' ? target.row.performed_on : target?.type === 'expense' ? target.row.spent_on : target?.type === 'odometer' ? target.row.read_on : bundle.today;
   const initialOdo = target?.type === 'oil' || target?.type === 'odometer' ? target.row.odo_km : target?.type === 'expense' ? target.row.odo_km : null;
@@ -108,6 +112,8 @@ export function RecordForm({
   const [filterChanged, setFilterChanged] = useState(target?.type === 'oil' ? target.row.filter_changed : false);
   const [note, setNote] = useState(target?.type === 'expense' ? (target.row.note ?? '') : '');
   const [busy, setBusy] = useState(false);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
+  const allowLeave = useRef(false);
 
   const isOil = kind === 'oil_change';
   const isOdoOnly = kind === 'odometer';
@@ -119,6 +125,55 @@ export function RecordForm({
   const odoValid = odoKm == null ? !odoRequired : Number.isFinite(odoKm) && odoKm <= 2_000_000;
   const amountValid = amountYen == null ? !amountRequired : Number.isFinite(amountYen) && amountYen > 0 && amountYen < 100_000_000;
   const valid = !!date && odoValid && amountValid;
+
+  // 入力途中で戻ろうとしたら確かめる（保存後は確かめない）
+  const dirty =
+    date !== initialDate ||
+    odo !== (initialOdo != null ? String(initialOdo) : '') ||
+    amount !== (initialAmount != null ? String(initialAmount) : '') ||
+    note !== (target?.type === 'expense' ? (target.row.note ?? '') : '') ||
+    filterChanged !== (target?.type === 'oil' ? target.row.filter_changed : false);
+  usePreventRemove(dirty, ({ data }) => {
+    if (allowLeave.current) {
+      navigation.dispatch(data.action);
+      return;
+    }
+    Alert.alert('入力中の内容を破棄しますか', '戻ると、この画面で入力した内容は保存されません。', [
+      { text: '入力を続ける', style: 'cancel' },
+      { text: '破棄して戻る', style: 'destructive', onPress: () => navigation.dispatch(data.action) },
+    ]);
+  });
+
+  /** 写真・音声で読み取った値を入れる。読み取れなかった項目は今の入力を残す */
+  const applyDraft = (d: RecordDraft) => {
+    const filled: string[] = [];
+    if (d.date) {
+      setDate(d.date);
+      filled.push('日付');
+    }
+    if (d.odoKm != null) {
+      setOdo(String(d.odoKm));
+      filled.push('走行距離');
+    }
+    if (d.amountYen != null && !isOdoOnly) {
+      setAmount(String(d.amountYen));
+      filled.push('金額');
+    }
+    if (d.filterChanged != null && isOil) {
+      setFilterChanged(d.filterChanged);
+      filled.push('フィルター');
+    }
+    if (d.note && !isOil && !isOdoOnly) {
+      setNote(d.note.slice(0, 200));
+      filled.push('メモ');
+    }
+    const otherKind = d.category && d.category !== kind ? `内容は「${kindLabel(d.category)}」のようです。項目が違う場合は選び直してください。` : '';
+    setDraftNotice(
+      filled.length > 0
+        ? `${filled.join('・')}を入れました。間違いがないか確かめてから記録してください。${otherKind}`
+        : `読み取れる内容がありませんでした。もう一度試すか、手で入力してください。${otherKind}`,
+    );
+  };
 
   const save = async () => {
     if (!valid) return;
@@ -138,8 +193,9 @@ export function RecordForm({
     setBusy(true);
     try {
       const vehicleId = bundle.vehicle.id;
+      let recordRef: string;
       if (isOil) {
-        await saveOilChange({
+        const saved = await saveOilChange({
           id: target?.type === 'oil' ? target.row.id : undefined,
           vehicleId,
           date,
@@ -148,10 +204,12 @@ export function RecordForm({
           filterChanged,
           amountYen,
         });
+        recordRef = `oil:${saved.id}`;
       } else if (isOdoOnly) {
-        await saveOdoReading({ id: target?.type === 'odometer' ? target.row.id : undefined, vehicleId, date, odoKm: odoKm! });
+        const saved = await saveOdoReading({ id: target?.type === 'odometer' ? target.row.id : undefined, vehicleId, date, odoKm: odoKm! });
+        recordRef = `odometer:${saved.id}`;
       } else {
-        await saveExpense({
+        const saved = await saveExpense({
           id: target?.type === 'expense' ? target.row.id : undefined,
           vehicleId,
           category: kind,
@@ -160,15 +218,11 @@ export function RecordForm({
           odoKm,
           note: note.trim() || null,
         });
+        recordRef = `expense:${saved.id}`;
       }
       await invalidate();
-      onSaved();
-      if (kind === 'shaken' && !target) {
-        Alert.alert('車検の満了日も更新しますか', '新しい満了日を登録すると、前の満了日の通知と警告が止まります。', [
-          { text: 'あとで', style: 'cancel' },
-          { text: '登録する', onPress: () => router.push('/settings/deadlines') },
-        ]);
-      }
+      allowLeave.current = true;
+      onSaved(recordRef);
     } catch (e) {
       Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
     } finally {
@@ -178,6 +232,8 @@ export function RecordForm({
 
   return (
     <View style={{ gap: spacing.md }}>
+      {!target && <QuickInput kind={kind} today={bundle.today} onDraft={applyDraft} />}
+      {draftNotice && <Notice title="読み取った内容を確認してください">{draftNotice}</Notice>}
       <Card>
         <AppText variant="heading">{kindLabel(kind)}</AppText>
         <DateField label="日付" value={date} onChange={(v) => v && setDate(v)} />

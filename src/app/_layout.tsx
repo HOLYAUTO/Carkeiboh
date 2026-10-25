@@ -1,5 +1,5 @@
-import { GeistMono_400Regular } from '@expo-google-fonts/geist-mono/400Regular';
-import { GeistMono_500Medium } from '@expo-google-fonts/geist-mono/500Medium';
+import { Saira_400Regular } from '@expo-google-fonts/saira/400Regular';
+import { Saira_500Medium } from '@expo-google-fonts/saira/500Medium';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -19,13 +19,13 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-  // 日本語フォントは1ウェイト約5MBあるため、使う太さだけ読み込む
+  // 日本語フォントは1ウェイトで約2MBあるため、使う太さ（400・500・600）だけ読み込む
   const [fontsLoaded] = useFonts({
-    [fonts.regular]: require('@expo-google-fonts/noto-sans-jp/400Regular/NotoSansJP_400Regular.ttf'),
-    [fonts.medium]: require('@expo-google-fonts/noto-sans-jp/500Medium/NotoSansJP_500Medium.ttf'),
-    [fonts.semibold]: require('@expo-google-fonts/noto-sans-jp/600SemiBold/NotoSansJP_600SemiBold.ttf'),
-    [fonts.mono]: GeistMono_400Regular,
-    [fonts.monoMedium]: GeistMono_500Medium,
+    [fonts.regular]: require('@expo-google-fonts/m-plus-2/400Regular/MPLUS2_400Regular.ttf'),
+    [fonts.medium]: require('@expo-google-fonts/m-plus-2/500Medium/MPLUS2_500Medium.ttf'),
+    [fonts.semibold]: require('@expo-google-fonts/m-plus-2/600SemiBold/MPLUS2_600SemiBold.ttf'),
+    [fonts.num]: Saira_400Regular,
+    [fonts.numMedium]: Saira_500Medium,
   });
 
   return (
@@ -67,7 +67,11 @@ function RootNavigator() {
       screenOptions={{
         headerTintColor: colors.accent,
         headerTitleStyle: { fontFamily: fonts.semibold, color: colors.text },
-        headerBackButtonDisplayMode: 'minimal',
+        // 入力ミスに気づいたらすぐ1つ前に戻れるよう、左上に「戻る」を文字付きで出し、
+        // iOS は画面のどこからでも右へスワイプして戻れるようにする（Android は端末の戻る操作）
+        headerBackButtonDisplayMode: 'default',
+        headerBackTitle: '戻る',
+        fullScreenGestureEnabled: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: colors.background },
         contentStyle: { backgroundColor: colors.background },
@@ -81,12 +85,17 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={signedIn && hasVehicle}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="records/new" options={{ title: '記録する' }} />
         <Stack.Screen name="records/index" options={{ title: '記録の一覧' }} />
         <Stack.Screen name="records/[id]" options={{ title: '記録の編集' }} />
         <Stack.Screen name="settings/index" options={{ title: '設定' }} />
         <Stack.Screen name="settings/vehicle" options={{ title: '車両情報と周期' }} />
         <Stack.Screen name="settings/deadlines" options={{ title: '車検・点検・保険' }} />
         <Stack.Screen name="settings/odometer" options={{ title: '走行距離とメーター交換' }} />
+        <Stack.Screen name="vehicles/index" options={{ title: 'クルマの切り替え・追加' }} />
+        <Stack.Screen name="vehicles/new" options={{ title: 'クルマを追加' }} />
+        <Stack.Screen name="plan" options={{ title: '複数台プラン' }} />
+        <Stack.Screen name="shops/[id]" options={{ title: '整備工場' }} />
         <Stack.Screen name="ledra/scan" options={{ title: 'QRコードを読み取る', presentation: 'modal' }} />
         <Stack.Screen name="ledra/consent" options={{ title: '整備工場との連携' }} />
       </Stack.Protected>

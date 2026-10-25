@@ -5,6 +5,8 @@ export const config = {
   /** 【要確認】利用規約・プライバシーポリシーの文面は別途用意される。URL が決まったら設定する */
   termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? '',
   privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? '',
+  /** 【要確認】複数台プランの料金表示（例：「月額 300円」）。決まるまでは「準備中」と出す */
+  plusPriceLabel: process.env.EXPO_PUBLIC_PLUS_PRICE_LABEL ?? '',
 };
 
 export const APP_OWNER = '株式会社たにぐち自動車';

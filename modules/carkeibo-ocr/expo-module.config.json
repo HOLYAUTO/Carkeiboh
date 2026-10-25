@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["CarkeiboOcrModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.carkeiboocr.CarkeiboOcrModule"]
+  }
+}

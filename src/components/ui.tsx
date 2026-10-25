@@ -37,12 +37,12 @@ export function AppText({ variant = 'body', style, ...rest }: TextProps & { vari
   return <Text {...rest} style={[{ color: colors.text }, variantStyles[variant], style]} />;
 }
 
-/** 金額・距離・日付用の等幅数字 */
+/** 金額・距離・日付用の数字（Saira の等幅数字 tnum で桁をそろえる） */
 export function Num({ size = 15, style, ...rest }: TextProps & { size?: number }) {
   return (
     <Text
       {...rest}
-      style={[{ color: colors.text, fontFamily: size >= 20 ? fonts.monoMedium : fonts.mono, fontSize: size, fontVariant: ['tabular-nums'] }, style]}
+      style={[{ color: colors.text, fontFamily: size >= 20 ? fonts.numMedium : fonts.num, fontSize: size, fontVariant: ['tabular-nums'] }, style]}
     />
   );
 }
@@ -238,7 +238,7 @@ export function Field({
           placeholderTextColor={colors.textSecondary}
           accessibilityLabel={label}
           {...input}
-          style={[styles.input, input.keyboardType === 'number-pad' && { fontFamily: fonts.mono }]}
+          style={[styles.input, input.keyboardType === 'number-pad' && { fontFamily: fonts.num }]}
         />
         {suffix && <AppText variant="label">{suffix}</AppText>}
       </View>
@@ -423,17 +423,47 @@ export function IconButton({
  * タブ画面の見出し。ナビゲーションの帯は出さず、画面の上端に小さな補足と大きな見出しを置く。
  * 右上は設定などのアイコンボタン。
  */
-export function ScreenHeader({ overline, title, subtitle, right }: { overline?: string; title: string; subtitle?: string; right?: ReactNode }) {
+export function ScreenHeader({
+  overline,
+  title,
+  subtitle,
+  right,
+  onTitlePress,
+  titlePressLabel,
+}: {
+  overline?: string;
+  title: string;
+  subtitle?: string;
+  right?: ReactNode;
+  /** 見出しを押せるようにする（ホームの車名から車両を切り替えるなど）。押せることを ▼ で示す */
+  onTitlePress?: () => void;
+  titlePressLabel?: string;
+}) {
   const insets = useSafeAreaInsets();
+  const titleText = (
+    <Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontSize: 24, lineHeight: 32, color: colors.text, flexShrink: 1 }}>
+      {title}
+    </Text>
+  );
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.md }}>
       <View style={{ flex: 1 }}>
         {overline && (
           <Text style={{ fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, color: colors.textSecondary, letterSpacing: 0.5 }}>{overline}</Text>
         )}
-        <Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontSize: 24, lineHeight: 32, color: colors.text }}>
-          {title}
-        </Text>
+        {onTitlePress ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={titlePressLabel ?? title}
+            onPress={onTitlePress}
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: MIN_TAP, opacity: pressed ? 0.6 : 1 })}
+          >
+            {titleText}
+            <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+          </Pressable>
+        ) : (
+          titleText
+        )}
         {subtitle && <Text style={{ fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: colors.textSecondary }}>{subtitle}</Text>}
       </View>
       {right}

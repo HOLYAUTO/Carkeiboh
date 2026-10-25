@@ -20,13 +20,16 @@ export const colors = {
   white: '#ffffff',
 } as const;
 
-/** 文字は Noto Sans JP（太さは600まで）。金額・距離・日付は等幅数字 */
+/**
+ * 文字は M PLUS 2（太さは600まで）。金額・距離・日付は Saira（スピードメーター風の数字）で、桁をそろえて出す。
+ * 汎用的な書体の組み合わせ（Noto Sans JP ＋ Geist Mono）から、クルマのアプリらしい組み合わせに変えた（2026-10-25 決定）
+ */
 export const fonts = {
-  regular: 'NotoSansJP_400Regular',
-  medium: 'NotoSansJP_500Medium',
-  semibold: 'NotoSansJP_600SemiBold',
-  mono: 'GeistMono_400Regular',
-  monoMedium: 'GeistMono_500Medium',
+  regular: 'MPLUS2_400Regular',
+  medium: 'MPLUS2_500Medium',
+  semibold: 'MPLUS2_600SemiBold',
+  num: 'Saira_400Regular',
+  numMedium: 'Saira_500Medium',
 } as const;
 
 /** 小さな部品 6 / ボタン・入力 10 / カード 14 / シート 18 */

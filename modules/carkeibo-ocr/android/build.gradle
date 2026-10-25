@@ -1,0 +1,24 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'app.carkeibo'
+version = '1.0.0'
+
+expoModule {
+  v2 true
+}
+
+android {
+  namespace "expo.modules.carkeiboocr"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}
+
+dependencies {
+  // 日本語の文字認識。Google Play 開発者サービス経由でモデルを取得するため、アプリの容量はほぼ増えない
+  implementation 'com.google.android.gms:play-services-mlkit-text-recognition-japanese:16.0.1'
+}

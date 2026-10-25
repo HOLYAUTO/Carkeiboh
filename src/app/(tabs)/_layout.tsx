@@ -6,11 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerForPush } from '../../lib/push';
 import { cardShadow, colors, fonts, spacing } from '../../theme';
 
-/** タブの定義（01 4章：ホーム／維持費／記録する／通知） */
+/** タブの定義（01 4章：ホーム／維持費／記録する／通知。整備工場は送客のために追加。「記録する」を真ん中に置く） */
 const TABS = [
   { name: 'index', title: 'ホーム', icon: 'home', outline: 'home-outline' },
   { name: 'costs', title: '維持費', icon: 'wallet', outline: 'wallet-outline' },
   { name: 'record', title: '記録する', icon: 'add-circle', outline: 'add-circle-outline' },
+  { name: 'shops', title: '整備工場', icon: 'construct', outline: 'construct-outline' },
   { name: 'notifications', title: '通知', icon: 'notifications', outline: 'notifications-outline' },
 ] as const;
 
