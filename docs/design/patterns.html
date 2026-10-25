@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>カーケイボー デザイン案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,700&family=Geist+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;600;700&family=Saira+Condensed:wght@600;700;800&family=Share+Tech+Mono&family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pg-bg:#f4f4f2; --pg-card:#ffffff; --pg-text:#18181b; --pg-sub:#5b5b63; --pg-line:#e2e2de; --pg-chip:#ebebe7;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --pg-bg:#121214; --pg-card:#1b1b1e; --pg-text:#ededef; --pg-sub:#a1a1aa; --pg-line:#2c2c31; --pg-chip:#26262a; }
+}
+:root[data-theme="dark"]{ --pg-bg:#121214; --pg-card:#1b1b1e; --pg-text:#ededef; --pg-sub:#a1a1aa; --pg-line:#2c2c31; --pg-chip:#26262a; }
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--pg-bg);color:var(--pg-text);font-family:"Noto Sans JP",system-ui,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:40px 16px 80px}
+.intro h1{font-size:28px;font-weight:700;letter-spacing:.02em;line-height:1.35}
+.intro p{color:var(--pg-sub);margin-top:10px;max-width:760px;font-size:15px}
+.assume{margin-top:18px;background:var(--pg-card);border:1px solid var(--pg-line);border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--pg-sub);max-width:760px}
+.assume b{color:var(--pg-text)}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 8px;position:sticky;top:0;padding:10px 0;background:var(--pg-bg);z-index:5}
+.jump a{font-size:13px;font-weight:600;text-decoration:none;color:var(--pg-text);background:var(--pg-chip);padding:6px 12px;border-radius:999px}
+.jump a:hover{background:var(--pg-line)}
+section.pat{margin-top:56px;padding-top:8px;scroll-margin-top:60px}
+.ph{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.ph .no{font-family:"Geist Mono",monospace;font-size:13px;color:var(--pg-sub)}
+.ph h2{font-size:22px;font-weight:700;line-height:1.4}
+.ph .tag{font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;background:var(--pg-chip);color:var(--pg-sub)}
+.concept{color:var(--pg-sub);font-size:14.5px;margin-top:6px;max-width:780px}
+.pbody{display:grid;grid-template-columns:auto 1fr;gap:32px;margin-top:20px;align-items:start}
+.phones{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 4px 16px;max-width:100%}
+.phones>div{scroll-snap-align:start;flex:none;text-align:center}
+.phones .cap2{font-size:12px;color:var(--pg-sub);margin-top:10px;font-weight:500}
+.spec{min-width:0}
+.spec h3{font-size:12px;letter-spacing:.08em;color:var(--pg-sub);font-weight:600;margin:0 0 8px}
+.sw{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.sw div{display:flex;align-items:center;gap:8px;background:var(--pg-card);border:1px solid var(--pg-line);border-radius:10px;padding:6px 10px 6px 6px;font-size:12px}
+.sw i{width:26px;height:26px;border-radius:7px;display:block;border:1px solid rgba(127,127,127,.25)}
+.sw code{font-family:"Geist Mono",monospace;color:var(--pg-sub);font-size:11px}
+.spec ul{list-style:none;display:grid;gap:8px;margin-bottom:22px}
+.spec li{font-size:13.5px;padding-left:16px;position:relative}
+.spec li::before{content:"";position:absolute;left:2px;top:.75em;width:6px;height:6px;border-radius:50%;background:var(--pg-sub)}
+.pc{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pc>div{background:var(--pg-card);border:1px solid var(--pg-line);border-radius:12px;padding:12px 14px;font-size:13px}
+.pc b{display:block;font-size:12px;margin-bottom:4px}
+.pc .good b{color:#1f7a4d} .pc .bad b{color:#b35c00}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .pc .good b{color:#5fd39a} :root:not([data-theme="light"]) .pc .bad b{color:#ffb35c} }
+.fonts{font-size:13.5px;margin-bottom:22px}
+.acc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.acc button{font:inherit;font-size:12.5px;font-weight:600;color:var(--pg-text);background:var(--pg-card);border:1px solid var(--pg-line);border-radius:999px;padding:6px 12px 6px 8px;display:flex;align-items:center;gap:6px;cursor:pointer;min-height:36px}
+.acc button i{width:14px;height:14px;border-radius:50%;display:block}
+.acc button.on{border-color:var(--pg-text);box-shadow:0 0 0 1px var(--pg-text) inset}
+.fonts span{display:inline-block;background:var(--pg-chip);border-radius:6px;padding:2px 8px;margin:0 6px 6px 0;font-size:12.5px}
+table.cmp{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--pg-card);border-radius:12px;overflow:hidden}
+.tblwrap{overflow-x:auto;margin-top:16px;border:1px solid var(--pg-line);border-radius:12px}
+table.cmp th,table.cmp td{padding:12px 14px;border-bottom:1px solid var(--pg-line);text-align:left;vertical-align:top;white-space:nowrap}
+table.cmp td.w{white-space:normal;min-width:220px}
+table.cmp th{font-size:12px;color:var(--pg-sub);font-weight:600;background:var(--pg-chip)}
+table.cmp tr:last-child td{border-bottom:0}
+.note{margin-top:56px}
+.note h2{font-size:20px}
+.note p,.note li{font-size:14px;color:var(--pg-sub)}
+.note ol{padding-left:20px;margin-top:8px;display:grid;gap:6px}
+@media (max-width:900px){ .pbody{grid-template-columns:1fr} .pc{grid-template-columns:1fr} }
+
+/* ---------- 端末の枠 ---------- */
+.phone{width:300px;height:640px;border-radius:46px;background:#0a0a0a;padding:9px;box-shadow:0 1px 0 1px #2b2b2b inset,0 24px 48px -16px rgba(0,0,0,.35)}
+.screen{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;display:flex;flex-direction:column;text-align:left}
+.sbar{height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 26px 0;font:600 12.5px/1 -apple-system,system-ui,sans-serif;position:relative;z-index:3}
+.sbar .isl{position:absolute;left:50%;top:9px;transform:translateX(-50%);width:86px;height:25px;border-radius:14px;background:#000}
+.sbar .r{display:flex;gap:5px;align-items:center}
+.sbar .bat{width:22px;height:11px;border:1.5px solid currentColor;border-radius:3px;position:relative;opacity:.9}
+.sbar .bat::after{content:"";position:absolute;inset:1.5px;right:5px;background:currentColor;border-radius:1px}
+.scroll{flex:1;overflow-y:auto;scrollbar-width:none;position:relative}
+.scroll::-webkit-scrollbar{display:none}
+.ico{display:inline-block;vertical-align:middle;flex:none}
+.tb{flex:none;display:flex;padding:8px 6px 20px;position:relative;z-index:2}
+.ti{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px}
+.row{display:flex;align-items:center}
+
+/* ====================== P0 現行 ====================== */
+.t0{--bg:#f5f5f7;--card:#fff;--tx:#1d1d1f;--sub:#555560;--ter:#6e6e73;--ln:#e5e5ea;--ac:#0071e3;--acs:rgba(0,113,227,.08);--ca:#b35c00;--cas:rgba(240,147,0,.08);--trk:#e8e8ed;
+  background:var(--bg);color:var(--tx);font-family:"Noto Sans JP",sans-serif}
+.t0 .hdr{display:flex;gap:10px;padding:2px 16px 6px}
+.t0 .ov{font-size:10.5px;color:var(--sub);font-weight:500;letter-spacing:.04em}
+.t0 .ttl{font-size:19px;font-weight:600;line-height:1.35}
+.t0 .sub{font-size:11.5px;color:var(--sub);font-weight:500}
+.t0 .ib{margin-left:auto;width:36px;height:36px;border-radius:8px;border:.5px solid var(--ln);background:var(--card);display:grid;place-items:center;color:var(--sub)}
+.t0 .body{padding:10px 16px 24px;display:grid;gap:10px}
+.t0 .card{background:var(--card);border-radius:12px;padding:14px;display:grid;gap:9px;box-shadow:0 2px 8px rgba(29,29,31,.06)}
+.t0 .na{border:1.5px solid var(--ac)}
+.t0 .nak{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--ac)}
+.t0 .h{font-size:14px;font-weight:600}
+.t0 .reason{display:flex;gap:6px;background:var(--acs);color:var(--ac);border-radius:5px;padding:7px 9px;font-size:10.5px;line-height:1.55;font-weight:500}
+.t0 .btn{background:var(--ac);color:#fff;border-radius:8px;min-height:38px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600}
+.t0 .lbl{font-size:10.5px;color:var(--sub);font-weight:500}
+.t0 .badge{font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:99px;background:#e8e8ed;color:var(--sub)}
+.t0 .badge.ca{background:var(--cas);color:var(--ca)}
+.t0 .num{font-family:"Geist Mono",monospace;font-variant-numeric:tabular-nums}
+.t0 .big{font-size:32px;font-weight:500;letter-spacing:-.02em}
+.t0 .stat{flex:1;background:var(--bg);border-radius:5px;padding:6px 7px;display:grid;gap:1px}
+.t0 .stat span{font-size:9px;color:var(--sub);font-weight:500}
+.t0 .stat b{font-family:"Geist Mono",monospace;font-size:11px;font-weight:400}
+.t0 .stat.ca{background:var(--cas);color:var(--ca)} .t0 .stat.ca span{color:var(--ca)}
+.t0 .div{height:.5px;background:var(--ln)}
+.t0 .capt{font-size:9.5px;color:var(--sub);line-height:1.6}
+.t0 .sect{display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:13px;font-weight:600}
+.t0 .sect .sa{font-size:10.5px;color:var(--sub);font-weight:500}
+.t0 .urow{display:flex;align-items:center;gap:9px;background:var(--card);border-radius:12px;padding:10px 12px;min-height:52px;box-shadow:0 2px 8px rgba(29,29,31,.06)}
+.t0 .urow.ca{background:var(--cas);box-shadow:none}
+.t0 .ul{font-size:12px} .t0 .ud{font-size:9.5px;color:var(--sub)}
+.t0 .uday{font-size:11px;font-weight:600;margin-left:auto}
+.t0 .urow.ca .uday{color:var(--ca)}
+.t0 .tb{background:var(--bg)}
+.t0 .tic{width:36px;height:36px;border-radius:50%;background:var(--card);display:grid;place-items:center;color:var(--sub);box-shadow:0 2px 8px rgba(29,29,31,.06)}
+.t0 .ti{color:var(--sub);font-weight:500}
+.t0 .ti.on .tic{background:var(--ac);color:#fff} .t0 .ti.on{color:var(--tx);font-weight:600}
+.t0 .seg{display:flex;background:#e8e8ed;border-radius:8px;padding:2px}
+.t0 .seg span{flex:1;text-align:center;font-size:11.5px;padding:6px 0;border-radius:6px;color:var(--sub);font-weight:500}
+.t0 .seg .on{background:#fff;color:var(--tx);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.t0 .bf{background:rgba(0,113,227,.35);border-radius:3px} .t0 .cur .bf{background:var(--ac)}
+.t0 .bl{color:var(--sub)}
+.t0 .ct{background:var(--trk);border-radius:3px} .t0 .cf{background:var(--ac);border-radius:3px}
+
+/* ====================== P1 ガレージ・ダーク ====================== */
+.t1{--bg:#0b0b0d;--card:#161619;--ln:#2a2a30;--tx:#f4f4f5;--sub:#a1a1aa;--red:#e60012;--redsoft:rgba(230,0,18,.14);--ca:#ffb020;--cas:rgba(255,176,32,.12);
+  background:var(--bg);color:var(--tx);font-family:"Noto Sans JP",sans-serif}
+.t1 .cond{font-family:"Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+.t1 .hdr{display:flex;gap:10px;padding:2px 16px 8px;align-items:flex-start}
+.t1 .ov{font-family:"Barlow Condensed",sans-serif;font-size:11.5px;letter-spacing:.18em;color:var(--sub);font-weight:600}
+.t1 .ov b{color:var(--red)}
+.t1 .ttl{font-size:19px;font-weight:700;line-height:1.35;margin-top:2px}
+.t1 .plate{display:inline-flex;gap:5px;align-items:baseline;margin-top:6px;background:#f2f2ee;color:#0f4d2e;border-radius:3px;padding:1px 7px;font-weight:700;font-size:10.5px;box-shadow:0 0 0 1px #0f4d2e inset}
+.t1 .plate small{font-size:8.5px}
+.t1 .ib{margin-left:auto;width:36px;height:36px;border-radius:8px;border:1px solid var(--ln);display:grid;place-items:center;color:var(--sub)}
+.t1 .body{padding:8px 16px 24px;display:grid;gap:10px}
+.t1 .card{background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:14px;display:grid;gap:10px}
+.t1 .next{background:linear-gradient(90deg,var(--redsoft),transparent 70%),var(--card);border:1px solid var(--ln);border-left:3px solid var(--red);border-radius:10px;padding:12px 14px;display:grid;gap:6px}
+.t1 .nk{font-family:"Barlow Condensed",sans-serif;letter-spacing:.2em;font-size:11px;color:var(--red);font-weight:700}
+.t1 .h{font-size:14px;font-weight:700}
+.t1 .next p{font-size:10.5px;color:var(--sub);line-height:1.6}
+.t1 .btn{background:var(--red);color:var(--onac,#fff);border-radius:7px;min-height:38px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;margin-top:4px}
+.t1 .lbl{font-family:"Barlow Condensed",sans-serif;letter-spacing:.16em;font-size:11px;color:var(--sub);font-weight:600;display:flex;align-items:center;gap:6px}
+.t1 .badge{font-family:"Noto Sans JP";letter-spacing:0;font-size:9px;font-weight:600;padding:1px 7px;border-radius:3px;background:#26262b;color:var(--sub)}
+.t1 .badge.ca{background:var(--cas);color:var(--ca)}
+.t1 .gw{position:relative;height:178px;margin:-4px 0 -8px}
+.t1 .gw svg{position:absolute;left:50%;top:0;transform:translateX(-50%)}
+.t1 .gn{position:absolute;left:0;right:0;top:66px;text-align:center}
+.t1 .gn b{font-family:"Barlow Condensed";font-weight:700;font-size:58px;line-height:1;letter-spacing:-.01em}
+.t1 .gn span{font-family:"Barlow Condensed";font-weight:600;font-size:18px;color:var(--sub);margin-left:3px}
+.t1 .gn div{font-size:10px;color:var(--sub);margin-top:2px}
+.t1 .s3{display:flex;border-top:1px solid var(--ln);padding-top:10px}
+.t1 .s3>div{flex:1;display:grid;gap:0;padding:0 8px;border-left:1px solid var(--ln)}
+.t1 .s3>div:first-child{border-left:0;padding-left:0}
+.t1 .s3 span{font-size:9px;color:var(--sub)}
+.t1 .s3 b{font-family:"Barlow Condensed";font-size:17px;font-weight:600;line-height:1.2}
+.t1 .s3 small{font-size:9px;color:var(--ca)}
+.t1 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.t1 .tile{background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:11px 12px}
+.t1 .tile b{display:block;font-family:"Barlow Condensed";font-size:24px;font-weight:600;line-height:1.15;margin-top:2px}
+.t1 .sect{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px}
+.t1 .sect b{font-size:13px;font-weight:700} .t1 .sect i{font-style:normal;font-family:"Barlow Condensed";letter-spacing:.18em;font-size:10.5px;color:var(--red);font-weight:700;margin-right:6px}
+.t1 .sect .sa{font-size:10px;color:var(--sub)}
+.t1 .urow{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:8px 10px}
+.t1 .db{width:46px;text-align:center;border-right:1px solid var(--ln);padding-right:8px}
+.t1 .db b{display:block;font-family:"Barlow Condensed";font-size:19px;font-weight:700;line-height:1.05}
+.t1 .db span{font-family:"Barlow Condensed";font-size:9.5px;letter-spacing:.15em;color:var(--sub)}
+.t1 .ul{font-size:12px;font-weight:600} .t1 .ud{font-size:9.5px;color:var(--sub)}
+.t1 .urow .badge{margin-left:auto}
+.t1 .tb{background:#0b0b0d;border-top:1px solid var(--ln);padding-top:0}
+.t1 .ti{color:#8a8a93;padding-top:9px;border-top:2px solid transparent;margin-top:-1px}
+.t1 .ti.on{color:#fff;border-top-color:var(--red)} .t1 .ti.on .tic{color:var(--red)}
+.t1 .seg{display:flex;border-bottom:1px solid var(--ln)}
+.t1 .seg span{flex:1;text-align:center;font-size:12px;padding:7px 0;color:var(--sub);font-weight:600}
+.t1 .seg .on{color:#fff;box-shadow:0 2px 0 var(--red)}
+.t1 .big{font-family:"Barlow Condensed";font-size:42px;font-weight:700;line-height:1.05}
+.t1 .bf{background:#34343b;border-radius:2px} .t1 .cur .bf{background:var(--red)}
+.t1 .bl{color:var(--sub);font-family:"Barlow Condensed";font-size:10px}
+.t1 .ct{background:#26262b;border-radius:2px} .t1 .cf{background:var(--red);border-radius:2px}
+.t1 .capt{font-size:9.5px;color:var(--sub)}
+.t1 .num{font-family:"Barlow Condensed";font-weight:600;font-size:14px}
+.t1 .div{height:1px;background:var(--ln)}
+
+/* ====================== P2 ピットボード ====================== */
+.t2{--bg:#efeee9;--card:#fff;--ink:#121212;--sub:#5c5c58;--ln:#d9d8d2;--red:#d10a0a;--yel:#ffd60a;
+  background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",sans-serif}
+.t2 .sbar{background:var(--ink);color:#fff}
+.t2 .hdr{background:var(--ink);color:#fff;padding:2px 16px 14px;display:flex;gap:10px;position:relative}
+.t2 .hdr::after{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px;background:linear-gradient(var(--red) 0 5px,#fff 5px 7px,var(--ink) 7px 10px)}
+.t2 .ov{font-family:"Saira Condensed";font-weight:700;font-size:12px;letter-spacing:.14em;color:var(--yel)}
+.t2 .ttl{font-size:19px;font-weight:700;line-height:1.35}
+.t2 .sub{font-size:11px;color:#bdbdb6;font-weight:500}
+.t2 .ib{margin-left:auto;width:36px;height:36px;border-radius:4px;background:#262626;display:grid;place-items:center;color:#fff}
+.t2 .body{padding:22px 14px 24px;display:grid;gap:10px}
+.t2 .card{background:var(--card);border-radius:4px;padding:14px;display:grid;gap:10px;box-shadow:0 1px 0 var(--ln)}
+.t2 .board{background:var(--ink);color:#fff;border-radius:4px;padding:12px 14px 14px;display:grid;gap:4px;position:relative;overflow:hidden}
+.t2 .board::before{content:"";position:absolute;right:-18px;top:-18px;width:70px;height:70px;background:repeating-conic-gradient(#fff 0 25%,transparent 0 50%) 0 0/14px 14px;opacity:.12;transform:rotate(12deg)}
+.t2 .bk{font-family:"Saira Condensed";font-weight:700;font-size:11px;letter-spacing:.16em;color:var(--yel);display:flex;gap:6px;align-items:center}
+.t2 .br{display:grid;grid-template-columns:62px 1fr;align-items:baseline;border-top:1px solid #2e2e2e;padding-top:3px}
+.t2 .br:first-of-type{border-top:0}
+.t2 .br span{font-family:"Saira Condensed";font-weight:700;font-size:15px;letter-spacing:.06em;color:#9a9a92}
+.t2 .br b{font-family:"Saira Condensed";font-weight:800;font-size:40px;line-height:1.05;letter-spacing:.01em}
+.t2 .br b small{font-size:17px;margin-left:4px;color:#cfcfc8;font-weight:700}
+.t2 .br.s b{font-size:26px}
+.t2 .shift{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:8px}
+.t2 .shift i{height:9px;border-radius:2px;background:#2e2e2e}
+.t2 .shift i.on{background:#f2f2ec} .t2 .shift i.on.r{background:var(--red)} .t2 .shift i.r{box-shadow:0 0 0 1px var(--red) inset}
+.t2 .shl{display:flex;justify-content:space-between;font-size:9px;color:#9a9a92;margin-top:3px}
+.t2 .next{background:var(--card);border-radius:4px;padding:12px 14px;display:grid;gap:6px;border-left:6px solid var(--red)}
+.t2 .nk{font-family:"Saira Condensed";font-weight:800;font-size:12px;letter-spacing:.16em;color:var(--red)}
+.t2 .h{font-size:14px;font-weight:700}
+.t2 .next p{font-size:10.5px;color:var(--sub);line-height:1.6}
+.t2 .btn{background:var(--red);color:#fff;border-radius:3px;min-height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:13px;font-weight:700;margin-top:2px}
+.t2 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.t2 .tile{background:var(--card);border-radius:4px;padding:10px 12px;border-top:3px solid var(--ink)}
+.t2 .tile span,.t2 .lbl{font-size:10px;color:var(--sub);font-weight:600}
+.t2 .tile b{display:block;font-family:"Saira Condensed";font-size:26px;font-weight:800;line-height:1.1}
+.t2 .sect{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-weight:700;font-size:13px}
+.t2 .sect::before{content:"";width:14px;height:14px;margin-right:6px;background:repeating-conic-gradient(var(--ink) 0 25%,#fff 0 50%) 0 0/7px 7px;border:1px solid var(--ink)}
+.t2 .sect span:first-of-type{margin-right:auto}
+.t2 .sect .sa{font-size:10px;color:var(--sub);font-weight:500}
+.t2 .urow{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:4px;padding:8px 10px 8px 8px}
+.t2 .nb{width:44px;height:40px;border-radius:3px;background:var(--ink);color:#fff;display:grid;place-items:center;line-height:1}
+.t2 .nb b{font-family:"Saira Condensed";font-weight:800;font-size:22px}
+.t2 .nb small{font-size:8px;font-weight:600;margin-top:-6px}
+.t2 .urow.ca .nb{background:var(--yel);color:var(--ink)}
+.t2 .ul{font-size:12px;font-weight:600} .t2 .ud{font-size:9.5px;color:var(--sub)}
+.t2 .flag{margin-left:auto;font-size:9px;font-weight:700;padding:2px 6px;border-radius:2px;background:var(--yel);color:var(--ink)}
+.t2 .flag.n{background:#e4e3dd;color:var(--sub)}
+.t2 .tb{background:#fff;border-top:2px solid var(--ink)}
+.t2 .tic{width:38px;height:30px;border-radius:3px;display:grid;place-items:center;color:#55554f}
+.t2 .ti{color:#55554f;font-weight:600}
+.t2 .ti.on .tic{background:var(--ink);color:#fff} .t2 .ti.on{color:var(--ink)}
+.t2 .ti.rec .tic{color:var(--red)}
+.t2 .seg{display:flex;gap:4px}
+.t2 .seg span{flex:1;text-align:center;font-size:12px;padding:6px 0;border-radius:3px;background:#e2e1db;font-weight:600;color:var(--sub)}
+.t2 .seg .on{background:var(--ink);color:#fff}
+.t2 .big{font-family:"Saira Condensed";font-size:44px;font-weight:800;line-height:1.05}
+.t2 .bf{background:#b9b8b1} .t2 .cur .bf{background:var(--red)}
+.t2 .bl{color:var(--sub);font-family:"Saira Condensed";font-weight:700;font-size:10px}
+.t2 .ct{background:#e4e3dd} .t2 .cf{background:var(--ink)}
+.t2 .capt{font-size:9.5px;color:var(--sub)}
+.t2 .num{font-family:"Saira Condensed";font-weight:700;font-size:15px}
+.t2 .div{height:1px;background:var(--ln)}
+
+/* ====================== P3 ダークブルーマイカ ====================== */
+.t3{--navy:#13284d;--navy2:#0b1932;--iv:#f6f4ee;--card:#fff;--ink:#1a2233;--sub:#5d6475;--ln:#e6e1d6;--brass:#b8935a;--brassT:#866530;--ver:#b5401b;--vers:rgba(181,64,27,.08);
+  background:var(--iv);color:var(--ink);font-family:"Zen Kaku Gothic New",sans-serif}
+.t3 .min{font-family:"Shippori Mincho B1",serif}
+.t3 .top{background:radial-gradient(120% 90% at 85% -10%,rgba(255,255,255,.22),transparent 55%),linear-gradient(160deg,#1d3a6b,var(--navy) 45%,var(--navy2));color:#fff;padding-bottom:64px}
+.t3 .sbar{color:#fff;background:#1d3a6b}
+.t3 .hdr{display:flex;gap:10px;padding:2px 18px 0}
+.t3 .ov{font-size:10.5px;color:#d9c39b;letter-spacing:.12em;font-weight:500}
+.t3 .ttl{font-family:"Shippori Mincho B1";font-size:19px;font-weight:700;line-height:1.4;letter-spacing:.03em}
+.t3 .sub{font-size:11px;color:#b9c3d6}
+.t3 .ib{margin-left:auto;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.28);display:grid;place-items:center;color:#fff}
+.t3 .body{padding:0 16px 24px;display:grid;gap:12px;margin-top:-50px;position:relative}
+.t3 .card{background:var(--card);border-radius:16px;padding:16px;display:grid;gap:10px;box-shadow:0 10px 24px -14px rgba(11,25,50,.35),0 0 0 1px rgba(11,25,50,.04)}
+.t3 .hero{display:flex;align-items:center;gap:12px}
+.t3 .lbl{font-size:10.5px;color:var(--sub);font-weight:500;letter-spacing:.06em}
+.t3 .hn{font-family:"Shippori Mincho B1";font-weight:700;font-size:46px;line-height:1.05;letter-spacing:.01em}
+.t3 .hn small{font-size:15px;margin-left:3px;color:var(--sub);font-weight:500}
+.t3 .rw{position:relative;width:80px;height:80px;margin-left:auto}
+.t3 .rw div{position:absolute;inset:0;display:grid;place-items:center;font-family:"Shippori Mincho B1";font-size:15px;font-weight:700;color:var(--navy)}
+.t3 .rl{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--ln);padding-top:10px}
+.t3 .rl div{display:grid;padding-left:9px;border-left:1px solid var(--ln)} .t3 .rl div:first-child{border-left:0;padding-left:0}
+.t3 .rl span{font-size:9px;color:var(--sub)} .t3 .rl b{font-family:"Shippori Mincho B1";font-size:15px;font-weight:700}
+.t3 .rl small{font-size:9px;color:var(--brassT);font-weight:700}
+.t3 .next{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start}
+.t3 .stamp{grid-row:span 2;width:40px;height:40px;border-radius:50%;border:2px solid var(--ver);color:var(--ver);display:grid;place-items:center;font-family:"Shippori Mincho B1";font-weight:700;font-size:17px;transform:rotate(-8deg)}
+.t3 .h{font-size:14.5px;font-weight:700;font-family:"Shippori Mincho B1"}
+.t3 .next p{font-size:10.5px;color:var(--sub);line-height:1.65}
+.t3 .btn{grid-column:1/-1;background:var(--navy);color:#fff;border-radius:99px;min-height:40px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;margin-top:6px}
+.t3 .shop{display:flex;gap:10px;align-items:center;background:var(--navy);color:#fff;border-radius:16px;padding:12px 14px}
+.t3 .shop .ic{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;color:#e3cfa6}
+.t3 .shop b{font-size:12.5px} .t3 .shop span{font-size:9.5px;color:#b9c3d6;display:block}
+.t3 .shop .go{margin-left:auto;white-space:nowrap;flex:none;font-size:10.5px;font-weight:700;background:#e3cfa6;color:var(--navy2);border-radius:99px;padding:5px 10px}
+.t3 .tiles{display:grid;grid-template-columns:1fr 1fr}
+.t3 .tiles div{padding:0 12px;border-left:1px solid var(--ln)} .t3 .tiles div:first-child{border-left:0;padding-left:0}
+.t3 .tiles b{display:block;font-family:"Shippori Mincho B1";font-size:22px;font-weight:700}
+.t3 .sect{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.t3 .sect b{font-family:"Shippori Mincho B1";font-size:14px;font-weight:700}
+.t3 .sect .sa{font-size:10px;color:var(--brassT);font-weight:700}
+.t3 .ledger{background:var(--card);border-radius:16px;padding:2px 14px;box-shadow:0 0 0 1px rgba(11,25,50,.05)}
+.t3 .urow{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px dashed var(--ln)}
+.t3 .urow:first-child{border-top:0}
+.t3 .ld{width:40px;text-align:center;font-family:"Shippori Mincho B1"}
+.t3 .ld b{display:block;font-size:17px;line-height:1.1} .t3 .ld span{font-size:9px;color:var(--sub)}
+.t3 .ul{font-size:12px;font-weight:700} .t3 .ud{font-size:9.5px;color:var(--sub)}
+.t3 .hk{margin-left:auto;font-size:9.5px;font-weight:700;color:var(--ver);border:1px solid var(--ver);border-radius:3px;padding:1px 5px;transform:rotate(-3deg)}
+.t3 .hk.n{color:var(--sub);border-color:var(--ln);transform:none}
+.t3 .tb{background:#fff;box-shadow:0 -1px 0 var(--ln)}
+.t3 .ti{color:#7c8292;font-weight:500}
+.t3 .ti.on{color:var(--navy);font-weight:700}
+.t3 .ti.on .tic{position:relative} .t3 .ti.on .tic::after{content:"";position:absolute;left:50%;bottom:-4px;width:4px;height:4px;border-radius:50%;background:var(--brass);transform:translateX(-50%)}
+.t3 .seg{display:flex;background:#ebe7dd;border-radius:99px;padding:3px}
+.t3 .seg span{flex:1;text-align:center;font-size:11.5px;padding:6px 0;border-radius:99px;color:var(--sub);font-weight:500}
+.t3 .seg .on{background:var(--navy);color:#fff;font-weight:700}
+.t3 .big{font-family:"Shippori Mincho B1";font-size:38px;font-weight:700;line-height:1.1}
+.t3 .bf{background:#c9d1e0;border-radius:99px} .t3 .cur .bf{background:var(--navy)}
+.t3 .bl{color:var(--sub)}
+.t3 .ct{background:#efebe2;border-radius:99px} .t3 .cf{background:var(--brass);border-radius:99px}
+.t3 .capt{font-size:9.5px;color:var(--sub)}
+.t3 .num{font-family:"Shippori Mincho B1";font-weight:700;font-size:14px}
+.t3 .div{height:1px;background:var(--ln)}
+.t3 .costtop{padding-bottom:28px}
+.t3 .costbody{margin-top:-18px}
+
+/* ====================== P4 メーターパネル ====================== */
+.t4{--bg:#050607;--pn:#0e1013;--ln:#1f2328;--tx:#e9e7e2;--sub:#8c9097;--amb:#ffb000;--ambd:rgba(255,176,0,.16);--warn:#ff4d3d;
+  background:radial-gradient(140% 60% at 50% 0%,#14171b,var(--bg) 60%);color:var(--tx);font-family:"Noto Sans JP",sans-serif}
+.t4 .mono{font-family:"Share Tech Mono",monospace}
+.t4 .hdr{padding:2px 16px 8px;display:flex;gap:10px}
+.t4 .odo{display:flex;gap:2px;margin-top:2px;align-items:center}
+.t4 .odo i{font-style:normal;font-family:"Share Tech Mono";font-size:13px;width:13px;height:19px;display:grid;place-items:center;background:#16191d;border-radius:2px;color:var(--tx);box-shadow:0 1px 0 #000 inset}
+.t4 .odo em{font-style:normal;font-size:9px;color:var(--sub);margin:0 4px 0 0;letter-spacing:.1em}
+.t4 .odo span{font-size:10px;color:var(--sub);margin-left:4px}
+.t4 .ttl{font-size:18px;font-weight:700;line-height:1.35}
+.t4 .ib{margin-left:auto;width:36px;height:36px;border-radius:50%;background:var(--pn);border:1px solid var(--ln);display:grid;place-items:center;color:var(--sub)}
+.t4 .body{padding:6px 14px 24px;display:grid;gap:10px}
+.t4 .card{background:linear-gradient(180deg,#121519,var(--pn));border:1px solid var(--ln);border-radius:14px;padding:14px;display:grid;gap:10px}
+.t4 .lamps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.t4 .lamp{display:grid;justify-items:center;gap:3px;padding:7px 0 6px;border-radius:10px;background:var(--pn);border:1px solid var(--ln);color:#3a3f46;font-size:9px}
+.t4 .lamp.on{color:var(--amb);border-color:rgba(255,176,0,.35);box-shadow:0 0 14px -4px rgba(255,176,0,.55) inset}
+.t4 .lamp.on svg{filter:drop-shadow(0 0 4px rgba(255,176,0,.8))}
+.t4 .lamp.dim{color:#c58a10}
+.t4 .lamp span{color:var(--sub)} .t4 .lamp.on span{color:var(--amb)}
+.t4 .lbl{font-size:10px;color:var(--sub);letter-spacing:.12em;display:flex;align-items:center;gap:6px}
+.t4 .badge{font-size:9px;padding:1px 6px;border-radius:99px;border:1px solid var(--ln);color:var(--sub);letter-spacing:0}
+.t4 .seven{font-family:"Share Tech Mono";font-size:62px;line-height:1;color:var(--amb);text-shadow:0 0 18px rgba(255,176,0,.45);display:flex;align-items:baseline;gap:6px}
+.t4 .seven small{font-size:16px;color:var(--sub);text-shadow:none}
+.t4 .fuel{display:flex;align-items:center;gap:6px}
+.t4 .fuel b{font-family:"Share Tech Mono";font-weight:400;font-size:11px;color:var(--sub)}
+.t4 .segs{flex:1;display:grid;grid-template-columns:repeat(20,1fr);gap:2px}
+.t4 .segs i{height:12px;border-radius:1.5px;background:#1a1d22}
+.t4 .segs i.on{background:var(--amb);box-shadow:0 0 6px rgba(255,176,0,.7)}
+.t4 .fcap{display:flex;justify-content:space-between;font-size:9.5px;color:var(--sub)}
+.t4 .fcap em{font-style:normal;color:var(--amb)}
+.t4 .trip{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.t4 .trip div{background:#0a0c0e;border:1px solid var(--ln);border-radius:8px;padding:6px 8px}
+.t4 .trip span{display:block;font-size:8.5px;color:var(--sub);letter-spacing:.06em}
+.t4 .trip b{font-family:"Share Tech Mono";font-weight:400;font-size:14px}
+.t4 .next{border:1px solid rgba(255,176,0,.45);background:linear-gradient(180deg,rgba(255,176,0,.08),transparent),var(--pn);border-radius:14px;padding:12px 14px;display:grid;gap:6px}
+.t4 .nk{font-size:10px;letter-spacing:.16em;color:var(--amb);font-weight:700;display:flex;gap:6px;align-items:center}
+.t4 .h{font-size:14px;font-weight:700}
+.t4 .next p{font-size:10.5px;color:var(--sub);line-height:1.6}
+.t4 .btn{background:var(--amb);color:#140e00;border-radius:10px;min-height:38px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;margin-top:4px}
+.t4 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.t4 .tile{background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:10px 12px}
+.t4 .tile span{font-size:9.5px;color:var(--sub)}
+.t4 .tile b{display:block;font-family:"Share Tech Mono";font-weight:400;font-size:22px}
+.t4 .sect{display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:13px;font-weight:700}
+.t4 .sect .sa{font-size:10px;color:var(--sub);font-weight:500}
+.t4 .urow{display:flex;gap:10px;align-items:center;background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:9px 12px}
+.t4 .dot{width:8px;height:8px;border-radius:50%;background:#2d3238}
+.t4 .dot.on{background:var(--amb);box-shadow:0 0 8px var(--amb)}
+.t4 .ul{font-size:12px;font-weight:600} .t4 .ud{font-size:9.5px;color:var(--sub)}
+.t4 .uday{margin-left:auto;font-family:"Share Tech Mono";font-size:16px} .t4 .uday small{font-family:"Noto Sans JP";font-size:9px;color:var(--sub);margin-left:2px}
+.t4 .urow.on .uday{color:var(--amb)}
+.t4 .tb{background:#050607;border-top:1px solid var(--ln)}
+.t4 .ti{color:#6f747c}
+.t4 .ti.on{color:var(--amb)} .t4 .ti.on svg{filter:drop-shadow(0 0 5px rgba(255,176,0,.8))}
+.t4 .seg{display:flex;background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:3px}
+.t4 .seg span{flex:1;text-align:center;font-size:11.5px;padding:5px 0;border-radius:7px;color:var(--sub)}
+.t4 .seg .on{background:#1b1f24;color:var(--amb);box-shadow:0 0 0 1px rgba(255,176,0,.35) inset}
+.t4 .big{font-family:"Share Tech Mono";font-size:40px;line-height:1.1;color:var(--amb);text-shadow:0 0 14px rgba(255,176,0,.35)}
+.t4 .bf{background:repeating-linear-gradient(0deg,#3a3320 0 3px,transparent 3px 5px)} .t4 .cur .bf{background:repeating-linear-gradient(0deg,var(--amb) 0 3px,transparent 3px 5px);filter:drop-shadow(0 0 4px rgba(255,176,0,.6))}
+.t4 .bl{color:var(--sub);font-family:"Share Tech Mono";font-size:9.5px}
+.t4 .ct{background:#1a1d22;border-radius:2px} .t4 .cf{background:var(--amb);border-radius:2px;box-shadow:0 0 6px rgba(255,176,0,.5)}
+.t4 .capt{font-size:9.5px;color:var(--sub)}
+.t4 .num{font-family:"Share Tech Mono";font-size:15px}
+.t4 .div{height:1px;background:var(--ln)}
+
+/* 維持費画面の共通の骨組み */
+.cbody{padding:8px 16px 24px;display:grid;gap:10px}
+.bars{display:flex;align-items:flex-end;gap:5px;height:118px}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.bf{width:72%}
+.bl{font-size:9px;white-space:nowrap}
+.cat{display:grid;gap:4px}
+.cat .r{display:flex;justify-content:space-between;font-size:11.5px}
+.cat .r em{font-style:normal;font-size:9.5px;opacity:.75;margin-left:4px}
+.ct{height:6px;overflow:hidden}
+.cf{height:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two span{display:block;font-size:9.5px;opacity:.75}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <h1>カーケイボー デザイン案</h1>
+    <p>同じ中身（ホームと維持費の2画面）を5つの見た目で並べました。00 は今のアプリで、比べるための基準です。01〜04 がたにぐち自動車さんの雰囲気に寄せた案です。</p>
+    <div class="assume">
+      <b>前提：</b> taniguchi-automotive.jp には作業環境から接続できず、サイトの中までは見られていません。検索結果から分かったことをもとに作りました。<b>愛知県一宮市のツアラーV専門店。オーナーの谷口敦史さんは整備歴20年以上で、ご自身もツアラーVでトップカテゴリーを走るドライバー。YouTube（5.2万人）で「エンジンオイルの闇」シリーズを配信しているオイルに強いお店</b>です。サムネイルの雰囲気は、黒地に白のロゴ、赤白のドリフト車、黒×ライムグリーンのスーツでした。ロゴや店の正式な色が分かれば差し替えます。
+    </div>
+  </header>
+  <nav class="jump" id="jump"></nav>
+  <main id="pats"></main>
+
+  <section class="note" id="cmp">
+    <h2>比較</h2>
+    <div class="tblwrap"><table class="cmp">
+      <thead><tr><th>案</th><th>印象</th><th>合いそうな利用者</th><th>屋外での見やすさ</th><th>アプリ側の作業</th><th class="w">気をつける点</th></tr></thead>
+      <tbody>
+        <tr><td>00 現行</td><td>清潔・中立</td><td>誰でも</td><td>◎</td><td>なし</td><td class="w">お店らしさがなく、どの工場のアプリか分かりにくい</td></tr>
+        <tr><td>01 ガレージ・ダーク</td><td>走り屋・チューニング</td><td>常連・クルマ好き</td><td>○</td><td>色の入れ替え、数字用フォント1つ追加、メーター部品</td><td class="w">赤がメインの色なので、注意表示はオレンジに分けている。赤＝危険と読まれないよう文言で補う</td></tr>
+        <tr><td>02 ピットボード</td><td>レース・元気</td><td>幅広い（明るい画面）</td><td>◎</td><td>色の入れ替え、数字用フォント1つ追加</td><td class="w">黄色は注意表示だけに使う。チェッカー柄はアクセント程度に留める</td></tr>
+        <tr><td>03 ダークブルーマイカ</td><td>上質・職人</td><td>年配の方・一般のお客さん</td><td>◎</td><td>色の入れ替え、明朝体の追加（約5MB/ウェイト）</td><td class="w">明朝体はアプリの容量が増える。数字だけ明朝にする手もある</td></tr>
+        <tr><td>04 メーターパネル</td><td>遊び心・インパネ</td><td>クルマ好き</td><td>△</td><td>メーター・警告灯の部品を新しく作る</td><td class="w">暗い画面に光る色は日なたで読みにくい。「残り16%」は今の「進み84%」と向きが逆になる</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="note">
+    <h2>おすすめ</h2>
+    <p style="margin-top:8px"><b style="color:var(--pg-text)">01 ガレージ・ダークを軸にするのがおすすめです。</b>お店の発信（黒地の写真、ドリフト、「オイルの闇」）と一番つながり、アプリの主役であるオイル交換をタコメーターで印象的に見せられます。一般のお客さんや屋外での見やすさが気になる場合は、02 ピットボードの明るい画面に 01 の色を合わせる折衷案もあります。</p>
+  </section>
+  <section class="note">
+    <h2>決める前に確認したいこと</h2>
+    <ol>
+      <li>依頼書 01 の6章で、色・文字・角丸は Ledra の Web 版に合わせると決まっています。どの案を選んでも、たにぐち自動車さんとこの指定を変える合意が必要です。</li>
+      <li>お店のロゴ・店の色・写真をもらえれば、01〜04 の色はすぐ差し替えられます。</li>
+      <li>03 の「いつもの工場に相談」（予約・電話への導線）は依頼書にない追加の提案です。お店の売上につながるので、どの案にも付けられます。</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+/* ---------- アイコン（Feather Icons, MIT） ---------- */
+const P = {
+  home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+  wallet:'<rect x="2" y="5" width="20" height="15" rx="2"/><path d="M2 10h20"/><path d="M16 15h2"/>',
+  plus:'<circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>',
+  bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  chev:'<path d="M9 18l6-6-6-6"/>',
+  arrow:'<path d="M5 12h14M12 5l7 7-7 7"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  warn:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
+  tool:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/>',
+  drop:'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+  phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+};
+const ic = (n, s = 18, w = 2) => `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${P[n]}</svg>`;
+
+/* ---------- 共通のデータ（どの案も同じ中身） ---------- */
+const D = {
+  date: '2026年10月24日（土）', car: 'チェイサー ツアラーV', plate: '一宮 300 た 10-00',
+  remain: 820, pct: 0.84, prev: '7/12', prevKm: '182,400', dueKm: '187,400', due: '11/15', days: 22, odo: '186580',
+  month: '¥18,700', year: '¥236,400',
+  up: [
+    { l: 'オイル交換', md: '11/15', dw: 'SUN', d: 22, full: '2026/11/15', est: true, soon: true },
+    { l: '自賠責保険の満了', md: '12/03', dw: 'THU', d: 40, full: '2026/12/03', soon: false },
+    { l: '12か月点検', md: '01/10', dw: 'SUN', d: 78, full: '2027/01/10', soon: false },
+  ],
+  bars: [['1',12300],['2',9800],['3',18400],['4',31200],['5',61500],['6',14200],['7',22800],['8',9600],['9',37900],['10',18700]],
+  cats: [['ガソリン','¥84,600',.36],['整備・部品','¥72,000',.30],['自動車税','¥45,000',.19],['保険','¥34,800',.15]],
+};
+const TABS = [['home','ホーム'],['wallet','維持費'],['plus','記録する'],['bell','通知']];
+
+const tabbar = (active) => `<div class="tb">${TABS.map(([i, l], k) =>
+  `<div class="ti${k === active ? ' on' : ''}${k === 2 ? ' rec' : ''}"><div class="tic">${ic(i, 19)}</div>${l}</div>`).join('')}</div>`;
+const sbar = () => `<div class="sbar"><span>9:41</span><div class="isl"></div><div class="r">${ic('chev',0)}<svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.3" y="5" width="3" height="6" rx="1"/><rect x="8.6" y="2.5" width="3" height="8.5" rx="1"/><rect x="12.9" y="0" width="3" height="11" rx="1"/></svg><div class="bat"></div></div></div>`;
+const phone = (t, inner, active) => `<div class="phone"><div class="screen ${t}">${sbar()}<div class="scroll">${inner}</div>${tabbar(active)}</div></div>`;
+
+function ring(s, sw, pct, col, trk) {
+  const r = (s - sw) / 2, c = 2 * Math.PI * r, h = s / 2;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}"><circle cx="${h}" cy="${h}" r="${r}" fill="none" stroke="${trk}" stroke-width="${sw}"/><circle cx="${h}" cy="${h}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" transform="rotate(-90 ${h} ${h})"/></svg>`;
+}
+const pt = (cx, cy, r, a) => { const t = a * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; };
+const arc = (cx, cy, r, a0, a1) => { const [x0, y0] = pt(cx, cy, r, a0), [x1, y1] = pt(cx, cy, r, a1); return `M${x0} ${y0} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`; };
+
+/* タコメーター風（01） */
+function tach(pct) {
+  const cx = 120, cy = 116, r = 96, a0 = 150, sw = 240, ap = a0 + sw * pct;
+  let t = '';
+  for (let i = 0; i <= 50; i++) {
+    const a = a0 + sw * i / 50, major = i % 5 === 0;
+    const [x0, y0] = pt(cx, cy, r - (major ? 20 : 14), a), [x1, y1] = pt(cx, cy, r - 9, a);
+    t += `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" style="stroke:${i >= 40 ? 'var(--red)' : major ? '#8a8a93' : '#3a3a41'}" stroke-width="${major ? 2 : 1}"/>`;
+  }
+  const [mx0, my0] = pt(cx, cy, r + 3, ap), [mx1, my1] = pt(cx, cy, r - 26, ap);
+  const [lx0, ly0] = pt(cx, cy, r + 4, a0), [lx1, ly1] = pt(cx, cy, r + 4, a0 + sw);
+  return `<svg width="240" height="182" viewBox="0 0 240 182">
+    <path d="${arc(cx, cy, r, a0, a0 + sw)}" stroke="#202024" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="${arc(cx, cy, r, a0, ap)}" stroke="url(#g1)" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" style="stop-color:var(--red);stop-opacity:.25"/><stop offset="1" style="stop-color:var(--red)"/></linearGradient></defs>
+    ${t}
+    <line x1="${mx0}" y1="${my0}" x2="${mx1}" y2="${my1}" stroke="#f4f4f5" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="${mx1}" cy="${my1}" r="3" fill="#f4f4f5"/>
+    <text x="${lx0 + 4}" y="${ly0 + 14}" fill="#8a8a93" font-size="9" font-family="Noto Sans JP">前回交換</text>
+    <text x="${lx1 - 4}" y="${ly1 + 14}" style="fill:var(--red)" font-size="9" font-family="Noto Sans JP" text-anchor="end">交換時期</text>
+  </svg>`;
+}
+
+/* ---------- 維持費の画面（骨組みは共通、見た目は各案のCSS） ---------- */
+function costBody(numCls = 'num') {
+  const max = Math.max(...D.bars.map(b => b[1]));
+  return `
+    <div class="seg"><span>今月</span><span class="on">今年</span><span>すべて</span></div>
+    <div class="card">
+      <div class="lbl">登録済みの合計</div>
+      <div class="big">¥236,400</div>
+      <div class="capt">2026/1/1 〜 2026/10/24。記録した支出だけの合計です</div>
+      <div class="div"></div>
+      <div class="two"><div><span>月平均</span><b class="${numCls}">¥23,640</b></div><div><span>1kmあたり</span><b class="${numCls}">¥20</b><span>期間の走行 11,820 km</span></div></div>
+    </div>
+    <div class="card">
+      <div class="lbl">月ごとの推移</div>
+      <div class="bars">${D.bars.map(([m, v], i) => `<div class="bc${i === D.bars.length - 1 ? ' cur' : ''}"><div class="bf" style="height:${Math.max(3, v / max * 92)}px"></div><div class="bl">${m}月</div></div>`).join('')}</div>
+    </div>
+    <div class="card">
+      <div class="lbl">項目別の内訳</div>
+      ${D.cats.map(([n, v, r]) => `<div class="cat"><div class="r"><span>${n}</span><span><b class="${numCls}" style="font-weight:inherit">${v}</b><em>${Math.round(r * 100)}%</em></span></div><div class="ct"><div class="cf" style="width:${r * 100}%"></div></div></div>`).join('')}
+    </div>`;
+}
+
+/* ====================== 各案 ====================== */
+const PATTERNS = [
+{
+  id: 'p0', no: '00', name: '現行', tag: '比較用',
+  concept: '今のアプリそのまま。Apple の純正アプリに近い、明るく中立的な見た目です。',
+  swatches: [['#f5f5f7','背景'],['#ffffff','カード'],['#1d1d1f','文字'],['#0071e3','アクセント'],['#b35c00','注意']],
+  fonts: ['Noto Sans JP（本文）','Geist Mono（数字）'],
+  points: ['「次にすること」の枠線カードが最上段','オイル交換は大きな数字と円グラフ','タブは丸いボタン'],
+  good: '読みやすく、誰にでも合う', bad: 'お店らしさがない。どの工場のアプリか伝わらない',
+  home: () => `
+    <div class="hdr"><div><div class="ov">${D.date}</div><div class="ttl">${D.car}</div><div class="sub">${D.plate}</div></div><div class="ib">${ic('gear',17)}</div></div>
+    <div class="body">
+      <div class="card na"><div class="nak">次にすること</div><div class="h">オイル交換の時期です</div>
+        <div class="reason">${ic('info',13)}<span>推定であと820km・目安日まで22日。交換したら記録すると、次の目安を出し直します。</span></div>
+        <div class="btn">オイル交換を記録する ${ic('arrow',15)}</div></div>
+      <div class="card">
+        <div class="row" style="gap:10px"><div style="flex:1;display:grid;gap:2px">
+          <div class="row" style="gap:6px"><span class="lbl">次回のオイル交換まで</span><span class="badge">推定</span></div>
+          <div class="row" style="align-items:baseline;gap:3px"><b style="font-size:14px;font-weight:600">あと</b><span class="num big" style="color:var(--ca)">820</span><b style="font-size:14px;font-weight:600;color:var(--sub)">km</b></div></div>
+          <div style="position:relative;width:60px;height:60px">${ring(60,5,D.pct,'#b35c00','#e8e8ed')}<div class="num" style="position:absolute;inset:0;display:grid;place-items:center;font-size:11px;color:#b35c00">84%</div></div></div>
+        <div class="row" style="gap:6px"><div class="stat"><span>前回 ${D.prev}</span><b>${D.prevKm} km</b></div><div class="stat"><span>予定距離</span><b>${D.dueKm} km</b></div><div class="stat ca"><span>目安日</span><b>${D.due}</b><span>あと22日</span></div></div>
+        <div class="div"></div>
+        <div class="capt">予定距離に届く予測日 11/15 ／ 期間の目安 1/12<br>早い方を目安日にしています。走行ペースは記録から推定（1日約38km）。</div>
+      </div>
+      <div class="card" style="grid-template-columns:1fr 1fr auto;align-items:center"><div><div class="lbl">今月の維持費</div><div class="num" style="font-size:18px">${D.month}</div></div><div><div class="lbl">今年の維持費</div><div class="num" style="font-size:18px">${D.year}</div></div><span style="color:#6e6e73">${ic('chev',16)}</span></div>
+      <div class="sect"><span>もうすぐの期限</span><span class="sa">期限を登録 →</span></div>
+      ${D.up.map(u => `<div class="urow${u.soon ? ' ca' : ''}"><span class="badge${u.soon ? ' ca' : ''}">${u.soon ? 'もうすぐ' : '予定'}</span><div><div class="ul">${u.l}</div><div class="ud">${u.full}${u.est ? '（推定）' : ''}</div></div><span class="uday">あと${u.d}日</span><span style="color:#6e6e73">${ic('chev',14)}</span></div>`).join('')}
+    </div>`,
+  costs: () => `<div class="hdr"><div><div class="ttl">維持費</div></div><div class="ib">${ic('gear',17)}</div></div><div class="cbody">${costBody()}</div>`,
+},
+{
+  id: 'p1', no: '01', name: 'ガレージ・ダーク', tag: 'チューニングショップ寄り',
+  concept: '夜のガレージと計器盤のイメージ。黒い画面にアクセントを1色だけ使い、次のオイル交換をタコメーターで見せます。サムネイルの黒×白ロゴの雰囲気に一番近く、ツアラーVやドリフトに惹かれて来るお客さんに刺さる方向です。下のボタンでアクセント色を切り替えられます。',
+  extra: `<h3>アクセント色を試す</h3><div class="acc" id="acc">
+    <button data-c="#e60012" data-on="#fff" class="on"><i style="background:#e60012"></i>赤（ドリフト車）</button>
+    <button data-c="#9be22d" data-on="#0b0b0d"><i style="background:#9be22d"></i>ライムグリーン（スーツ）</button>
+    <button data-c="#d9a43a" data-on="#0b0b0d"><i style="background:#d9a43a"></i>ゴールド（オイル缶）</button></div>`,
+  swatches: [['#0b0b0d','背景'],['#161619','カード'],['#f4f4f5','文字'],['#e60012','アクセント（赤）'],['#ffb020','注意']],
+  fonts: ['Noto Sans JP（本文）','Barlow Condensed（数字・英字ラベル）'],
+  points: ['オイル交換を「レッドゾーンに近づくタコメーター」で表示','ナンバープレート風のチップ','期限は日付を左に大きく置いたスケジュール表'],
+  good: '一目でお店の空気が伝わる。写真映えしてSNSに載せやすい', bad: '日なたでは明るい画面より読みにくい。赤が「危険」に見えやすい',
+  home: () => `
+    <div class="hdr"><div><div class="ov"><b>GARAGE LOG</b> · 10.24 SAT</div><div class="ttl">${D.car}</div><div class="plate"><small>一宮 300</small>た 10-00</div></div><div class="ib">${ic('gear',17)}</div></div>
+    <div class="body">
+      <div class="next"><div class="nk">NEXT ACTION</div><div class="h">オイル交換の時期です</div><p>推定であと820km・目安日まで22日。交換したら記録すると、次の目安を出し直します。</p><div class="btn">オイル交換を記録する ${ic('arrow',15)}</div></div>
+      <div class="card">
+        <div class="lbl">NEXT OIL CHANGE <span class="badge">推定</span></div>
+        <div class="gw">${tach(D.pct)}<div class="gn"><b>820</b><span>km</span><div>次のオイル交換まで</div></div></div>
+        <div class="s3"><div><span>前回 ${D.prev}</span><b>${D.prevKm}</b></div><div><span>予定距離</span><b>${D.dueKm}</b></div><div><span>目安日</span><b>${D.due}</b><small>あと22日</small></div></div>
+      </div>
+      <div class="tiles"><div class="tile"><div class="lbl">THIS MONTH</div><b>${D.month}</b></div><div class="tile"><div class="lbl">THIS YEAR</div><b>${D.year}</b></div></div>
+      <div class="sect"><span><i>SCHEDULE</i><b>もうすぐの期限</b></span><span class="sa">期限を登録 →</span></div>
+      ${D.up.map(u => `<div class="urow"><div class="db"><b>${u.md}</b><span>${u.dw}</span></div><div><div class="ul">${u.l}</div><div class="ud">${u.est ? '推定 · ' : ''}あと${u.d}日</div></div><span class="badge${u.soon ? ' ca' : ''}">${u.soon ? 'もうすぐ' : '予定'}</span></div>`).join('')}
+    </div>`,
+  costs: () => `<div class="hdr"><div><div class="ov"><b>COST</b> · 2026</div><div class="ttl">維持費</div></div><div class="ib">${ic('gear',17)}</div></div><div class="cbody">${costBody()}</div>`,
+},
+{
+  id: 'p2', no: '02', name: 'ピットボード', tag: 'モータースポーツ・明るめ',
+  concept: 'サーキットのピットボードとマシンのカラーリングがモチーフ。画面は明るいままで、黒・赤・黄色の旗の色でレースの雰囲気を出します。走り好き以外のお客さんにも使いやすい折衷案です。',
+  swatches: [['#efeee9','背景'],['#121212','黒（主役）'],['#d10a0a','アクセント（赤）'],['#ffd60a','注意（黄旗）'],['#ffffff','カード']],
+  fonts: ['Noto Sans JP（本文）','Saira Condensed（数字）'],
+  points: ['オイル交換を黒いピットボードで「OIL 820km / DAY 22」と表示','シフトランプ風の10段バーで進み具合を表示','期限が近いものは黄旗の色、日数はゼッケン風'],
+  good: '明るい画面なので屋外でも読みやすい。レースらしさも出せる', bad: '要素が多く、少しにぎやかになりやすい',
+  home: () => `
+    <div class="hdr"><div><div class="ov">PIT BOARD · 10.24 SAT</div><div class="ttl">${D.car}</div><div class="sub">${D.plate}</div></div><div class="ib">${ic('gear',17)}</div></div>
+    <div class="body">
+      <div class="board">
+        <div class="bk">NEXT OIL CHANGE <span style="color:#9a9a92;letter-spacing:0;font-family:'Noto Sans JP';font-weight:500;font-size:9px">推定</span></div>
+        <div class="br"><span>OIL</span><b>820<small>km</small></b></div>
+        <div class="br s"><span>DAY</span><b>22<small>日 · 11/15</small></b></div>
+        <div class="shift">${Array.from({length:10},(_,i)=>`<i class="${i<8?'on ':''}${i>=8?'r':''}"></i>`).join('')}</div>
+        <div class="shl"><span>前回 ${D.prev} · ${D.prevKm} km</span><span>予定 ${D.dueKm} km</span></div>
+      </div>
+      <div class="next"><div class="nk">NEXT PIT</div><div class="h">オイル交換の時期です</div><p>推定であと820km・目安日まで22日。交換したら記録すると、次の目安を出し直します。</p><div class="btn">オイル交換を記録する ${ic('arrow',15)}</div></div>
+      <div class="tiles"><div class="tile"><span>今月の維持費</span><b>${D.month}</b></div><div class="tile"><span>今年の維持費</span><b>${D.year}</b></div></div>
+      <div class="sect"><span>もうすぐの期限</span><span class="sa">期限を登録 →</span></div>
+      ${D.up.map(u => `<div class="urow${u.soon ? ' ca' : ''}"><div class="nb"><b>${u.d}</b><small>日</small></div><div><div class="ul">${u.l}</div><div class="ud">${u.full}${u.est ? '（推定）' : ''}</div></div><span class="flag${u.soon ? '' : ' n'}">${u.soon ? 'もうすぐ' : '予定'}</span></div>`).join('')}
+    </div>`,
+  costs: () => `<div class="hdr"><div><div class="ov">COST · 2026</div><div class="ttl">維持費</div></div><div class="ib">${ic('gear',17)}</div></div><div class="cbody" style="padding-top:22px">${costBody()}</div>`,
+},
+{
+  id: 'p3', no: '03', name: 'ダークブルーマイカ', tag: '上質・職人',
+  concept: 'JZX100 後期の純正色「ダークブルーマイカ」と、紙の整備手帳がモチーフ。紺と真鍮色に明朝体を合わせ、「信頼できる町の工場」を感じさせます。一般のお客さんや年配の方にも受け入れられやすい方向です。',
+  swatches: [['#13284d','紺（主役）'],['#f6f4ee','背景（生成り）'],['#b8935a','真鍮'],['#b5401b','朱（注意・はんこ）'],['#1a2233','文字']],
+  fonts: ['Zen Kaku Gothic New（本文）','Shippori Mincho B1（見出し・数字）'],
+  points: ['メタリックな紺の上に、主役のカードを重ねて置く','「次にすること」ははんこ風の印','期限は手帳の罫線のような一覧','（追加提案）いつもの工場への予約・電話の導線'],
+  good: '落ち着いていて誰にでも好かれやすい。お店の信頼感が出る', bad: '走り・チューニングの色は薄い。明朝体の分アプリが重くなる',
+  home: () => `
+    <div class="top"><div class="hdr"><div><div class="ov">整備手帳 · ${D.date}</div><div class="ttl">${D.car}</div><div class="sub">${D.plate}</div></div><div class="ib">${ic('gear',17)}</div></div></div>
+    <div class="body">
+      <div class="card">
+        <div class="hero"><div><div class="lbl">次のオイル交換まで · 推定</div><div class="hn">820<small>km</small></div></div>
+          <div class="rw">${ring(80,4,D.pct,'#13284d','#ece7db')}<div>84%</div></div></div>
+        <div class="rl"><div><span>前回 ${D.prev}</span><b>${D.prevKm}</b></div><div><span>予定距離</span><b>${D.dueKm}</b></div><div><span>目安日</span><b>${D.due}</b><small>あと22日</small></div></div>
+      </div>
+      <div class="card next"><div class="stamp">次</div><div class="h">オイル交換の時期です</div><p>推定であと820km・目安日まで22日。交換したら記録すると、次の目安を出し直します。</p><div class="btn">オイル交換を記録する ${ic('arrow',15)}</div></div>
+      <div class="shop"><div class="ic">${ic('tool',16)}</div><div><b>いつもの工場に相談</b><span>たにぐち自動車 · 予約・お問い合わせ</span></div><div class="go">予約する</div></div>
+      <div class="card"><div class="tiles"><div><div class="lbl">今月の維持費</div><b>${D.month}</b></div><div><div class="lbl">今年の維持費</div><b>${D.year}</b></div></div></div>
+      <div class="sect"><b>もうすぐの期限</b><span class="sa">期限を登録 →</span></div>
+      <div class="ledger">${D.up.map(u => `<div class="urow"><div class="ld"><b>${u.md}</b><span>あと${u.d}日</span></div><div><div class="ul">${u.l}</div><div class="ud">${u.full}${u.est ? '（推定）' : ''}</div></div><span class="hk${u.soon ? '' : ' n'}">${u.soon ? 'もうすぐ' : '予定'}</span></div>`).join('')}</div>
+    </div>`,
+  costs: () => `<div class="top costtop"><div class="hdr"><div><div class="ov">整備手帳 · 2026年</div><div class="ttl">維持費</div></div><div class="ib">${ic('gear',17)}</div></div></div><div class="cbody costbody">${costBody()}</div>`,
+},
+{
+  id: 'p4', no: '04', name: 'メーターパネル', tag: '遊び心',
+  concept: 'クルマのインパネそのもの。走行距離はオドメーター、期限は警告灯、オイルは燃料計のように「残り」で見せます。クルマ好きが思わず開きたくなる、いちばん尖った案です。',
+  swatches: [['#050607','背景'],['#0e1013','パネル'],['#e9e7e2','文字'],['#ffb000','アクセント（琥珀）'],['#ff4d3d','警告']],
+  fonts: ['Noto Sans JP（本文）','Share Tech Mono（数字）'],
+  points: ['ヘッダーにオドメーター（186,580 km）','期限を警告灯の並びで表示（点灯＝もうすぐ）','オイルは燃料計のように「残り16%」で表示'],
+  good: '他にない見た目で話題にしやすい。開くのが楽しい', bad: '日なたで読みにくい。「残り」で見せると今の計算（進み具合）と向きが逆になる',
+  home: () => `
+    <div class="hdr"><div><div class="odo"><em>ODO</em>${D.odo.split('').map(c=>`<i>${c}</i>`).join('')}<span>km</span></div><div class="ttl" style="margin-top:4px">${D.car}</div></div><div class="ib">${ic('gear',17)}</div></div>
+    <div class="body">
+      <div class="lamps">
+        <div class="lamp on">${ic('drop',18)}<span>オイル</span></div>
+        <div class="lamp">${ic('shield',18)}<span>自賠責</span></div>
+        <div class="lamp">${ic('tool',18)}<span>点検</span></div>
+        <div class="lamp">${ic('file',18)}<span>車検</span></div>
+      </div>
+      <div class="card">
+        <div class="lbl">OIL CHANGE IN <span class="badge">推定</span></div>
+        <div class="seven">820<small>km</small></div>
+        <div class="fuel"><b>E</b><div class="segs">${Array.from({length:20},(_,i)=>`<i class="${i<3?'on':''}"></i>`).join('')}</div><b>F</b></div>
+        <div class="fcap"><span>オイルの寿命 <em>残り16%</em></span><span>目安日 11/15（あと22日）</span></div>
+        <div class="trip"><div><span>前回 ${D.prev}</span><b>${D.prevKm}</b></div><div><span>予定距離</span><b>${D.dueKm}</b></div><div><span>1日の走行</span><b>38 km</b></div></div>
+      </div>
+      <div class="next"><div class="nk">${ic('warn',13)} NEXT ACTION</div><div class="h">オイル交換の時期です</div><p>推定であと820km・目安日まで22日。交換したら記録すると、次の目安を出し直します。</p><div class="btn">オイル交換を記録する ${ic('arrow',15)}</div></div>
+      <div class="tiles"><div class="tile"><span>今月の維持費</span><b>${D.month}</b></div><div class="tile"><span>今年の維持費</span><b>${D.year}</b></div></div>
+      <div class="sect"><span>もうすぐの期限</span><span class="sa">期限を登録 →</span></div>
+      ${D.up.map(u => `<div class="urow${u.soon ? ' on' : ''}"><span class="dot${u.soon ? ' on' : ''}"></span><div><div class="ul">${u.l}</div><div class="ud">${u.full}${u.est ? '（推定）' : ''}</div></div><span class="uday">${u.d}<small>日</small></span></div>`).join('')}
+    </div>`,
+  costs: () => `<div class="hdr"><div><div class="lbl">TRIP COST · 2026</div><div class="ttl">維持費</div></div><div class="ib">${ic('gear',17)}</div></div><div class="cbody">${costBody()}</div>`,
+},
+];
+
+document.getElementById('jump').innerHTML =
+  PATTERNS.map(p => `<a href="#${p.id}">${p.no} ${p.name}</a>`).join('') + '<a href="#cmp">比較</a>';
+
+document.getElementById('pats').innerHTML = PATTERNS.map((p, i) => `
+  <section class="pat" id="${p.id}">
+    <div class="ph"><span class="no">${p.no}</span><h2>${p.name}</h2><span class="tag">${p.tag}</span></div>
+    <p class="concept">${p.concept}</p>
+    <div class="pbody">
+      <div class="phones">
+        <div>${phone('t' + i, p.home(), 0)}<div class="cap2">ホーム</div></div>
+        <div>${phone('t' + i, p.costs(), 1)}<div class="cap2">維持費</div></div>
+      </div>
+      <div class="spec">
+        <h3>色</h3>
+        <div class="sw">${p.swatches.map(([c, n]) => `<div><i style="background:${c}"></i><span>${n}<br><code>${c}</code></span></div>`).join('')}</div>
+        <h3>文字</h3>
+        <div class="fonts">${p.fonts.map(f => `<span>${f}</span>`).join('')}</div>
+        <h3>この案のポイント</h3>
+        <ul>${p.points.map(x => `<li>${x}</li>`).join('')}</ul>
+        ${p.extra || ''}
+        <div class="pc"><div class="good"><b>良いところ</b>${p.good}</div><div class="bad"><b>気になるところ</b>${p.bad}</div></div>
+      </div>
+    </div>
+  </section>`).join('');
+
+document.getElementById('acc').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#acc button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.t1').forEach(el => { el.style.setProperty('--red', b.dataset.c); el.style.setProperty('--onac', b.dataset.on);
+    el.style.setProperty('--redsoft', b.dataset.c + '24'); });
+});
+</script>
+</body>
+</html>
