@@ -1,0 +1,58 @@
+name: EAS ビルド
+
+# GitHub の Actions 画面（スマホのブラウザでも可）から、EAS のビルドを開始する。
+# ビルド自体は EAS のサーバーで行うので、ここでは開始だけして終わる（進み具合は expo.dev で見る）。
+# 事前に、リポジトリの Settings → Secrets and variables → Actions に EXPO_TOKEN を登録しておくこと。
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'プラットフォーム'
+        type: choice
+        options: [all, ios, android]
+        default: all
+      profile:
+        description: 'ビルドの種類（eas.json の build の名前）'
+        type: choice
+        options: [production, preview, development]
+        default: production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eas-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: EXPO_TOKEN が登録されているか確かめる
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::リポジトリの Secrets に EXPO_TOKEN が登録されていません（Settings → Secrets and variables → Actions）"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: EAS でビルドを開始する
+        env:
+          PLATFORM: ${{ inputs.platform }}
+          PROFILE: ${{ inputs.profile }}
+        run: eas build --platform "$PLATFORM" --profile "$PROFILE" --non-interactive --no-wait
