@@ -88,6 +88,12 @@
         "projectId": "4dbab413-c3d8-412d-95d8-1c4f4f7958fb"
       }
     },
-    "owner": "cartrust"
+    "owner": "cartrust",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/4dbab413-c3d8-412d-95d8-1c4f4f7958fb"
+    }
   }
 }
