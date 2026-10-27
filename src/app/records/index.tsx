@@ -79,8 +79,8 @@ export default function Records() {
                 style={({ pressed }) => ({ minHeight: 56, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.md, opacity: pressed ? 0.6 : 1 })}
               >
                 <View style={{ flex: 1, gap: 2 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                    <AppText>{item.title}</AppText>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs }}>
+                    <AppText style={{ flexShrink: 1 }}>{item.title}</AppText>
                     {item.verified && <Badge label="証明付き" />}
                   </View>
                   <AppText variant="caption">

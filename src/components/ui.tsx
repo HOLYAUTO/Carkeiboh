@@ -37,12 +37,21 @@ export function AppText({ variant = 'body', style, ...rest }: TextProps & { vari
   return <Text {...rest} style={[{ color: colors.text }, variantStyles[variant], style]} />;
 }
 
-/** 金額・距離・日付用の数字（Saira の等幅数字 tnum で桁をそろえる） */
+/**
+ * 金額・距離・日付用の数字（Saira の等幅数字 tnum で桁をそろえる）。
+ * 数字は途中で折り返さない。桁が増えたり端末の文字サイズが大きかったりして入りきらないときは、1行のまま小さくする
+ */
 export function Num({ size = 15, style, ...rest }: TextProps & { size?: number }) {
   return (
     <Text
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.5}
       {...rest}
-      style={[{ color: colors.text, fontFamily: size >= 20 ? fonts.numMedium : fonts.num, fontSize: size, fontVariant: ['tabular-nums'] }, style]}
+      style={[
+        { color: colors.text, fontFamily: size >= 20 ? fonts.numMedium : fonts.num, fontSize: size, fontVariant: ['tabular-nums'], flexShrink: 1 },
+        style,
+      ]}
     />
   );
 }
@@ -606,6 +615,9 @@ export function Tachometer({ value, label, children }: { value: number; label: s
   const pct = Math.min(1, Math.max(0, value));
   const W = 264;
   const H = 200;
+  // 置き場所が狭い端末では、メーター全体（中央の文字の幅も）を縮める
+  const [available, setAvailable] = useState(W);
+  const s = Math.min(1, available / W);
   const cx = W / 2;
   const cy = 128;
   const r = 106;
@@ -630,31 +642,36 @@ export function Tachometer({ value, label, children }: { value: number; label: s
     return <Line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={stroke} strokeWidth={major ? 2 : 1} />;
   });
   const m0 = at(now, r + 3);
-  const m1 = at(now, r - 20); // 4桁の距離（9,999km）でも中央の数字にかからない長さ
+  const m1 = at(now, r - 20); // 中央の数字（幅は下の CENTER_WIDTH まで）にかからない長さ
+  const CENTER_WIDTH = 150;
   return (
-    <View
-      accessibilityRole="progressbar"
-      accessibilityLabel={label}
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}
-      style={{ width: W, height: H, alignSelf: 'center' }}
-    >
-      <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
-        <Defs>
-          <LinearGradient id="tach" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={colors.accent} stopOpacity={0.25} />
-            <Stop offset="1" stopColor={colors.accent} stopOpacity={1} />
-          </LinearGradient>
-        </Defs>
-        <Path d={arc(start, start + sweep)} stroke={colors.surfaceVariant} strokeWidth={5} strokeLinecap="round" fill="none" />
-        {pct > 0 && <Path d={arc(start, now)} stroke="url(#tach)" strokeWidth={5} strokeLinecap="round" fill="none" />}
-        {ticks}
-        <Line x1={m0.x} y1={m0.y} x2={m1.x} y2={m1.y} stroke={colors.text} strokeWidth={3} strokeLinecap="round" />
-        <Circle cx={m1.x} cy={m1.y} r={3} fill={colors.text} />
-      </Svg>
-      <View style={{ position: 'absolute', left: 0, right: 0, top: 74, alignItems: 'center' }}>{children}</View>
-      <View style={{ position: 'absolute', left: 18, right: 18, bottom: 0, flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary }}>前回交換</Text>
-        <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.accentText }}>交換時期</Text>
+    <View onLayout={(e) => setAvailable(e.nativeEvent.layout.width)} style={{ alignSelf: 'stretch', alignItems: 'center' }}>
+      <View
+        accessibilityRole="progressbar"
+        accessibilityLabel={label}
+        accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}
+        style={{ width: W * s, height: H * s }}
+      >
+        <Svg width={W * s} height={H * s} viewBox={`0 0 ${W} ${H}`} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="tach" x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0" stopColor={colors.accent} stopOpacity={0.25} />
+              <Stop offset="1" stopColor={colors.accent} stopOpacity={1} />
+            </LinearGradient>
+          </Defs>
+          <Path d={arc(start, start + sweep)} stroke={colors.surfaceVariant} strokeWidth={5} strokeLinecap="round" fill="none" />
+          {pct > 0 && <Path d={arc(start, now)} stroke="url(#tach)" strokeWidth={5} strokeLinecap="round" fill="none" />}
+          {ticks}
+          <Line x1={m0.x} y1={m0.y} x2={m1.x} y2={m1.y} stroke={colors.text} strokeWidth={3} strokeLinecap="round" />
+          <Circle cx={m1.x} cy={m1.y} r={3} fill={colors.text} />
+        </Svg>
+        <View style={{ position: 'absolute', left: (W * s - CENTER_WIDTH * s) / 2, width: CENTER_WIDTH * s, top: 74 * s, alignItems: 'center' }}>
+          {children}
+        </View>
+        <View style={{ position: 'absolute', left: 18 * s, right: 18 * s, bottom: 0, flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text numberOfLines={1} style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary }}>前回交換</Text>
+          <Text numberOfLines={1} style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.accentText }}>交換時期</Text>
+        </View>
       </View>
     </View>
   );
