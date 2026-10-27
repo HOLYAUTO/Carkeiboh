@@ -78,7 +78,8 @@
           "locationFullAccuracyPermission": false
         }
       ],
-      "expo-image"
+      "expo-image",
+      "./modules/carkeibo-ocr/app.plugin.js"
     ],
     "experiments": {
       "typedRoutes": true
