@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { DEFAULT_FILTER_INTERVAL, DEFAULT_OIL_INTERVAL } from '@domain/service.ts';
 import { createVehicle } from '../lib/data';
-import { parseInteger } from '../lib/format';
+import { km, parseInteger } from '../lib/format';
 import { colors, fonts, MIN_TAP, radius, spacing } from '../theme';
 import { AppText, Button, Card, DateField, Field } from './ui';
 
@@ -65,8 +65,10 @@ export function VehicleForm({ submitTitle, onCreated }: { submitTitle: string; o
         <Field label="現在の走行距離（ODO）" value={odo} onChangeText={setOdo} keyboardType="number-pad" suffix="km" placeholder="例：41200" />
       </Card>
       <Card>
-        <AppText variant="label">年間走行距離の目安</AppText>
-        <AppText variant="caption">走行距離の記録が2件以上たまるまで、次回の目安の計算に使います。</AppText>
+        <AppText variant="label">1年間に走る距離の目安</AppText>
+        <AppText variant="caption">
+          エンジンオイル交換の次回の時期を予想するのに使います。走行距離の記録が2件以上たまると、実際のペースで予想します。
+        </AppText>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {ANNUAL_PRESETS.map((v) => {
             const selected = annual === v;
@@ -91,6 +93,10 @@ export function VehicleForm({ submitTitle, onCreated }: { submitTitle: string; o
             );
           })}
         </View>
+        <AppText variant="caption">
+          エンジンオイル交換の周期は{km(DEFAULT_OIL_INTERVAL.km!)}・{DEFAULT_OIL_INTERVAL.months}か月、オイルフィルターは
+          {km(DEFAULT_FILTER_INTERVAL.km!)}・{DEFAULT_FILTER_INTERVAL.months}か月で始めます。設定の「車両情報と周期」で変えられます。
+        </AppText>
       </Card>
       <Card>
         <DateField label="車検満了日（任意）" value={shaken} onChange={setShaken} optional />
