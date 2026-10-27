@@ -1,0 +1,88 @@
+name: EAS Build Status
+
+# GitHub の Actions タブ →「EAS Build Status」→「Run workflow」で手動実行する。
+# 最近の EAS ビルドと、そのストア申請（TestFlight など）の状況を実行結果の Summary に表で出す。
+# ビルドを始めたり止めたりはしない（読むだけ）。
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 表示するプラットフォーム
+        type: choice
+        options: [all, ios, android]
+        default: all
+      limit:
+        description: 表示する件数（最大 50）
+        type: number
+        default: 5
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: EXPO_TOKEN の確認
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::リポジトリの Secrets に EXPO_TOKEN を登録してください"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: ビルドの一覧
+        env:
+          PLATFORM: ${{ inputs.platform }}
+          LIMIT: ${{ inputs.limit }}
+        run: eas build:list --platform "$PLATFORM" --limit "$LIMIT" --json --non-interactive > builds.json
+      - name: 申請の状況
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        # eas-cli には申請を一覧するコマンドがないので、eas-cli と同じ GraphQL API でビルドごとに申請を取る。
+        # 取れなくてもビルドの一覧は出したいので、失敗はこのステップの中で吸収する
+        run: |
+          query='query($buildId: ID!) { builds { byId(buildId: $buildId) { id submissions { id status error { errorCode message } } } } }'
+          echo '{}' > submissions.json
+          for id in $(jq -r '.[].id' builds.json); do
+            body=$(jq -n --arg q "$query" --arg id "$id" '{query: $q, variables: {buildId: $id}}')
+            if res=$(curl -fsS https://api.expo.dev/graphql \
+                -H "Authorization: Bearer $EXPO_TOKEN" \
+                -H 'Content-Type: application/json' \
+                -d "$body"); then
+              subs=$(jq 'if .errors then null else (.data.builds.byId.submissions // []) end' <<<"$res")
+            else
+              subs='null'
+            fi
+            jq --arg id "$id" --argjson subs "$subs" '.[$id] = $subs' submissions.json > tmp.json && mv tmp.json submissions.json
+          done
+      - name: 結果を表示
+        run: |
+          jq -r --slurpfile subs submissions.json '
+            def jst: if . then (sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 + 9 * 3600 | strftime("%m/%d %H:%M")) else "-" end;
+            def ja:
+              { "NEW": "受付", "IN_QUEUE": "順番待ち", "IN_PROGRESS": "ビルド中", "PENDING_CANCEL": "取消中",
+                "FINISHED": "✅ 完了", "ERRORED": "❌ 失敗", "CANCELED": "取消",
+                "AWAITING_BUILD": "ビルド待ち" }[.] // .;
+            def msg: if .error then "（" + (.error.message | gsub("[|\\n]"; " ")) + "）" else "" end;
+            def submission($id):
+              ($subs[0][$id]) as $s
+              | if $s == null then "取得できず"
+                elif ($s | length) == 0 then "-"
+                else ($s | map((.status | ja) + msg) | join(" / "))
+                end;
+            "| ビルド | 環境 | 状態 | 申請 | 開始 (JST) | 完了 (JST) |",
+            "|---|---|---|---|---|---|",
+            (.[] | "| [\(.platform | ascii_downcase) \(.appVersion // "-") (\(.appBuildVersion // "-"))](https://expo.dev/accounts/\(.app.ownerAccount.name)/projects/\(.app.slug)/builds/\(.id)) | \(.buildProfile // "-") | \(.status | ja)\(msg) | \(submission(.id)) | \(.createdAt | jst) | \(.completedAt | jst) |")
+          ' builds.json | tee -a "$GITHUB_STEP_SUMMARY"
