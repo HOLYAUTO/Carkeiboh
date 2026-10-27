@@ -21,6 +21,9 @@ export default function Notifications() {
   const { bundle } = useVehicleBundle();
   const invalidate = useInvalidate();
   const [push, setPush] = useState<PushStatus | null>(null);
+  // 保存中の切り替え。サーバーの値が更新されるまでこちらを表示する
+  // （サーバーの値だけで表示すると、押したスイッチが一度戻ってから切り替わる）
+  const [pending, setPending] = useState<Partial<Record<keyof VehicleRow, boolean>>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -46,11 +49,15 @@ export default function Notifications() {
   );
 
   const toggle = async (column: keyof VehicleRow, value: boolean) => {
+    setPending((p) => ({ ...p, [column]: value }));
     try {
       await updateVehicle(vehicle.id, { [column]: value });
       await invalidate();
     } catch (e) {
       Alert.alert('変更できませんでした', e instanceof Error ? e.message : String(e));
+    } finally {
+      // 続けて押されていたら、あとの切り替えの表示を残す
+      setPending(({ [column]: current, ...rest }) => (current === value ? rest : { ...rest, [column]: current }));
     }
   };
 
@@ -97,7 +104,7 @@ export default function Notifications() {
             <ToggleRow
               title={REMINDER_LABELS[item.kind]}
               description={item.description}
-              value={vehicle[item.column] as boolean}
+              value={pending[item.column] ?? (vehicle[item.column] as boolean)}
               onChange={(v) => toggle(item.column, v)}
             />
           </View>
