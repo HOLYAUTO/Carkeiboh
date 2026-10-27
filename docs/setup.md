@@ -36,12 +36,6 @@
    - 音声入力（`expo-speech-recognition`）・位置情報・端末での写真の読み取り（`modules/carkeibo-ocr`）はネイティブモジュールを使うため、Expo Go では動かない（音声入力は「使えません」と案内し、写真はサーバーでの読み取りだけになる）。開発ビルドで確かめる
    - Android の端末での読み取りは、Google Play 開発者サービスが日本語の文字認識モデルを取得してから使える（インストール直後に取得を始める。取得前はサーバーでの読み取りに回る）
 
-### GitHub からビルドを開始する（スマホからでも可）
-
-1. Expo の管理画面（cartrust アカウント → Access tokens）でトークンを作る
-2. GitHub のリポジトリの Settings → Secrets and variables → Actions に `EXPO_TOKEN` として登録する
-3. Actions → 「EAS ビルド」→ Run workflow で、ブランチ・プラットフォーム・種類を選んで開始する（ビルドの進み具合は expo.dev で見る）
-
 ## 3. 限定配布（TestFlight・Google Play 内部テスト）
 
 ```sh
