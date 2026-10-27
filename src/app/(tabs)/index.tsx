@@ -166,14 +166,14 @@ function OilCard({ forecast }: { forecast: ServiceForecast }) {
   const near = nearDue(forecast);
   return (
     <Card>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-        <AppText variant="label">次回のオイル交換まで</AppText>
+      <View style={styles.titleRow}>
+        <AppText variant="label" style={{ flexShrink: 1 }}>次回のオイル交換まで</AppText>
         <Badge label="推定" tone="neutral" />
       </View>
       <Tachometer value={forecast.progress} label="前回の交換から交換時期までの進み具合">
         {remaining != null ? (
           <>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, maxWidth: '100%' }}>
               <Num
                 size={48}
                 style={{ color: near ? colors.caution : colors.text, lineHeight: 56 }}
@@ -181,7 +181,7 @@ function OilCard({ forecast }: { forecast: ServiceForecast }) {
               >
                 {Math.abs(remaining).toLocaleString('ja-JP')}
               </Num>
-              <Num size={18} style={{ color: colors.textSecondary }}>km</Num>
+              <Num size={18} style={{ color: colors.textSecondary, flexShrink: 0 }}>km</Num>
             </View>
             <AppText variant="caption" style={near ? { color: colors.caution } : undefined}>
               {remaining > 0 ? '次の交換まで' : '目安を超過'}
@@ -235,8 +235,8 @@ function FilterRow({ forecast }: { forecast: ServiceForecast }) {
     <View style={styles.row}>
       <ProgressRing value={forecast.progress} size={44} strokeWidth={4} tone={near ? 'caution' : 'accent'} label="フィルター交換からの進み具合" />
       <View style={{ flex: 1, gap: 2 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <AppText variant="label">フィルター交換まで</AppText>
+        <View style={styles.titleRow}>
+          <AppText variant="label" style={{ flexShrink: 1 }}>フィルター交換まで</AppText>
           <Badge label="推定" tone="neutral" />
         </View>
         <Num size={16} style={near ? { color: colors.caution } : undefined}>
@@ -244,7 +244,7 @@ function FilterRow({ forecast }: { forecast: ServiceForecast }) {
         </Num>
       </View>
       {forecast.dueDate && forecast.remainingDays != null && (
-        <View style={{ alignItems: 'flex-end' }}>
+        <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
           <AppText variant="caption">目安日 {monthDay(forecast.dueDate)}</AppText>
           <AppText variant="caption" style={near ? { color: colors.caution } : undefined}>{daysLeft(forecast.remainingDays)}</AppText>
         </View>
@@ -299,6 +299,8 @@ function UpcomingRow({ item }: { item: UpcomingItem }) {
 
 const styles = StyleSheet.create({
   stat: { flex: 1, gap: 2, borderRadius: radius.chip, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, backgroundColor: colors.background },
+  /** 見出しと「推定」バッジ。入りきらないときはバッジを次の行に送る（重ねない） */
+  titleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs },
   statLabel: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
   statSub: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
   row: {
