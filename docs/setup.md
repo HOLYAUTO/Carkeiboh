@@ -47,6 +47,19 @@ npx eas-cli@latest submit --profile production --platform android  # 内部テ�
 - ストア上の販売元は HOLY と表示されるため、アプリ名・説明文でたにぐち自動車のアプリであることが分かるようにする（`app.json` の `description`、ストアの説明文）
 - 利用規約・プライバシーポリシー（名義はたにぐち自動車、HOLY は開発・管理の委託先）の URL を、アプリ（`EXPO_PUBLIC_TERMS_URL` / `EXPO_PUBLIC_PRIVACY_URL`）とストアの両方に設定する
 
+### 画面や計算の修正だけを配る（EAS Update）
+
+JavaScript・画像だけの修正は、ストアの審査を通さずに配れます。端末はアプリを開いたときに更新を取りに行き、次に開いたときから新しい版になります。
+
+```sh
+npx eas-cli@latest update --channel production --message "変更の内容"
+```
+
+- ビルドの種類（`eas.json` の `development` / `preview` / `production`）ごとに、同じ名前の channel の更新を受け取る
+- 更新を受け取れるのは `expo-updates` を入れた後のビルドだけ。それより前に配ったビルドには届かない
+- `runtimeVersion` は `fingerprint`。ネイティブのライブラリや `app.json` を変えるとこの値が変わり、古いビルドには配られなくなる（作り直したビルドにだけ届く）。ネイティブ部分が合わない更新を配ってアプリが落ちるのを防ぐため
+- `app.json` を変えたときや、ネイティブのライブラリを足したときは EAS Update ではなくビルドを作り直す
+
 ## 4. 通知の試験（完成の条件「5.4 の通知がタイミングどおりにテスト端末へ届く」）
 
 `notify-dispatch` は日付を指定して実行できます（`CRON_SECRET` が必要）。
