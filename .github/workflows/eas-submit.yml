@@ -1,0 +1,66 @@
+name: EAS Submit
+
+# GitHub の Actions タブ →「EAS Submit」→「Run workflow」で手動実行する。
+# ビルドし直さずに、EAS にあるビルドをストアへ申請だけする（申請が失敗したときのやり直しなど）。
+# ビルド ID は expo.dev のビルド画面の URL の末尾か、「EAS Build Status」の表のリンクで分かる。
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 申請するプラットフォーム
+        type: choice
+        options: [android, ios]
+        default: android
+      build_id:
+        description: 申請するビルドの ID（空なら、そのプラットフォームの最新のビルド）
+        type: string
+        required: false
+
+concurrency:
+  group: eas-submit-${{ inputs.platform }}
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: EXPO_TOKEN の確認
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::リポジトリの Secrets に EXPO_TOKEN を登録してください"
+            exit 1
+          fi
+      - name: ビルド ID の確認
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          if [ -n "$BUILD_ID" ] && ! [[ "$BUILD_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+            echo "::error::ビルド ID の形式が違います（例: 92b0beb1-78b8-482d-85da-8d4aa032b9e3）"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: 申請
+        env:
+          PLATFORM: ${{ inputs.platform }}
+          BUILD_ID: ${{ inputs.build_id }}
+        # 申請の結果をこの実行で確かめられるよう、終わるまで待つ
+        run: |
+          args=(--platform "$PLATFORM" --profile production --non-interactive --wait)
+          if [ -n "$BUILD_ID" ]; then
+            args+=(--id "$BUILD_ID")
+          else
+            args+=(--latest)
+          fi
+          eas submit "${args[@]}"
