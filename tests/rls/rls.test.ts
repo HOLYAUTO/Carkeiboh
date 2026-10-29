@@ -309,6 +309,173 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
+  describe('お知らせ・スポンサー広告', () => {
+    const holy = randomUUID();
+    const taniguchi = randomUUID();
+
+    beforeAll(async () => {
+      await asAdmin(`insert into auth.users (id) values ($1), ($2)`, [holy, taniguchi]);
+      await asAdmin(`insert into public.staff_members (user_id, org) values ($1, 'holy'), ($2, 'taniguchi')`, [holy, taniguchi]);
+    });
+
+    afterAll(async () => {
+      await asAdmin(`delete from public.announcements`);
+      await asAdmin(`delete from public.sponsor_ads`);
+      await asAdmin(`delete from auth.users where id = any($1)`, [[holy, taniguchi]]);
+    });
+
+    it('利用者は公開中のお知らせだけ見え、書き込めない', async () => {
+      await asAdmin(
+        `insert into public.announcements (category, title, body, is_published, published_at, expires_at, org) values
+           ('app_update', '公開中', '本文', true, now() - interval '1 hour', null, 'holy'),
+           ('shop_news', '下書き', '本文', false, now() - interval '1 hour', null, 'taniguchi'),
+           ('shop_news', '予約', '本文', true, now() + interval '1 day', null, 'taniguchi'),
+           ('app_update', '掲載終了', '本文', true, now() - interval '2 day', now() - interval '1 day', 'holy')`,
+      );
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select title from public.announcements`);
+        expect(r.rows.map((x) => x.title)).toEqual(['公開中']);
+        await expectFail(c, () => c.query(`insert into public.announcements (category, title, body) values ('app_update', 'x', 'y')`), /row-level security/);
+        const u = await c.query(`update public.announcements set title = '乗っ取り'`);
+        expect(u.rowCount).toBe(0);
+      });
+      await asUser(null, async (c) => {
+        await expectFail(c, () => c.query(`select * from public.announcements`), /permission denied/);
+      });
+    });
+
+    it('HOLY は両方、たにぐち自動車は最新情報だけを出せる。下書きはスタッフに見える', async () => {
+      await asUser(taniguchi, async (c) => {
+        const r = await c.query(`select count(*)::int as n from public.announcements`);
+        expect(r.rows[0].n).toBe(4);
+        const ins = await c.query(
+          `insert into public.announcements (category, title, body, is_published) values ('shop_news', '新しいオイル入荷', '本文', true) returning org, created_by`,
+        );
+        expect(ins.rows[0]).toEqual({ org: 'taniguchi', created_by: taniguchi });
+        await expectFail(c, () => c.query(`insert into public.announcements (category, title, body) values ('app_update', 'x', 'y')`), /row-level security/);
+        const u = await c.query(`update public.announcements set title = 'x' where category = 'app_update'`);
+        expect(u.rowCount).toBe(0);
+      });
+      await asUser(holy, async (c) => {
+        await c.query(`insert into public.announcements (category, title, body) values ('app_update', 'v1.1', '修正しました')`);
+        await c.query(`insert into public.announcements (category, title, body) values ('shop_news', '代わりに投稿', '本文')`);
+      });
+    });
+
+    it('送った記録（pushed_at）と書いた会社はスタッフも書き換えられない', async () => {
+      await asUser(holy, async (c) => {
+        await expectFail(c, () => c.query(`update public.announcements set pushed_at = null`), /permission denied/);
+        await expectFail(c, () => c.query(`update public.announcements set org = 'taniguchi'`), /permission denied/);
+      });
+    });
+
+    it('最新情報の受け取りは本人だけが変えられ、プランは変わらない', async () => {
+      await asUser(alice, async (c) => {
+        await c.query(`select public.set_shop_news_opt_in(true)`);
+        await c.query(`select public.mark_announcements_seen()`);
+        const r = await c.query(`select plan, shop_news_opt_in, shop_news_opt_in_at is not null as at, announcements_seen_at is not null as seen from public.profiles`);
+        expect(r.rows).toEqual([{ plan: 'free', shop_news_opt_in: true, at: true, seen: true }]);
+        await expectFail(c, () => c.query(`select * from public.announcement_push_tokens('app_update', null, 10)`), /permission denied/);
+      });
+      const bobProfile = await asAdmin(`select shop_news_opt_in from public.profiles where id = $1`, [bob]);
+      expect(bobProfile.rows[0].shop_news_opt_in).toBeNull();
+    });
+
+    it('最新情報のプッシュは受け取ると選んだ利用者だけに送る', async () => {
+      await asAdmin(`insert into public.push_tokens (token, user_id, platform) values ('tok-alice', $1, 'ios'), ('tok-bob', $2, 'android')`, [alice, bob]);
+      await asAdmin(`update public.profiles set shop_news_opt_in = (id = $1) where id = any($2)`, [alice, [alice, bob]]);
+      try {
+        const c = await pool!.connect();
+        try {
+          await c.query('begin');
+          await c.query('set local role service_role');
+          const app = await c.query(`select token from public.announcement_push_tokens('app_update', null, 100) where token like 'tok-%'`);
+          expect(app.rows.map((r) => r.token)).toEqual(['tok-alice', 'tok-bob']);
+          const shop = await c.query(`select token from public.announcement_push_tokens('shop_news', null, 100) where token like 'tok-%'`);
+          expect(shop.rows.map((r) => r.token)).toEqual(['tok-alice']);
+          const page = await c.query(`select token from public.announcement_push_tokens('app_update', 'tok-alice', 100) where token like 'tok-%'`);
+          expect(page.rows.map((r) => r.token)).toEqual(['tok-bob']);
+        } finally {
+          await c.query('rollback');
+          c.release();
+        }
+      } finally {
+        await asAdmin(`delete from public.push_tokens where token like 'tok-%'`);
+      }
+    });
+
+    it('広告は掲載中のものだけ見え、各社は自社の広告だけ編集できる（HOLY はすべて）', async () => {
+      const ads = await asAdmin(
+        `insert into public.sponsor_ads (org, sponsor_name, title, placements, is_published, starts_on, ends_on) values
+           ('taniguchi', 'たにぐち自動車', '掲載中', '{home,costs}', true, current_date - 1, null),
+           ('holy', 'HOLY', '下書き', '{home}', false, current_date - 1, null),
+           ('taniguchi', 'X社', '掲載終了', '{home}', true, current_date - 10, current_date - 1)
+         returning id, title`,
+      );
+      const id = (title: string) => ads.rows.find((r) => r.title === title).id;
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select title from public.sponsor_ads`);
+        expect(r.rows.map((x) => x.title)).toEqual(['掲載中']);
+        await expectFail(c, () => c.query(`insert into public.sponsor_ads (org, sponsor_name, title) values ('holy', 'x', 'y')`), /row-level security/);
+        // 表示・タップは掲載中の広告の、出している場所にだけ記録できる。記録は読めない
+        await c.query(`insert into public.sponsor_ad_events (ad_id, action, placement) values ($1, 'impression', 'home'), ($1, 'click', 'costs')`, [id('掲載中')]);
+        await expectFail(c, () => c.query(`insert into public.sponsor_ad_events (ad_id, action, placement) values ($1, 'impression', 'shops')`, [id('掲載中')]), /row-level security/);
+        await expectFail(c, () => c.query(`insert into public.sponsor_ad_events (ad_id, action, placement) values ($1, 'impression', 'home')`, [id('下書き')]), /row-level security/);
+        await expectFail(c, () =>
+          c.query(`insert into public.sponsor_ad_events (ad_id, user_id, action, placement) values ($1, $2, 'click', 'home')`, [id('掲載中'), bob]),
+          /row-level security/,
+        );
+        await expectFail(c, () => c.query(`select * from public.sponsor_ad_events`), /permission denied/);
+        await expectFail(c, () => c.query(`select * from public.sponsor_ad_stats(current_date, current_date)`), /not_staff/);
+      });
+      await asUser(taniguchi, async (c) => {
+        const all = await c.query(`select count(*)::int as n from public.sponsor_ads`);
+        expect(all.rows[0].n).toBe(3);
+        const own = await c.query(`update public.sponsor_ads set weight = 5 where id = $1`, [id('掲載中')]);
+        expect(own.rowCount).toBe(1);
+        const other = await c.query(`update public.sponsor_ads set weight = 5 where id = $1`, [id('下書き')]);
+        expect(other.rowCount).toBe(0);
+        await expectFail(c, () => c.query(`update public.sponsor_ads set org = 'holy' where id = $1`, [id('掲載中')]), /row-level security/);
+        await expectFail(c, () => c.query(`insert into public.sponsor_ads (org, sponsor_name, title) values ('holy', 'x', 'y')`), /row-level security/);
+        const ins = await c.query(`insert into public.sponsor_ads (sponsor_name, title) values ('Y社', '新しい広告') returning org`);
+        expect(ins.rows[0].org).toBe('taniguchi');
+      });
+      await asUser(holy, async (c) => {
+        const u = await c.query(`update public.sponsor_ads set weight = 3 where id = any($1)`, [ads.rows.map((r) => r.id)]);
+        expect(u.rowCount).toBe(3);
+      });
+    });
+
+    it('表示・タップの集計はスタッフが自社の広告（HOLY はすべて）の分だけ読める', async () => {
+      const ad = await asAdmin(
+        `insert into public.sponsor_ads (org, sponsor_name, title, is_published, starts_on) values ('holy', 'HOLY', '集計用', true, current_date - 1) returning id`,
+      );
+      const adId = ad.rows[0].id;
+      await asAdmin(
+        `insert into public.sponsor_ad_events (ad_id, user_id, action, placement) values ($1, $2, 'impression', 'home'), ($1, $2, 'impression', 'home'), ($1, $3, 'click', 'home')`,
+        [adId, alice, bob],
+      );
+      const today = `(now() at time zone 'Asia/Tokyo')::date`;
+      await asUser(holy, async (c) => {
+        const r = await c.query(`select impressions::int, clicks::int, users::int from public.sponsor_ad_stats(${today}, ${today}) where ad_id = $1`, [adId]);
+        expect(r.rows).toEqual([{ impressions: 2, clicks: 1, users: 2 }]);
+      });
+      await asUser(taniguchi, async (c) => {
+        const r = await c.query(`select * from public.sponsor_ad_stats(${today}, ${today}) where ad_id = $1`, [adId]);
+        expect(r.rows).toEqual([]);
+      });
+    });
+
+    it('広告の画像はスタッフだけが置ける', async () => {
+      await asUser(alice, async (c) => {
+        await expectFail(c, () => c.query(`insert into storage.objects (bucket_id, name) values ('sponsor-images', 'x.jpg')`), /row-level security/);
+      });
+      await asUser(taniguchi, async (c) => {
+        await c.query(`insert into storage.objects (bucket_id, name) values ('sponsor-images', 'ad-1.jpg')`);
+      });
+    });
+  });
+
   it('アカウント削除でデータがすべて消える', async () => {
     const carol = randomUUID();
     await asAdmin(`insert into auth.users (id) values ($1)`, [carol]);

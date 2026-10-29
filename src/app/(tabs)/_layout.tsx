@@ -3,8 +3,8 @@ import { Tabs, type BottomTabBarProps } from 'expo-router/js-tabs';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { registerForPush } from '../../lib/push';
-import { colors, fonts, MIN_TAP, spacing } from '../../theme';
+import { registerForPush, useAnnouncementNotificationTaps } from '../../lib/push';
+import { fonts, MIN_TAP, spacing, themedStyles, useColors } from '../../theme';
 
 /** タブの定義（01 4章：ホーム／維持費／記録する／通知。整備工場は送客のために追加。「記録する」を真ん中に置く） */
 const TABS = [
@@ -16,6 +16,8 @@ const TABS = [
 ] as const;
 
 export default function TabsLayout() {
+  const colors = useColors();
+  useAnnouncementNotificationTaps();
   // 許可済みなら、起動のたびに端末のトークンを登録し直す（機種変更・再インストールに備える）
   useEffect(() => {
     registerForPush(false).catch(() => {});
@@ -35,6 +37,8 @@ export default function TabsLayout() {
  * 色だけで伝えないよう、ラベルも必ず出す。
  */
 function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.xs }]} accessibilityRole="tablist">
@@ -63,26 +67,28 @@ function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingHorizontal: spacing.xs,
-  },
-  item: {
-    flex: 1,
-    minHeight: MIN_TAP + 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    paddingTop: spacing.sm,
-    borderTopWidth: 2,
-    borderTopColor: 'transparent',
-    marginTop: -1,
-  },
-  itemActive: { borderTopColor: colors.accent },
-  label: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
-  labelActive: { fontFamily: fonts.semibold, color: colors.text },
-});
+const useStyles = themedStyles((colors) =>
+  StyleSheet.create({
+    bar: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingHorizontal: spacing.xs,
+    },
+    item: {
+      flex: 1,
+      minHeight: MIN_TAP + 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 3,
+      paddingTop: spacing.sm,
+      borderTopWidth: 2,
+      borderTopColor: 'transparent',
+      marginTop: -1,
+    },
+    itemActive: { borderTopColor: colors.accent },
+    label: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
+    labelActive: { fontFamily: fonts.semibold, color: colors.text },
+  }),
+);

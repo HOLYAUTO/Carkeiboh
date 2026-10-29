@@ -13,7 +13,7 @@ import {
 } from '@shared/record-draft.ts';
 import { recognizeTextOnDevice } from '../../modules/carkeibo-ocr';
 import { invokeFunction } from '../lib/supabase';
-import { colors, fonts, MIN_TAP, radius, spacing } from '../theme';
+import { fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
 import { AppText, Button, Card } from './ui';
 
 /** 読み取りに送る写真の長辺。レシートの小さな文字が読める程度に残し、通信量を抑える */
@@ -44,6 +44,7 @@ function askOpenSettings(title: string, message: string) {
  * - 音声：端末の音声認識で文字にし、端末内で日付・金額・走行距離を読み取る
  */
 export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; today: string; onDraft: (draft: RecordDraft) => void }) {
+  const colors = useColors();
   const [reading, setReading] = useState(false);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -196,6 +197,7 @@ function QuickButton({
   disabled?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="button"

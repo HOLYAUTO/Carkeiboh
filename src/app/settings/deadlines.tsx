@@ -5,7 +5,7 @@ import { AppText, Button, Card, DateField, ErrorView, Loading, Screen } from '..
 import { registerDeadline, removeDeadline, useInvalidate, useVehicleBundle, type DeadlineRow } from '../../lib/data';
 import { daysLeft, fullDate } from '../../lib/format';
 import { diffDays } from '@domain/dates.ts';
-import { colors, spacing } from '../../theme';
+import { spacing, useColors } from '../../theme';
 
 const KINDS: { kind: DeadlineKind; hint: string }[] = [
   { kind: 'shaken', hint: '車検を受けたら、新しい満了日を登録してください。前の満了日の通知と警告が止まります。' },
@@ -35,6 +35,7 @@ export default function Deadlines() {
 }
 
 function DeadlineCard({ kind, hint, vehicleId, today, current }: { kind: DeadlineKind; hint: string; vehicleId: string; today: string; current: DeadlineRow | null }) {
+  const colors = useColors();
   const invalidate = useInvalidate();
   const [date, setDate] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

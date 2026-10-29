@@ -25,6 +25,7 @@
 5. 定期実行を登録する：拡張 `pg_cron`・`pg_net` を有効にし、Vault に `project_url`・`cron_secret` を登録してから `supabase/cron.example.sql` を実行
    - Ledra 取得：毎時（`ledra-sync`）
    - 事前通知：毎日 UTC 0:00 = 日本時間 9:00（`notify-dispatch`）
+   - お知らせのプッシュ通知：10分ごと（`announce-dispatch`）
 
 ## 2. Expo / EAS（カーケイボー専用のプロジェクト）
 
@@ -107,7 +108,65 @@ select s.name, r.action, count(*) as times, count(distinct r.user_id) as users
 update public.profiles set plan = 'plus' where id = '<利用者のID>';
 ```
 
-## 7. たにぐち自動車への移管に備えて
+## 7. お知らせ・スポンサー広告（運営スタッフ）
+
+お知らせ（アップデート・修正のお知らせ／たにぐち自動車の最新情報）とスポンサー広告は、
+運営スタッフがアプリの「設定 → 運営メニュー」から登録します。Google などの外部の広告サービスは使いません。
+
+### スタッフの登録
+
+スタッフにするアカウントでアプリにログインし、クルマの初回登録まで済ませてもらってから（設定画面を開くため）、
+SQL エディタ（service_role）で所属を登録します。
+
+```sql
+-- 利用者の ID はメールアドレスから調べる
+select id, email from auth.users where email = 'staff@example.com';
+
+insert into public.staff_members (user_id, org, display_name)
+values ('<利用者のID>', 'taniguchi', '店長');   -- org は 'holy' または 'taniguchi'
+
+-- 外すとき
+delete from public.staff_members where user_id = '<利用者のID>';
+```
+
+| | HOLY | たにぐち自動車 |
+| --- | --- | --- |
+| アップデート・修正のお知らせ | 書ける | — |
+| たにぐち自動車の最新情報 | 代わりに書ける | 書ける |
+| スポンサー広告 | すべて編集できる | 自社が管理する広告を編集できる（他社の広告は見るだけ） |
+| 表示・タップの数 | すべて | 自社が管理する広告の分 |
+
+### お知らせの配信
+
+- 「公開する」をオンにすると、公開の日時からホームとお知らせの一覧に出る（日時を先にすれば予約になる）
+- 「プッシュ通知も送る」をオンにすると、公開の日時から10分以内に1回だけ送る（`announce-dispatch`）
+  - アップデート・修正のお知らせ：通知を許可しているすべての利用者
+  - たにぐち自動車の最新情報：アプリで「受け取る」を選んだ利用者だけ（既定は受け取らない）
+- EAS Update で修正を配ったときは、アプリが自動で取り込み、ホームに「アプリの修正が届きました（再起動して反映する）」を出す。
+  何を直したかを知らせたいときは、あわせて「アップデート・修正のお知らせ」を出す
+
+送る前に、送り先の数だけ確かめられます。
+
+```sh
+curl -X POST "$SUPABASE_URL/functions/v1/announce-dispatch" \
+  -H "x-cron-secret: $CRON_SECRET" -H 'content-type: application/json' -d '{"dryRun":true}'
+```
+
+### 広告の掲載
+
+- 出す場所：ホーム（期限の一覧の下）、維持費（一番下）、整備工場（一覧の下）。どの場所でも「PR」と広告主の名前を必ず出す
+- 同じ場所に複数の広告があるときは、表示の重みに比例した割合で出す。画面を開くたびに選び直す
+- 画像は横2：縦1に切り抜き、公開バケット `sponsor-images` に置く（URL を知っていれば誰でも見られるため、広告に出せる画像だけを使う）
+- 表示・タップの数は「スポンサー広告の管理」で月ごとに見られる（同じ起動のあいだに同じ画面で出した分は1回と数える）。広告主への報告用に SQL エディタで出す場合：
+
+```sql
+select a.sponsor_name, a.title, e.action, count(*) as times, count(distinct e.user_id) as users
+  from public.sponsor_ad_events e join public.sponsor_ads a on a.id = e.ad_id
+ where e.created_at >= date_trunc('month', now() at time zone 'Asia/Tokyo') at time zone 'Asia/Tokyo'
+ group by a.sponsor_name, a.title, e.action order by a.sponsor_name, a.title, e.action;
+```
+
+## 8. たにぐち自動車への移管に備えて
 
 - Supabase：専用の組織ごと移管できる（組織のオーナー変更）
 - Expo：専用のプロジェクトをたにぐち自動車のアカウントへ移管できる

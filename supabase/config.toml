@@ -31,3 +31,6 @@ verify_jwt = false
 
 [functions.notify-dispatch]
 verify_jwt = false
+
+[functions.announce-dispatch]
+verify_jwt = false

@@ -3,10 +3,11 @@ import { AppText, Screen } from '../components/ui';
 import { VehicleForm } from '../components/VehicleForm';
 import { selectVehicle } from '../lib/data';
 import { registerForPush } from '../lib/push';
-import { colors } from '../theme';
+import { useColors } from '../theme';
 
 /** 初回設定。1分以内で終わる量に絞る（周期は既定値で始め、あとから設定で変えられる） */
 export default function Onboarding() {
+  const colors = useColors();
   const qc = useQueryClient();
   return (
     <Screen>

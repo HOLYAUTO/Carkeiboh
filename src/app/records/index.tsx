@@ -5,7 +5,7 @@ import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
 import { AppText, Badge, Card, Divider, ErrorView, Loading, Num, Screen } from '../../components/ui';
 import { useVehicleBundle } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
-import { colors, spacing } from '../../theme';
+import { spacing, useColors } from '../../theme';
 
 interface Item {
   id: string;
@@ -19,6 +19,7 @@ interface Item {
 
 /** 記録の一覧。Ledra から来た記録は「証明付き」と表示し、本体は編集できない（金額だけ追記できる） */
 export default function Records() {
+  const colors = useColors();
   const { bundle } = useVehicleBundle();
   const items = useMemo<Item[]>(() => {
     if (!bundle.data) return [];

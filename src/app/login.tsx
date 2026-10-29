@@ -4,9 +4,10 @@ import { Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { AppText, Button, Card, Field, Screen } from '../components/ui';
 import { APP_OWNER } from '../lib/config';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../lib/auth';
-import { colors, radius, spacing } from '../theme';
+import { radius, spacing, useColors } from '../theme';
 
 export default function Login() {
+  const colors = useColors();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);

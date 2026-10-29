@@ -4,10 +4,11 @@ import { router } from 'expo-router';
 import { Fragment } from 'react';
 import { AppText, Badge, Card, Divider, ErrorView, ListRow, Loading, Screen, SectionTitle } from '../../components/ui';
 import { selectVehicle, usePlan, useVehicle, useVehicles } from '../../lib/data';
-import { colors } from '../../theme';
+import { useColors } from '../../theme';
 
 /** 車両の切り替えと追加。2台目からは複数台プラン（有料）で登録できる */
 export default function Vehicles() {
+  const colors = useColors();
   const qc = useQueryClient();
   const vehicles = useVehicles();
   const current = useVehicle();

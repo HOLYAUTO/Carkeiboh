@@ -4,10 +4,11 @@ import { View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS, summarizeCosts, type CostPeriod } from '@domain/costs.ts';
 import { monthKey } from '@domain/dates.ts';
 import { MonthlyBarChart } from '../../components/BarChart';
+import { SponsorSlot } from '../../components/SponsorSlot';
 import { AppText, Card, Divider, ErrorView, IconButton, Num, Screen, ScreenHeader, Segmented, Skeleton } from '../../components/ui';
 import { useVehicleBundle } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
-import { colors, spacing } from '../../theme';
+import { spacing, useColors } from '../../theme';
 
 const PERIODS: { value: CostPeriod; label: string }[] = [
   { value: 'month', label: '今月' },
@@ -16,6 +17,7 @@ const PERIODS: { value: CostPeriod; label: string }[] = [
 ];
 
 export default function Costs() {
+  const colors = useColors();
   const { bundle } = useVehicleBundle();
   const [period, setPeriod] = useState<CostPeriod>('month');
   const summary = useMemo(() => {
@@ -94,6 +96,8 @@ export default function Costs() {
       <AppText variant="caption" style={{ marginHorizontal: spacing.xs }}>
         オイル交換の金額は、オイル交換の記録に入力した分だけを数えます（整備・修理と二重に数えません）。
       </AppText>
+
+      <SponsorSlot placement="costs" />
     </Screen>
   );
 }

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
 import { AppText, Button, Card, Screen } from '../components/ui';
 import { config } from '../lib/config';
-import { colors, spacing } from '../theme';
+import { spacing, useColors } from '../theme';
 
 const BENEFITS = [
   '家族や仕事のクルマをまとめて登録（最大5台）',
@@ -15,6 +15,7 @@ const BENEFITS = [
  * 【要確認】価格・課金の仕組み（App Store / Google Play のアプリ内課金）は未定のため、申し込みボタンは「準備中」にしている
  */
 export default function Plan() {
+  const colors = useColors();
   return (
     <Screen>
       <Card>

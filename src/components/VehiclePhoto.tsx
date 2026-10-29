@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { removeVehiclePhoto, saveVehiclePhoto, useInvalidate, useVehiclePhotoUrl, type VehicleRow } from '../lib/data';
-import { cardShadow, colors, fonts, radius, spacing } from '../theme';
+import { cardShadow, fonts, radius, spacing, themedStyles, useColors } from '../theme';
 
 /** 保存する写真の長辺。ホームの横幅いっぱいに出してもきれいに見え、通信量を抑えられる大きさ */
 const PHOTO_MAX_SIDE = 1600;
@@ -16,6 +16,8 @@ const ASPECT = 16 / 9;
  * 写真がなければ、追加をうながす枠を出す
  */
 export function VehiclePhoto({ vehicle }: { vehicle: VehicleRow }) {
+  const colors = useColors();
+  const styles = useStyles();
   const invalidate = useInvalidate();
   const url = useVehiclePhotoUrl(vehicle.photo_path);
   const [busy, setBusy] = useState(false);
@@ -137,47 +139,49 @@ export function VehiclePhoto({ vehicle }: { vehicle: VehicleRow }) {
   );
 }
 
-const styles = StyleSheet.create({
-  frame: {
-    width: '100%',
-    aspectRatio: ASPECT,
-    borderRadius: radius.card,
-    overflow: 'hidden',
-    backgroundColor: colors.surfaceVariant,
-  },
-  empty: {
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    padding: spacing.lg,
-  },
-  emptyIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  emptyTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
-  emptyCaption: { fontFamily: fonts.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  badge: {
-    position: 'absolute',
-    right: spacing.sm,
-    bottom: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(29,29,31,0.55)',
-  },
-  badgeText: { fontFamily: fonts.medium, fontSize: 12, color: colors.white },
-});
+const useStyles = themedStyles((colors) =>
+  StyleSheet.create({
+    frame: {
+      width: '100%',
+      aspectRatio: ASPECT,
+      borderRadius: radius.card,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceVariant,
+    },
+    empty: {
+      backgroundColor: colors.card,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      padding: spacing.lg,
+    },
+    emptyIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: colors.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.xs,
+    },
+    emptyTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
+    emptyCaption: { fontFamily: fonts.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
+    center: { alignItems: 'center', justifyContent: 'center' },
+    badge: {
+      position: 'absolute',
+      right: spacing.sm,
+      bottom: spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: radius.pill,
+      backgroundColor: 'rgba(29,29,31,0.55)',
+    },
+    badgeText: { fontFamily: fonts.medium, fontSize: 12, color: colors.white },
+  }),
+);

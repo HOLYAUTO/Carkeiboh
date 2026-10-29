@@ -16,7 +16,7 @@ import {
 } from '../lib/data';
 import { parseInteger } from '../lib/format';
 import type { RecordDraft } from '@shared/record-draft.ts';
-import { cardShadow, colors, fonts, radius, spacing } from '../theme';
+import { cardShadow, fonts, radius, spacing, useColors } from '../theme';
 import { QuickInput } from './QuickInput';
 import { AppText, Button, Card, DateField, Field, Notice, ToggleRow } from './ui';
 
@@ -41,6 +41,7 @@ export function kindLabel(kind: RecordKind): string {
 }
 
 export function KindPicker({ onSelect }: { onSelect: (k: RecordKind) => void }) {
+  const colors = useColors();
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
       {KINDS.map(({ kind, icon }) => (

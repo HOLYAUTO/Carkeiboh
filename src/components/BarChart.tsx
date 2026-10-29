@@ -1,10 +1,11 @@
 import { View } from 'react-native';
-import { colors, spacing } from '../theme';
+import { spacing, useColors } from '../theme';
 import { yen } from '../lib/format';
 import { AppText, Num } from './ui';
 
 /** 月ごとの棒グラフ。棒の高さに加えて金額も文字で出す（読み上げにも対応） */
 export function MonthlyBarChart({ data, currentMonth }: { data: { month: string; totalYen: number }[]; currentMonth: string }) {
+  const colors = useColors();
   const max = Math.max(1, ...data.map((d) => d.totalYen));
   const visible = data.slice(-12);
   return (

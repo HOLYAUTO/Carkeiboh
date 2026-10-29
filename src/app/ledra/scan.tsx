@@ -4,10 +4,12 @@ import { useRef, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { extractLinkToken } from '@shared/ledra-records.ts';
 import { AppText, Button, Loading, Notice, Screen } from '../../components/ui';
-import { colors, radius, spacing } from '../../theme';
+import { radius, spacing, themedStyles, useColors } from '../../theme';
 
 /** 整備工場が表示した「カーケイボー連携用QR」を読み取る */
 export default function Scan() {
+  const colors = useColors();
+  const styles = useStyles();
   const [permission, requestPermission] = useCameraPermissions();
   const [error, setError] = useState<string | null>(null);
   const handled = useRef(false);
@@ -51,25 +53,27 @@ export default function Scan() {
   );
 }
 
-const styles = StyleSheet.create({
-  frame: {
-    position: 'absolute',
-    top: '22%',
-    alignSelf: 'center',
-    width: 240,
-    height: 240,
-    borderWidth: 3,
-    borderColor: colors.white,
-    borderRadius: radius.card,
-  },
-  footer: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: spacing.xl * 2,
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-  },
-});
+const useStyles = themedStyles((colors) =>
+  StyleSheet.create({
+    frame: {
+      position: 'absolute',
+      top: '22%',
+      alignSelf: 'center',
+      width: 240,
+      height: 240,
+      borderWidth: 3,
+      borderColor: colors.white,
+      borderRadius: radius.card,
+    },
+    footer: {
+      position: 'absolute',
+      left: spacing.lg,
+      right: spacing.lg,
+      bottom: spacing.xl * 2,
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderRadius: radius.card,
+      backgroundColor: colors.card,
+    },
+  }),
+);
