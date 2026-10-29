@@ -3,10 +3,11 @@ import { router } from 'expo-router';
 import { AppText, Screen } from '../../components/ui';
 import { VehicleForm } from '../../components/VehicleForm';
 import { selectVehicle } from '../../lib/data';
-import { colors } from '../../theme';
+import { useColors } from '../../theme';
 
 /** 2台目以降の登録。登録したらその車両に切り替えてホームに戻る */
 export default function NewVehicle() {
+  const colors = useColors();
   const qc = useQueryClient();
   return (
     <Screen>

@@ -5,9 +5,10 @@ import { OIL_INTERVAL_KM_CHOICES, OIL_INTERVAL_MONTH_CHOICES } from '@domain/ser
 import { AppText, Button, Card, ErrorView, Field, Loading, Screen, SectionTitle } from '../../components/ui';
 import { deleteVehicle, updateVehicle, useInvalidate, useVehicleBundle, useVehicles, type VehicleRow } from '../../lib/data';
 import { parseInteger } from '../../lib/format';
-import { colors, fonts, MIN_TAP, radius, spacing } from '../../theme';
+import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
 
 function Chips<T extends number>({ options, value, onChange, unit }: { options: readonly T[]; value: number | null; onChange: (v: T) => void; unit: string }) {
+  const colors = useColors();
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
       {options.map((o) => {
@@ -20,7 +21,7 @@ function Chips<T extends number>({ options, value, onChange, unit }: { options: 
             onPress={() => onChange(o)}
             style={{ minHeight: MIN_TAP, paddingHorizontal: spacing.md, borderRadius: radius.control, justifyContent: 'center', backgroundColor: selected ? colors.accent : colors.accentSoft }}
           >
-            <Text style={{ fontFamily: fonts.num, color: selected ? colors.white : colors.accentText }}>
+            <Text style={{ fontFamily: fonts.num, color: selected ? colors.onAccent : colors.accentText }}>
               {o.toLocaleString('ja-JP')}
               {unit}
             </Text>

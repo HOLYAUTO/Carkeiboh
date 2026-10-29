@@ -61,3 +61,23 @@ export function longDate(d: IsoDate): string {
   const [, m, day] = d.split('-').map(Number);
   return `${m}月${day}日（${weekday(d)}）`;
 }
+
+/** 日時（ISO 8601）→ 日本時間の '2026/10/29 09:05' */
+export function jstDateTime(iso: string): string {
+  const d = new Date(Date.parse(iso) + 9 * 60 * 60 * 1000);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+}
+
+/** 日時（ISO 8601）→ 日本時間の日付と 'HH:MM'（入力欄に入れ直すため） */
+export function jstParts(iso: string): { date: IsoDate; time: string } {
+  const [date, time] = jstDateTime(iso).split(' ');
+  return { date: date.replaceAll('/', '-'), time };
+}
+
+/** 日本時間の日付と 'HH:MM' → 日時（ISO 8601）。時刻の形が違えば null */
+export function jstToIso(date: IsoDate, time: string): string | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(time.trim().replace('：', ':'));
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+  return new Date(`${date}T${m[1].padStart(2, '0')}:${m[2]}:00+09:00`).toISOString();
+}

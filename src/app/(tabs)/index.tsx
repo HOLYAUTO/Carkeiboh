@@ -22,10 +22,12 @@ import {
   Skeleton,
   Tachometer,
 } from '../../components/ui';
+import { HomeNotices } from '../../components/HomeNotices';
+import { SponsorSlot } from '../../components/SponsorSlot';
 import { VehiclePhoto } from '../../components/VehiclePhoto';
 import { useVehicleBundle, type VehicleBundle } from '../../lib/data';
 import { daysLeft, fullDate, km, longDate, monthDay, weekday, yen } from '../../lib/format';
-import { cardShadow, colors, fonts, radius, spacing } from '../../theme';
+import { cardShadow, fonts, radius, spacing, themedStyles, useColors } from '../../theme';
 
 const settingsButton = <IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />;
 
@@ -95,6 +97,7 @@ function NextAction({ data }: { data: VehicleBundle }) {
 }
 
 function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; refreshing: boolean; onRefresh: () => void }) {
+  const colors = useColors();
   const { vehicle, state, today, expenses } = data;
   const costs = useMemo(() => {
     const items = expenses.map((e) => ({ date: e.spent_on, amountYen: e.amount_yen, category: e.category }));
@@ -119,6 +122,7 @@ function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; ref
       }
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />}
     >
+      <HomeNotices />
       <VehiclePhoto vehicle={vehicle} />
       <NextAction data={data} />
       {/* オイル交換・車検が近いときだけ、近くの整備工場への導線を出す */}
@@ -157,11 +161,15 @@ function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; ref
           ))}
         </View>
       )}
+
+      <SponsorSlot placement="home" />
     </Screen>
   );
 }
 
 function OilCard({ forecast }: { forecast: ServiceForecast }) {
+  const colors = useColors();
+  const styles = useStyles();
   const remaining = forecast.remainingKm;
   const near = nearDue(forecast);
   return (
@@ -219,6 +227,8 @@ function OilCard({ forecast }: { forecast: ServiceForecast }) {
 
 /** 小さな数値のかたまり（ラベル＋値）。3つ並べて使う */
 function Stat({ label, value, sub, caution }: { label: string; value: string; sub?: string; caution?: boolean }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={[styles.stat, caution && { backgroundColor: colors.cautionBackground }]}>
       <Text style={[styles.statLabel, caution && { color: colors.caution }]}>{label}</Text>
@@ -229,6 +239,8 @@ function Stat({ label, value, sub, caution }: { label: string; value: string; su
 }
 
 function FilterRow({ forecast }: { forecast: ServiceForecast }) {
+  const colors = useColors();
+  const styles = useStyles();
   const remaining = forecast.remainingKm;
   const near = nearDue(forecast);
   return (
@@ -266,6 +278,8 @@ function levelBadge(item: UpcomingItem) {
 }
 
 function UpcomingRow({ item }: { item: UpcomingItem }) {
+  const colors = useColors();
+  const styles = useStyles();
   const badge = levelBadge(item);
   const caution = item.level !== 'normal';
   const onPress = () =>
@@ -297,25 +311,27 @@ function UpcomingRow({ item }: { item: UpcomingItem }) {
   );
 }
 
-const styles = StyleSheet.create({
-  stat: { flex: 1, gap: 2, borderRadius: radius.chip, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, backgroundColor: colors.background },
-  /** 見出しと「推定」バッジ。入りきらないときはバッジを次の行に送る（重ねない） */
-  titleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs },
-  statLabel: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
-  statSub: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 64,
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    ...cardShadow,
-  },
-  dateBlock: { width: 56, alignItems: 'center', paddingRight: spacing.md, borderRightWidth: 1, borderRightColor: colors.border },
-  dateWeekday: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
-});
+const useStyles = themedStyles((colors) =>
+  StyleSheet.create({
+    stat: { flex: 1, gap: 2, borderRadius: radius.chip, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, backgroundColor: colors.background },
+    /** 見出しと「推定」バッジ。入りきらないときはバッジを次の行に送る（重ねない） */
+    titleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs },
+    statLabel: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
+    statSub: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      minHeight: 64,
+      backgroundColor: colors.card,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      ...cardShadow,
+    },
+    dateBlock: { width: 56, alignItems: 'center', paddingRight: spacing.md, borderRightWidth: 1, borderRightColor: colors.border },
+    dateWeekday: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
+  }),
+);

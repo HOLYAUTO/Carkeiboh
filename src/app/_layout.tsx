@@ -10,7 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorView, Loading } from '../components/ui';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { useVehicle } from '../lib/data';
-import { colors, fonts } from '../theme';
+import { fonts, ThemeProvider, useColors, useTheme } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -31,16 +31,24 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <StatusBar style="light" />
-          {fontsLoaded ? <RootNavigator /> : null}
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ThemedStatusBar />
+            {fontsLoaded ? <RootNavigator /> : null}
+          </AuthProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );
 }
 
+function ThemedStatusBar() {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
+
 function RootNavigator() {
+  const colors = useColors();
   const { session, loading } = useAuth();
   const vehicle = useVehicle();
   const signedIn = !!session;
@@ -92,6 +100,13 @@ function RootNavigator() {
         <Stack.Screen name="settings/vehicle" options={{ title: '車両情報と周期' }} />
         <Stack.Screen name="settings/deadlines" options={{ title: '車検・点検・保険' }} />
         <Stack.Screen name="settings/odometer" options={{ title: '走行距離とメーター交換' }} />
+        <Stack.Screen name="settings/appearance" options={{ title: '画面の色' }} />
+        <Stack.Screen name="announcements/index" options={{ title: 'お知らせ' }} />
+        <Stack.Screen name="announcements/[id]" options={{ title: 'お知らせ' }} />
+        <Stack.Screen name="admin/announcements/index" options={{ title: 'お知らせの管理' }} />
+        <Stack.Screen name="admin/announcements/[id]" options={{ title: 'お知らせの編集' }} />
+        <Stack.Screen name="admin/sponsors/index" options={{ title: 'スポンサー広告の管理' }} />
+        <Stack.Screen name="admin/sponsors/[id]" options={{ title: '広告の編集' }} />
         <Stack.Screen name="vehicles/index" options={{ title: 'クルマの切り替え・追加' }} />
         <Stack.Screen name="vehicles/new" options={{ title: 'クルマを追加' }} />
         <Stack.Screen name="plan" options={{ title: '複数台プラン' }} />

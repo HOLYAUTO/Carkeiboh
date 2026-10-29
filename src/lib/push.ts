@@ -1,6 +1,8 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
@@ -34,6 +36,12 @@ export async function registerForPush(ask: boolean): Promise<PushStatus> {
       // eslint-disable-next-line import/namespace
       importance: Notifications.AndroidImportance.DEFAULT,
     });
+    // 運営からのお知らせ・たにぐち自動車の最新情報（announce-dispatch が送る）。端末の設定で期限のお知らせと分けて止められる
+    await Notifications.setNotificationChannelAsync('announcements', {
+      name: 'お知らせ',
+      // eslint-disable-next-line import/namespace
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
   }
   let { status } = await Notifications.getPermissionsAsync();
   if (status !== 'granted' && ask) status = (await Notifications.requestPermissionsAsync()).status;
@@ -47,4 +55,17 @@ export async function registerForPush(ask: boolean): Promise<PushStatus> {
   });
   if (error) console.warn('通知の登録に失敗しました', error.message);
   return status;
+}
+
+/** お知らせの通知を押したら、そのお知らせを開く（アプリが閉じていたときも、起動後に開く） */
+export function useAnnouncementNotificationTaps() {
+  const response = Notifications.useLastNotificationResponse();
+  useEffect(() => {
+    if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+    const data = response.notification.request.content.data as { kind?: unknown; announcementId?: unknown } | undefined;
+    if (data?.kind !== 'announcement' || typeof data.announcementId !== 'string') return;
+    // 同じ通知でもう一度開かないよう、扱ったら消す
+    Notifications.clearLastNotificationResponse();
+    router.push({ pathname: '/announcements/[id]', params: { id: data.announcementId } });
+  }, [response]);
 }

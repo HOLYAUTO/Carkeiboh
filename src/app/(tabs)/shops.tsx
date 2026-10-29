@@ -2,12 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
+import { SponsorSlot } from '../../components/SponsorSlot';
 import { AppText, Badge, Button, Card, EmptyState, ErrorView, IconButton, Screen, ScreenHeader, Skeleton } from '../../components/ui';
 import { useShops, type ShopRow } from '../../lib/data';
 import { formatDistance, sortByDistance } from '../../lib/geo';
 import { useCurrentPosition } from '../../lib/location';
 import { callShop, openRoute } from '../../lib/maps';
-import { colors, spacing } from '../../theme';
+import { spacing, useColors } from '../../theme';
 
 const header = (
   <ScreenHeader
@@ -20,6 +21,7 @@ const header = (
 
 /** 近くの整備工場（掲載店）。選ぶと地図アプリでルート検索、または電話できる */
 export default function Shops() {
+  const colors = useColors();
   const shops = useShops();
   const location = useCurrentPosition();
   const sorted = useMemo(() => sortByDistance(shops.data ?? [], location.position), [shops.data, location.position]);
@@ -55,11 +57,14 @@ export default function Shops() {
       ) : (
         sorted.map((shop) => <ShopCard key={shop.id} shop={shop} distanceKm={shop.distanceKm} />)
       )}
+
+      <SponsorSlot placement="shops" />
     </Screen>
   );
 }
 
 function ShopCard({ shop, distanceKm }: { shop: ShopRow; distanceKm: number | null }) {
+  const colors = useColors();
   return (
     <Card>
       <Pressable

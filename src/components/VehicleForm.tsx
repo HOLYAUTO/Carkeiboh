@@ -4,7 +4,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 import { DEFAULT_FILTER_INTERVAL, DEFAULT_OIL_INTERVAL } from '@domain/service.ts';
 import { createVehicle } from '../lib/data';
 import { km, parseInteger } from '../lib/format';
-import { colors, fonts, MIN_TAP, radius, spacing } from '../theme';
+import { fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
 import { AppText, Button, Card, DateField, Field } from './ui';
 
 const ANNUAL_PRESETS = [3000, 5000, 8000, 10000, 15000];
@@ -14,6 +14,7 @@ const ANNUAL_PRESETS = [3000, 5000, 8000, 10000, 15000];
  * 1分以内で終わる量に絞る（周期は既定値で始め、あとから設定で変えられる）
  */
 export function VehicleForm({ submitTitle, onCreated }: { submitTitle: string; onCreated: (vehicleId: string) => Promise<void> }) {
+  const colors = useColors();
   const [name, setName] = useState('');
   const [plate, setPlate] = useState('');
   const [odo, setOdo] = useState('');
@@ -86,7 +87,7 @@ export function VehicleForm({ submitTitle, onCreated }: { submitTitle: string; o
                   backgroundColor: selected ? colors.accent : colors.accentSoft,
                 }}
               >
-                <Text style={{ fontFamily: fonts.num, color: selected ? colors.white : colors.accentText }}>
+                <Text style={{ fontFamily: fonts.num, color: selected ? colors.onAccent : colors.accentText }}>
                   {v.toLocaleString('ja-JP')}km
                 </Text>
               </Pressable>

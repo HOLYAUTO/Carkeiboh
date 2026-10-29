@@ -4,6 +4,8 @@ export interface PushMessage {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  /** Android の通知チャンネル（アプリの src/lib/push.ts で作る）。既定は期限のお知らせ */
+  channelId?: 'reminders' | 'announcements';
 }
 
 export interface PushResult {
@@ -21,10 +23,10 @@ export async function sendPush(messages: PushMessage[]): Promise<PushResult> {
   const accessToken = Deno.env.get('EXPO_ACCESS_TOKEN');
   for (let i = 0; i < messages.length; i += BATCH) {
     const batch = messages.slice(i, i + BATCH).map((m) => ({
-      ...m,
       sound: 'default',
-      channelId: 'reminders',
       priority: 'high',
+      ...m,
+      channelId: m.channelId ?? 'reminders',
     }));
     const res = await fetch(ENDPOINT, {
       method: 'POST',

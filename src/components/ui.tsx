@@ -20,7 +20,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, cardShadow, fonts, MIN_TAP, radius, spacing } from '../theme';
+import { cardShadow, fonts, MIN_TAP, radius, spacing, themedStyles, useColors, useTheme } from '../theme';
 import { dateToIso, fullDate, isoToDate } from '../lib/format';
 
 type Variant = 'title' | 'heading' | 'body' | 'label' | 'caption';
@@ -29,12 +29,14 @@ const variantStyles: Record<Variant, TextStyle> = {
   title: { fontFamily: fonts.semibold, fontSize: 22, lineHeight: 30 },
   heading: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 24 },
   body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
-  label: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
-  caption: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.textSecondary },
+  label: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 18 },
+  caption: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17 },
 };
 
 export function AppText({ variant = 'body', style, ...rest }: TextProps & { variant?: Variant }) {
-  return <Text {...rest} style={[{ color: colors.text }, variantStyles[variant], style]} />;
+  const colors = useColors();
+  const color = variant === 'label' || variant === 'caption' ? colors.textSecondary : colors.text;
+  return <Text {...rest} style={[{ color }, variantStyles[variant], style]} />;
 }
 
 /**
@@ -42,6 +44,7 @@ export function AppText({ variant = 'body', style, ...rest }: TextProps & { vari
  * 数字は途中で折り返さない。桁が増えたり端末の文字サイズが大きかったりして入りきらないときは、1行のまま小さくする
  */
 export function Num({ size = 15, style, ...rest }: TextProps & { size?: number }) {
+  const colors = useColors();
   return (
     <Text
       numberOfLines={1}
@@ -68,6 +71,7 @@ export function Screen({
   header?: ReactNode;
   refreshControl?: ComponentProps<typeof ScrollView>['refreshControl'];
 }) {
+  const styles = useStyles();
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right']}>
       {scroll ? (
@@ -86,6 +90,8 @@ export function Screen({
 }
 
 export function Loading() {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.center}>
       <ActivityIndicator color={colors.accent} />
@@ -94,6 +100,7 @@ export function Loading() {
 }
 
 export function ErrorView({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const styles = useStyles();
   return (
     <View style={[styles.center, { padding: spacing.xl, gap: spacing.md }]}>
       <AppText style={{ textAlign: 'center' }}>{message}</AppText>
@@ -103,11 +110,13 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry?: () 
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const styles = useStyles();
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
 /** セクション見出し。右に「すべて見る」などの導線を置ける */
 export function SectionTitle({ children, action }: { children: ReactNode; action?: { label: string; onPress: () => void } }) {
+  const colors = useColors();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md }}>
       <AppText variant="heading" style={{ fontSize: 16 }}>{children}</AppText>
@@ -135,8 +144,10 @@ export function Button({
   loading?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const fg =
-    variant === 'primary' ? colors.white : variant === 'destructive' ? colors.caution : colors.accentText;
+    variant === 'primary' ? colors.onAccent : variant === 'destructive' ? colors.caution : colors.accentText;
   return (
     <Pressable
       accessibilityRole="button"
@@ -166,6 +177,8 @@ export function Button({
 
 /** 注意表示（オレンジ系はこれだけに使う）。色だけでなく文字とアイコンでも伝える */
 export function Notice({ children, title }: { children: ReactNode; title?: string }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.notice} accessibilityRole="alert">
       <Ionicons name="warning-outline" size={18} color={colors.caution} style={{ marginTop: 2 }} />
@@ -179,6 +192,7 @@ export function Notice({ children, title }: { children: ReactNode; title?: strin
 
 /** 状態の小さなピル。色だけでなく必ず文字で状態を書く */
 export function Badge({ label, tone = 'accent' }: { label: string; tone?: 'accent' | 'caution' | 'neutral' }) {
+  const colors = useColors();
   const fg = tone === 'accent' ? colors.accentText : tone === 'caution' ? colors.caution : colors.textSecondary;
   const bg = tone === 'accent' ? colors.accentSoft : tone === 'caution' ? colors.cautionBackground : colors.surfaceVariant;
   return (
@@ -189,6 +203,7 @@ export function Badge({ label, tone = 'accent' }: { label: string; tone?: 'accen
 }
 
 export function ProgressBar({ value, tone = 'accent', label }: { value: number; tone?: 'accent' | 'caution'; label: string }) {
+  const colors = useColors();
   const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
   return (
     <View
@@ -211,6 +226,8 @@ export function Segmented<T extends string>({
   value: T;
   onChange: (v: T) => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.segmented} accessibilityRole="tablist">
       {options.map((o) => {
@@ -239,13 +256,16 @@ export function Field({
   suffix,
   ...input
 }: TextInputProps & { label: string; hint?: string; suffix?: string }) {
+  const { isDark } = useTheme();
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={{ gap: 6 }}>
       <AppText variant="label">{label}</AppText>
       <View style={styles.inputWrap}>
         <TextInput
           placeholderTextColor={colors.textSecondary}
-          keyboardAppearance="dark"
+          keyboardAppearance={isDark ? 'dark' : 'light'}
           selectionColor={colors.accentText}
           accessibilityLabel={label}
           {...input}
@@ -270,6 +290,9 @@ export function DateField({
   onChange: (v: string | null) => void;
   optional?: boolean;
 }) {
+  const { isDark } = useTheme();
+  const colors = useColors();
+  const styles = useStyles();
   const current = value ? isoToDate(value) : new Date();
   const open = () =>
     DateTimePickerAndroid.open({
@@ -282,7 +305,7 @@ export function DateField({
       <AppText variant="label">{label}</AppText>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         {Platform.OS === 'ios' && value ? (
-          <DateTimePicker value={current} mode="date" display="compact" locale="ja-JP" themeVariant="dark" accentColor={colors.accentText} onValueChange={(_e, d) => onChange(dateToIso(d))} />
+          <DateTimePicker value={current} mode="date" display="compact" locale="ja-JP" themeVariant={isDark ? 'dark' : 'light'} accentColor={colors.accentText} onValueChange={(_e, d) => onChange(dateToIso(d))} />
         ) : (
           <Pressable
             accessibilityRole="button"
@@ -309,12 +332,16 @@ export function ToggleRow({
   description,
   value,
   onChange,
+  disabled,
 }: {
   title: string;
   description?: string;
   value: boolean;
-  onChange: (v: boolean) => void;
+  onChange?: (v: boolean) => void;
+  disabled?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <View style={{ flex: 1, gap: 2 }}>
@@ -325,6 +352,7 @@ export function ToggleRow({
         accessibilityLabel={title}
         value={value}
         onValueChange={onChange}
+        disabled={disabled}
         trackColor={{ true: colors.accent, false: colors.track }}
         ios_backgroundColor={colors.track}
         // つまみは白に固定する（指定しないと Android・Web は端末やライブラリの色になり、赤の上で緑などに見える）
@@ -347,6 +375,8 @@ export function ListRow({
   right?: ReactNode;
   destructive?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
@@ -365,10 +395,11 @@ export function ListRow({
 }
 
 export function Divider() {
+  const colors = useColors();
   return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />;
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   screenContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxxl * 2, gap: spacing.md },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
@@ -411,7 +442,7 @@ const styles = StyleSheet.create({
     borderColor: colors.plateText,
     backgroundColor: colors.plateBackground,
   },
-});
+}));
 
 /** 四角いアイコンボタン（44px）。読み上げ用のラベル必須 */
 export function IconButton({
@@ -423,6 +454,7 @@ export function IconButton({
   label: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="button"
@@ -471,6 +503,8 @@ export function ScreenHeader({
   onTitlePress?: () => void;
   titlePressLabel?: string;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const titleText = (
     <Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontSize: 24, lineHeight: 32, color: colors.text, flexShrink: 1 }}>
@@ -530,6 +564,7 @@ export function ProgressRing({
   tone?: 'accent' | 'caution';
   label: string;
 }) {
+  const colors = useColors();
   const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
   const r = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * r;
@@ -579,10 +614,12 @@ export function NextActionCard({
   onPress: () => void;
   tone?: 'accent' | 'caution';
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const caution = tone === 'caution';
   const color = caution ? colors.caution : colors.accentText;
   const fill = caution ? colors.caution : colors.accent;
-  const onFill = caution ? colors.onCaution : colors.white;
+  const onFill = caution ? colors.onCaution : colors.onAccent;
   return (
     <View style={[styles.card, { gap: spacing.sm, borderLeftWidth: 3, borderLeftColor: fill }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -612,6 +649,7 @@ export function NextActionCard({
  * 今の位置に白い目盛りを立てる。中央（children）に残りの距離などを文字で置く。
  */
 export function Tachometer({ value, label, children }: { value: number; label: string; children?: ReactNode }) {
+  const colors = useColors();
   const pct = Math.min(1, Math.max(0, value));
   const W = 264;
   const H = 200;
@@ -689,6 +727,7 @@ export function EmptyState({
   description?: string;
   action?: { label: string; onPress: () => void };
 }) {
+  const colors = useColors();
   return (
     <View style={{ alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
       <Ionicons name={icon} size={36} color={colors.textTertiary} />
@@ -705,6 +744,7 @@ export function EmptyState({
 
 /** 読み込み中の形だけの表示（実際の中身と同じ形に置く） */
 export function Skeleton({ height, style }: { height: number; style?: StyleProp<ViewStyle> }) {
+  const colors = useColors();
   const [opacity] = useState(() => new Animated.Value(0.5));
   useEffect(() => {
     const loop = Animated.loop(

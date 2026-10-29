@@ -36,3 +36,20 @@ select cron.schedule(
   );
   $$
 );
+
+-- お知らせのプッシュ通知：10分ごと（公開日時を過ぎた「通知する」のお知らせを送る）
+select cron.schedule(
+  'announce-dispatch-10min',
+  '*/10 * * * *',
+  $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/announce-dispatch',
+    headers := jsonb_build_object(
+      'content-type', 'application/json',
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 300000
+  );
+  $$
+);

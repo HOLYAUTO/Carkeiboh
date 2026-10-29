@@ -1,8 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
 import { REMINDER_LABELS, type ReminderKind } from '@domain/reminders.ts';
 import { AppText, Button, Card, Divider, ErrorView, IconButton, ListRow, Notice, Screen, ScreenHeader, SectionTitle, Skeleton, ToggleRow } from '../../components/ui';
+import { setShopNewsOptIn, useAnnouncements } from '../../lib/announcements';
 import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
 import { daysLeft, fullDate, km } from '../../lib/format';
 import { getPushStatus, registerForPush, type PushStatus } from '../../lib/push';
@@ -20,7 +22,11 @@ const ITEMS: { kind: ReminderKind; column: keyof VehicleRow; description: string
 export default function Notifications() {
   const { bundle } = useVehicleBundle();
   const invalidate = useInvalidate();
+  const qc = useQueryClient();
+  const announcements = useAnnouncements();
   const [push, setPush] = useState<PushStatus | null>(null);
+  // 保存中の「最新情報を受け取る」。サーバーの値が更新されるまでこちらを表示する
+  const [pendingShopNews, setPendingShopNews] = useState<boolean | null>(null);
   // 保存中の切り替え。サーバーの値が更新されるまでこちらを表示する
   // （サーバーの値だけで表示すると、押したスイッチが一度戻ってから切り替わる）
   const [pending, setPending] = useState<Partial<Record<keyof VehicleRow, boolean>>>({});
@@ -58,6 +64,19 @@ export default function Notifications() {
     } finally {
       // 続けて押されていたら、あとの切り替えの表示を残す
       setPending(({ [column]: current, ...rest }) => (current === value ? rest : { ...rest, [column]: current }));
+    }
+  };
+
+  const toggleShopNews = async (value: boolean) => {
+    setPendingShopNews(value);
+    try {
+      await setShopNewsOptIn(value);
+      if (value) setPush(await registerForPush(true));
+      await qc.invalidateQueries({ queryKey: ['announcementPrefs'] });
+    } catch (e) {
+      Alert.alert('変更できませんでした', e instanceof Error ? e.message : String(e));
+    } finally {
+      setPendingShopNews(null);
     }
   };
 
@@ -113,6 +132,24 @@ export default function Notifications() {
       <AppText variant="caption" style={{ marginHorizontal: spacing.xs }}>
         通知は日本時間9:00に届きます。通知が届かなくても、期限はホームに必ず表示します。
       </AppText>
+
+      <SectionTitle action={{ label: '一覧を見る', onPress: () => router.push('/announcements') }}>お知らせ</SectionTitle>
+      <Card style={{ gap: 0, paddingVertical: spacing.sm }}>
+        <ToggleRow
+          title="アップデート・修正のお知らせ"
+          description="アプリの修正や新しい機能をホームでお知らせします。大切なお知らせは通知でも届きます。"
+          value
+          disabled
+        />
+        <Divider />
+        <ToggleRow
+          title="たにぐち自動車の最新情報"
+          description="新しいサービス・キャンペーン・営業日のお知らせなどを、ホームと通知でお届けします。"
+          value={pendingShopNews ?? announcements.prefs?.shopNewsOptIn === true}
+          onChange={toggleShopNews}
+          disabled={!announcements.prefs}
+        />
+      </Card>
 
       <SectionTitle>オイル交換の周期</SectionTitle>
       <Card style={{ paddingVertical: 4 }}>

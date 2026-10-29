@@ -6,13 +6,17 @@ import { signOut } from '../../lib/auth';
 import { APP_OWNER, config, DEVELOPER } from '../../lib/config';
 import { useInvalidate, useVehicleBundle } from '../../lib/data';
 import { fullDate } from '../../lib/format';
+import { STAFF_ORG_LABELS, useStaff } from '../../lib/staff';
 import { invokeFunction } from '../../lib/supabase';
-import { spacing } from '../../theme';
+import { ACCENTS, BASES } from '../../palettes';
+import { spacing, useTheme } from '../../theme';
 import { toJstDate } from '@domain/dates.ts';
 
 export default function Settings() {
   const { bundle } = useVehicleBundle();
   const invalidate = useInvalidate();
+  const staff = useStaff();
+  const { choice } = useTheme();
   const [busy, setBusy] = useState(false);
 
   if (bundle.isPending) return <Loading />;
@@ -84,6 +88,13 @@ export default function Settings() {
         <ListRow title="記録の一覧" onPress={() => router.push('/records')} />
       </Card>
 
+      <SectionTitle>表示</SectionTitle>
+      <Card style={{ gap: 0, paddingVertical: 4 }}>
+        <ListRow title="画面の色" detail={`${BASES[choice.base].label}・${ACCENTS[choice.accent].label}`} onPress={() => router.push('/settings/appearance')} />
+        <Divider />
+        <ListRow title="お知らせ" detail="アップデート・修正、たにぐち自動車の最新情報" onPress={() => router.push('/announcements')} />
+      </Card>
+
       <SectionTitle>整備工場との連携</SectionTitle>
       <Card>
         {linked ? (
@@ -114,6 +125,18 @@ export default function Settings() {
           </>
         )}
       </Card>
+
+      {staff.data && (
+        <>
+          <SectionTitle>運営メニュー</SectionTitle>
+          <Card style={{ gap: 0, paddingVertical: 4 }}>
+            <AppText variant="caption" style={{ paddingTop: spacing.sm }}>{STAFF_ORG_LABELS[staff.data.org]}のスタッフとしてログインしています。</AppText>
+            <ListRow title="お知らせの管理" detail="アップデート・修正のお知らせ、最新情報の配信" onPress={() => router.push('/admin/announcements')} />
+            <Divider />
+            <ListRow title="スポンサー広告の管理" detail="広告枠の掲載・表示回数" onPress={() => router.push('/admin/sponsors')} />
+          </Card>
+        </>
+      )}
 
       <SectionTitle>アカウント</SectionTitle>
       <Card style={{ gap: 0, paddingVertical: 4 }}>
