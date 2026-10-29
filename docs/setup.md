@@ -53,8 +53,14 @@ npx eas-cli@latest submit --profile production --platform android  # 内部テ�
 JavaScript・画像だけの修正は、ストアの審査を通さずに配れます。端末はアプリを開いたときに更新を取りに行き、次に開いたときから新しい版になります。
 
 ```sh
-npx eas-cli@latest update --channel production --message "変更の内容"
+./scripts/publish-update.sh "変更の内容"            # 本番に配る（eas update を直接実行しない）
+DRY_RUN=1 ./scripts/publish-update.sh "変更の内容"  # 書き出しと接続先の確認だけ
 ```
+
+- **`eas update` を直接実行しない**：Expo のアカウント（cartrust）には Ledra 用の共有の環境変数（`EXPO_PUBLIC_SUPABASE_URL` など）があり、
+  直接実行するとカーケイボーではなく Ledra の Supabase に向いた版が配られることがある（2026-10-29 に起き、ログインできなくなった）。
+  スクリプトは接続先をカーケイボーに固定して書き出し、中身にほかの Supabase が入っていないことを確かめてから配る
+- ビルド（`eas build`）は `eas.json` の production に接続先を書いて固定している
 
 - ビルドの種類（`eas.json` の `development` / `preview` / `production`）ごとに、同じ名前の channel の更新を受け取る
 - 更新を受け取れるのは `expo-updates` を入れた後のビルドだけ。それより前に配ったビルドには届かない

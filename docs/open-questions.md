@@ -74,3 +74,9 @@
 | 39 | たにぐち自動車の最新情報 | 利用者が「受け取る」を選んだときだけ、ホーム・一覧に出してプッシュ通知を送る。既定は受け取らない（宣伝を含むため。App Store 審査ガイドライン 4.5.4）。ホームで一度だけ受け取るかを聞き、通知タブでいつでも変えられる。選んだ日時を `profiles.shop_news_opt_in_at` に残す | 案内の文言。プライバシーポリシーへの記載（最新情報の配信。案：`docs/legal/privacy-policy-items.md`） | `src/components/HomeNotices.tsx`、`src/app/(tabs)/notifications.tsx` |
 | 40 | スポンサー広告枠 | 外部の広告サービスは使わず、自前の枠（ホーム・維持費・整備工場の各画面に1枠）に、運営スタッフが登録した広告を出す。必ず「PR」と広告主の名前を表示。同じ場所に複数あれば重みに比例して出す。各社は自社が管理する広告を編集でき、HOLY はすべてを編集できる（他社の広告も見られる）。表示・タップの数を月ごとに集計（同じ起動のあいだに同じ画面で出した分は1回） | 掲載料・契約の窓口（HOLY・たにぐち自動車のどちらが受けるか、売上の分け方）。載せてよい業種・表現の基準（案：`docs/sponsor-guidelines.md`）。広告主への報告の形と頻度。枠の数と場所。表示・タップの記録（利用者ごと）をプライバシーポリシーに書くこと | `src/components/SponsorSlot.tsx`、`src/app/admin/sponsors`、マイグレーション `20261029000001_announcements_and_sponsors.sql` |
 | 41 | 運営スタッフの登録 | SQL で `staff_members` に登録する（`docs/setup.md` 7章）。権限は DB の RLS で守り、スタッフでない利用者には運営メニューを出さない。設定画面を開くため、スタッフのアカウントでもクルマの初回登録が必要 | **決定（2026-10-29）**：たにぐち自動車のスタッフは正式リリースのときに登録する（それまでは HOLY が代わりに最新情報を出せる）。HOLY の担当アカウントは作成待ち。管理用の Web 画面が要るか（いまはアプリの中だけ） | `src/lib/staff.ts`、`src/app/settings/index.tsx` |
+
+## 2026-10-29 の障害と対応
+
+| # | 項目 | 内容 | 判断が必要なこと | 場所 |
+| --- | --- | --- | --- | --- |
+| 42 | 本番の更新が Ledra の Supabase に向いた | `eas update --environment production` で配った版が、アカウント共有の環境変数（Ledra 用）の `EXPO_PUBLIC_SUPABASE_URL` を使い、iPhone でログインできなくなった（キーはカーケイボーのものだったため、Ledra 側で読み書きはされていない）。接続先を固定して配り直し、以後は `scripts/publish-update.sh` で配る。ビルドは `eas.json` で接続先を固定 | 根本的には、カーケイボーを Ledra と別の Expo アカウントへ移すか、共有の環境変数を Ledra のプロジェクトだけの変数に変える（Ledra 側の設定変更が必要）。preview・development の環境は、いまも Ledra の接続先しかない | `scripts/publish-update.sh`、`eas.json`、`docs/setup.md` 2章 |
