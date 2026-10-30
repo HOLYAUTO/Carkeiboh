@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -57,15 +58,33 @@ export async function registerForPush(ask: boolean): Promise<PushStatus> {
   return status;
 }
 
-/** お知らせの通知を押したら、そのお知らせを開く（アプリが閉じていたときも、起動後に開く） */
+function isAnnouncement(data: unknown): data is { kind: 'announcement'; announcementId: string } {
+  const d = data as { kind?: unknown; announcementId?: unknown } | undefined;
+  return d?.kind === 'announcement' && typeof d.announcementId === 'string';
+}
+
+/**
+ * お知らせの通知を押したら、そのお知らせを開く（アプリが閉じていたときも、起動後に開く）。
+ * アプリを開いている間に届いたときも、ホームと一覧にすぐ出るよう読み直す
+ */
 export function useAnnouncementNotificationTaps() {
+  const qc = useQueryClient();
   const response = Notifications.useLastNotificationResponse();
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener((notification) => {
+      if (isAnnouncement(notification.request.content.data)) qc.invalidateQueries({ queryKey: ['announcements'] });
+    });
+    return () => sub.remove();
+  }, [qc]);
+
   useEffect(() => {
     if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
-    const data = response.notification.request.content.data as { kind?: unknown; announcementId?: unknown } | undefined;
-    if (data?.kind !== 'announcement' || typeof data.announcementId !== 'string') return;
+    const data = response.notification.request.content.data;
+    if (!isAnnouncement(data)) return;
     // 同じ通知でもう一度開かないよう、扱ったら消す
     Notifications.clearLastNotificationResponse();
+    qc.invalidateQueries({ queryKey: ['announcements'] });
     router.push({ pathname: '/announcements/[id]', params: { id: data.announcementId } });
-  }, [response]);
+  }, [response, qc]);
 }

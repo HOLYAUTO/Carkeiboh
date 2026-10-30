@@ -1,11 +1,12 @@
 import { Saira_400Regular } from '@expo-google-fonts/saira/400Regular';
 import { Saira_500Medium } from '@expo-google-fonts/saira/500Medium';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { AppState, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorView, Loading } from '../components/ui';
 import { AuthProvider, useAuth } from '../lib/auth';
@@ -13,6 +14,14 @@ import { useVehicle } from '../lib/data';
 import { fonts, ThemeProvider, useColors, useTheme } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// アプリを前面に戻したときに、古くなったデータ（お知らせ・記録など）を読み直す。
+// React Native では react-query が画面の前面・背面を知らないため、AppState を伝える
+focusManager.setEventListener((handleFocus) => {
+  if (Platform.OS === 'web') return undefined;
+  const sub = AppState.addEventListener('change', (state) => handleFocus(state === 'active'));
+  return () => sub.remove();
+});
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
