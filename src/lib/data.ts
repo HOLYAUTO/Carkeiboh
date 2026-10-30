@@ -17,7 +17,7 @@ import {
   type VehicleRow,
 } from '@shared/db-mapping.ts';
 import { useAuth } from './auth';
-import { supabase } from './supabase';
+import { invokeFunction, supabase } from './supabase';
 
 export type { VehicleRow, OilChangeRow, DeadlineRow, MeterReplacementRow, OdometerPointRow };
 
@@ -88,7 +88,8 @@ export function useVehicles() {
     // 利用者ごとに分け、ログインし直したときに前のアカウントのデータを使わない
     queryKey: ['vehicles', userId],
     enabled: !!userId,
-    queryFn: async () => unwrap(await supabase.from('vehicles').select('*').order('created_at')) as VehicleRow[],
+    // 手放したクルマ（乗り換え・廃車）は記録を残したまま、アプリには出さない
+    queryFn: async () => unwrap(await supabase.from('vehicles').select('*').eq('status', 'active').order('created_at')) as VehicleRow[],
   });
 }
 
@@ -233,10 +234,14 @@ export async function createVehicle(input: OnboardingInput) {
   return vehicle;
 }
 
-/** 車両と、その車両の記録・期限・連携をすべて削除する（子テーブルは外部キーの連鎖で消える。写真は別に消す） */
-export async function deleteVehicle(vehicle: Pick<VehicleRow, 'id' | 'photo_path'>) {
-  unwrap(await supabase.from('vehicles').delete().eq('id', vehicle.id));
-  if (vehicle.photo_path) await removePhotoFile(vehicle.photo_path);
+export type ReleaseReason = 'transferred' | 'scrapped';
+
+/**
+ * クルマを手放す（乗り換え・廃車）。アプリからは見えなくなるが、記録は消さずに残す。
+ * 整備工場との連携の解除と、廃車のときの Ledra への通知はサーバー（vehicle-release）が行う
+ */
+export async function releaseVehicle(input: { vehicleId: string; reason: ReleaseReason; releasedOn: IsoDate; shareHistory: boolean }) {
+  return invokeFunction<{ ok: true; ledraLinked: boolean }>('vehicle-release', { ...input });
 }
 
 // ---------------------------------------------------------------------------

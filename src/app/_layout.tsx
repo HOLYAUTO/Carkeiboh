@@ -118,6 +118,7 @@ function RootNavigator() {
         <Stack.Screen name="admin/sponsors/[id]" options={{ title: '広告の編集' }} />
         <Stack.Screen name="vehicles/index" options={{ title: 'クルマの切り替え・追加' }} />
         <Stack.Screen name="vehicles/new" options={{ title: 'クルマを追加' }} />
+        <Stack.Screen name="vehicles/release" options={{ title: 'クルマを手放す' }} />
         <Stack.Screen name="plan" options={{ title: '複数台プラン' }} />
         <Stack.Screen name="shops/[id]" options={{ title: '整備工場' }} />
         <Stack.Screen name="ledra/scan" options={{ title: 'QRコードを読み取る', presentation: 'modal' }} />

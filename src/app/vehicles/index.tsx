@@ -52,7 +52,7 @@ export default function Vehicles() {
           {canAdd
             ? `あと${vehicleLimit - list.length}台登録できます。家族のクルマもまとめて、1台ずつ記録・通知を管理できます。`
             : planName === 'plus'
-              ? `登録できるのは${vehicleLimit}台までです。使わなくなったクルマは「車両情報と周期」から削除できます。`
+              ? `登録できるのは${vehicleLimit}台までです。手放したクルマは「車両情報と周期」の「このクルマを手放す」から外せます。`
               : '2台目からは複数台プラン（有料）で登録できます。'}
         </AppText>
         <ListRow

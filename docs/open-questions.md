@@ -80,3 +80,10 @@
 | # | 項目 | 内容 | 判断が必要なこと | 場所 |
 | --- | --- | --- | --- | --- |
 | 42 | 本番の更新が Ledra の Supabase に向いた | `eas update --environment production` で配った版が、アカウント共有の環境変数（Ledra 用）の `EXPO_PUBLIC_SUPABASE_URL` を使い、iPhone でログインできなくなった（キーはカーケイボーのものだったため、Ledra 側で読み書きはされていない）。接続先を固定して配り直し、以後は `scripts/publish-update.sh` で配る。ビルドは `eas.json` で接続先を固定 | 根本的には、カーケイボーを Ledra と別の Expo アカウントへ移すか、共有の環境変数を Ledra のプロジェクトだけの変数に変える（Ledra 側の設定変更が必要）。preview・development の環境は、いまも Ledra の接続先しかない | `scripts/publish-update.sh`、`eas.json`、`docs/setup.md` 2章 |
+
+## 2026-10-31 の要望で追加したもの
+
+| # | 項目 | 仮の値・実装 | 判断が必要なこと | 場所 |
+| --- | --- | --- | --- | --- |
+| 43 | クルマを手放す（乗り換え・廃車） | 「車両情報と周期 → このクルマを手放す」から、乗り換えか廃車を選ぶ。手放したクルマはアプリに出さず、記録は DB に残す（アカウント削除ではすべて消える）。以後そのクルマには記録を足せず、台数の上限にも数えない。整備工場との連携は解除し、廃車のときは Ledra にも伝える（Ledra 側の API は未実装。届くまで1時間ごとに再送）。最後の1台を手放すと、新しいクルマの登録に進む | Ledra 側の実装（`docs/ledra-api-contract.md` 4章）。手放したクルマの記録を本人があとから見返せるようにするか（いまは見られない） | `supabase/functions/vehicle-release`、`src/app/vehicles/release.tsx`、マイグレーション `20261031000001_vehicle_release.sql` |
+| 44 | 次の持ち主への記録の引き継ぎ・有料閲覧・還元 | 未実装。乗り換えのとき本人が「引き継げるようにする」を選べるところまで（既定はオフ） | 同じクルマだと判断する方法、前の持ち主の同意、課金と分配の方法など（`docs/vehicle-history-design.md`） | `docs/vehicle-history-design.md` |

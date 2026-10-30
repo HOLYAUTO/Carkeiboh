@@ -49,7 +49,7 @@ Deno.serve(
     const summary = { today, vehicles: 0, notifications: 0, sent: 0, removedTokens: 0, preview: [] as unknown[] };
 
     for (let from = 0; ; from += PAGE) {
-      let q = admin.from('vehicles').select('*').order('id').range(from, from + PAGE - 1);
+      let q = admin.from('vehicles').select('*').eq('status', 'active').order('id').range(from, from + PAGE - 1);
       if (body.userId) q = q.eq('user_id', body.userId);
       const { data: vehicles, error } = await q;
       if (error) throw error;

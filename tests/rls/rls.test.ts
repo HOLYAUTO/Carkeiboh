@@ -476,6 +476,50 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
+  it('手放したクルマ（乗り換え・廃車）には記録を足せず、台数の上限にも数えない', async () => {
+    const dave = randomUUID();
+    await asAdmin(`insert into auth.users (id) values ($1)`, [dave]);
+    try {
+      const v = await asAdmin(
+        `insert into public.vehicles (user_id, name, annual_km_estimate, oil_interval_km) values ($1, '前の車', 5000, 5000) returning id`,
+        [dave],
+      );
+      const oldId = v.rows[0].id;
+      await asAdmin(`insert into public.expenses (vehicle_id, user_id, spent_on, category, amount_yen) values ($1, $2, '2026-10-01', 'fuel', 3000)`, [oldId, dave]);
+
+      // 利用者は自分では手放す状態を変えられない（連携の解除と一緒にサーバーが行う）
+      await asUser(dave, async (c) => {
+        await expectFail(c, () => c.query(`update public.vehicles set status = 'scrapped', released_at = now() where id = $1`, [oldId]), /release_via_server/);
+      });
+
+      await asAdmin(`update public.vehicles set status = 'scrapped', released_on = current_date, released_at = now() where id = $1`, [oldId]);
+
+      await asUser(dave, async (c) => {
+        await expectFail(c, () =>
+          c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen) values ($1, '2026-10-02', 'fuel', 100)`, [oldId]),
+          /vehicle_released/,
+        );
+        await expectFail(c, () => c.query(`insert into public.odometer_readings (vehicle_id, read_on, odo_km) values ($1, '2026-10-02', 100)`, [oldId]), /vehicle_released/);
+        await expectFail(c, () => c.query(`update public.expenses set amount_yen = 1 where vehicle_id = $1`, [oldId]), /vehicle_released/);
+        await expectFail(c, () => c.query(`delete from public.expenses where vehicle_id = $1`, [oldId]), /vehicle_released/);
+        await expectFail(c, () => c.query(`update public.vehicles set name = 'x' where id = $1`, [oldId]), /vehicle_released/);
+        await expectFail(c, () => c.query(`delete from public.vehicles where id = $1`, [oldId]), /vehicle_released/);
+        await expectFail(c, () => c.query(`select public.register_deadline($1, 'shaken', '2027-01-01')`, [oldId]), /vehicle_released/);
+        // 無料プランでも、手放したクルマは数えずに新しいクルマを登録できる
+        await c.query(`insert into public.vehicles (name, annual_km_estimate, oil_interval_km) values ('新しい車', 5000, 5000)`);
+      });
+
+      // 記録は消さずに残る
+      const kept = await asAdmin(`select count(*)::int as n from public.expenses where vehicle_id = $1`, [oldId]);
+      expect(kept.rows[0].n).toBe(1);
+
+      // 廃車では「次の持ち主に引き継ぐ」は選べない
+      await expect(asAdmin(`update public.vehicles set history_share_consent = true where id = $1`, [oldId])).rejects.toThrow(/vehicles_release_consistent/);
+    } finally {
+      await asAdmin(`delete from auth.users where id = $1`, [dave]);
+    }
+  });
+
   it('アカウント削除でデータがすべて消える', async () => {
     const carol = randomUUID();
     await asAdmin(`insert into auth.users (id) values ($1)`, [carol]);

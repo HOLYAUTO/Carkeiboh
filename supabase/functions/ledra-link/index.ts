@@ -36,6 +36,7 @@ Deno.serve(
       .select('id')
       .eq('id', body.vehicleId)
       .eq('user_id', user.id)
+      .eq('status', 'active')
       .maybeSingle();
     if (!vehicle) throw new HttpError(404, 'vehicle_not_found');
 

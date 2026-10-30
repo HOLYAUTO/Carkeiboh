@@ -77,6 +77,23 @@ export async function syncLink(admin: SupabaseClient, ledra: LedraClient, link: 
   }
 }
 
+/** 廃車の通知を送る。届かなければ scrap_notify_pending を残し、定期実行で再送する */
+export async function notifyScrapped(
+  admin: SupabaseClient,
+  ledra: LedraClient,
+  link: { id: string; ledra_link_id: string; scrapped_on: string },
+) {
+  try {
+    await ledra.reportScrapped(link.ledra_link_id, link.scrapped_on);
+    await admin.from('ledra_links').update({ scrap_notify_pending: false }).eq('id', link.id);
+    return true;
+  } catch (e) {
+    console.error(e);
+    await admin.from('ledra_links').update({ scrap_notify_pending: true }).eq('id', link.id);
+    return false;
+  }
+}
+
 /** 解除の通知が Ledra に届かなかった連携。定期実行で再送する */
 export const REVOKE_NOTIFY_FAILED = 'revoke_notify_failed';
 
