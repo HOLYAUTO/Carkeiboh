@@ -43,7 +43,7 @@ function askOpenSettings(title: string, message: string) {
  *   金額・日付（メーターなら走行距離）がそろわないときだけサーバー（AI）で読み直す（画像は保存しない）
  * - 音声：端末の音声認識で文字にし、端末内で日付・金額・走行距離を読み取る
  */
-export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; today: string; onDraft: (draft: RecordDraft) => void }) {
+export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; today: string; onDraft: (draft: RecordDraft, via: 'photo' | 'voice') => void }) {
   const colors = useColors();
   const [reading, setReading] = useState(false);
   const [listening, setListening] = useState(false);
@@ -91,7 +91,7 @@ export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; toda
       const lines = await recognizeTextOnDevice(saved.uri);
       const onDevice = lines ? parseReceiptText(lines, kind, today) : {};
       if (isDraftSufficient(kind, onDevice)) {
-        onDraft(onDevice);
+        onDraft(onDevice, 'photo');
         return;
       }
 
@@ -99,10 +99,10 @@ export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; toda
       if (!saved.base64) throw new Error('写真を読み込めませんでした。');
       try {
         const onServer = await invokeFunction<RecordDraft>('read-record-photo', { image: saved.base64, kind });
-        onDraft(mergeDrafts(onDevice, onServer));
+        onDraft(mergeDrafts(onDevice, onServer), 'photo');
       } catch (e) {
         if (Object.keys(onDevice).length === 0) throw e;
-        onDraft(onDevice);
+        onDraft(onDevice, 'photo');
       }
     } catch (e) {
       Alert.alert('読み取れませんでした', e instanceof Error ? e.message : String(e));
@@ -149,7 +149,7 @@ export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; toda
       module.addListener('end', () => {
         setListening(false);
         clearSubscriptions();
-        if (finalText.trim()) onDraft(parseSpokenRecord(finalText, today));
+        if (finalText.trim()) onDraft(parseSpokenRecord(finalText, today), 'voice');
       }),
     ];
     setTranscript('');

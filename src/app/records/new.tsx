@@ -1,12 +1,12 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Alert } from 'react-native';
 import { EXPENSE_CATEGORIES } from '@domain/costs.ts';
-import { kindLabel, RecordForm, type RecordKind } from '../../components/RecordForm';
+import { isWearKind, kindLabel, RecordForm, type RecordKind } from '../../components/RecordForm';
 import { ErrorView, Loading, Screen } from '../../components/ui';
 import { useVehicleBundle } from '../../lib/data';
 
 function isKind(v: unknown): v is RecordKind {
-  return v === 'odometer' || (typeof v === 'string' && (EXPENSE_CATEGORIES as readonly string[]).includes(v));
+  return typeof v === 'string' && (v === 'odometer' || isWearKind(v) || (EXPENSE_CATEGORIES as readonly string[]).includes(v));
 }
 
 /**

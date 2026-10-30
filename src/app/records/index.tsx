@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
 import { AppText, Badge, Card, Divider, ErrorView, Loading, Num, Screen } from '../../components/ui';
+import { wearTitle } from '../../components/RecordForm';
 import { useVehicleBundle } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
 import { spacing, useColors } from '../../theme';
@@ -23,7 +24,7 @@ export default function Records() {
   const { bundle } = useVehicleBundle();
   const items = useMemo<Item[]>(() => {
     if (!bundle.data) return [];
-    const { oilChanges, expenses, readings } = bundle.data;
+    const { oilChanges, expenses, wearChecks, readings } = bundle.data;
     const oilAmounts = new Map(expenses.filter((e) => e.oil_change_id).map((e) => [e.oil_change_id!, e.amount_yen]));
     const list: Item[] = [
       ...oilChanges.map((o) => ({
@@ -34,6 +35,17 @@ export default function Records() {
         amount: oilAmounts.get(o.id) ?? null,
         verified: o.source === 'ledra',
         sortKey: o.created_at,
+      })),
+      ...wearChecks.map((w) => ({
+        id: `wear:${w.id}`,
+        date: w.performed_on,
+        title: wearTitle(w),
+        detail: [w.remaining_mm != null ? `残り ${Number(w.remaining_mm)}mm` : null, w.odo_km != null ? km(w.odo_km) : null, w.shop_name]
+          .filter(Boolean)
+          .join('・'),
+        amount: null,
+        verified: w.source === 'ledra',
+        sortKey: w.created_at,
       })),
       ...expenses
         .filter((e) => !e.oil_change_id)
