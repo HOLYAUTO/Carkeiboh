@@ -9,6 +9,8 @@ describe('溝・パッドの厚さ（mm）', () => {
     ['1,6', 1.6],
     ['4mm', 4],
     ['4 ミリ', 4],
+    ['3.', 3],
+    ['.5', 0.5],
   ])('%s → %s', (text, mm) => {
     expect(parseMillimeters(text)).toBe(mm);
   });
@@ -17,7 +19,7 @@ describe('溝・パッドの厚さ（mm）', () => {
     expect(parseMillimeters('  ')).toBeNull();
   });
 
-  it.each(['abc', '3.55', '123', '-1'])('%s は読めない', (text) => {
+  it.each(['abc', '3.55', '123', '-1', '.', '1.2.3'])('%s は読めない', (text) => {
     expect(parseMillimeters(text)).toBeNaN();
   });
 });

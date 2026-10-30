@@ -48,14 +48,14 @@ export function parseInteger(text: string): number | null {
   return Number(normalized);
 }
 
-/** タイヤの溝・ブレーキパッドの厚さ（mm、小数1桁まで）。全角・「，」の小数点も受ける。空なら null、読めなければ NaN */
+/** タイヤの溝・ブレーキパッドの厚さ（mm、小数1桁まで）。全角・「，」の小数点も、入力途中の「3.」・「.5」も受ける。空なら null、読めなければ NaN */
 export function parseMillimeters(text: string): number | null {
   const normalized = text
     .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
     .replace(/[．，,]/g, '.')
     .replace(/\s|mm|ｍｍ|ミリ/gi, '');
   if (normalized === '') return null;
-  if (!/^\d{1,2}(\.\d)?$/.test(normalized)) return NaN;
+  if (!/^(\d{1,2}(\.\d?)?|\.\d)$/.test(normalized)) return NaN;
   return Number(normalized);
 }
 

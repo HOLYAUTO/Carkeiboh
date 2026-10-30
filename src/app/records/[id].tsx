@@ -125,7 +125,7 @@ function LedraRecord({ bundle, row, expense }: { bundle: VehicleBundle; row: Oil
         <Info label="走行距離（ODO）" value={km(row.odo_km)} />
         <Info label="オイル交換" value={row.oil_changed ? 'あり' : 'なし'} />
         <Info label="オイルフィルター交換" value={row.filter_changed ? 'あり' : 'なし'} />
-        {row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
+        {!!row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
       </Card>
       <Card>
         <Field label="金額（任意）" value={amount} onChangeText={setAmount} keyboardType="number-pad" suffix="円" hint="入力すると維持費に1件として数えます。" />
@@ -148,7 +148,7 @@ function LedraWearRecord({ row }: { row: WearCheckRow }) {
         <Info label="作業日" value={fullDate(row.performed_on)} />
         {row.odo_km != null && <Info label="走行距離（ODO）" value={km(row.odo_km)} />}
         <Info label={row.kind === 'tire' ? '溝の深さ' : 'パッドの厚さ'} value={row.remaining_mm != null ? `${Number(row.remaining_mm)}mm` : '—'} />
-        {row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
+        {!!row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
       </Card>
     </Screen>
   );

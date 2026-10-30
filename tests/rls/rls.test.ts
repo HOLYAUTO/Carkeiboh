@@ -535,6 +535,7 @@ describe.skipIf(!pool)('RLS', () => {
     await asUser(alice, async (c) => {
       await insert(c, alice, aliceVehicle);
       await expectFail(c, () => insert(c, bob, bobVehicle), /row-level security/);
+      await expectFail(c, () => insert(c, alice, bobVehicle), /violates foreign key constraint/);
       await expectFail(c, () => c.query(`select * from public.input_sessions`), /permission denied/);
       await expectFail(c, () => c.query(`delete from public.input_sessions`), /permission denied/);
       // 保存したのに記録の参照が無い行は受け付けない

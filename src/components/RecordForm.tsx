@@ -179,15 +179,13 @@ export function RecordForm({
   // 入力の計測（実証実験の KPI 用）。画面を開いてから保存・離脱までと、写真・音声で埋まった項目を覚える
   const values = { date, odo, amount, note, remaining, filterChanged: String(filterChanged) };
   const latestValues = useRef(values);
-  useEffect(() => {
-    latestValues.current = values;
-  });
   const metrics = useRef({
     openedAt: new Date(),
     method: 'manual' as 'manual' | 'photo' | 'voice',
     draftValues: {} as Partial<Record<keyof typeof values, string>>,
     warningsShown: 0,
     saved: false,
+    touched: false,
   });
   const finishSession = (outcome: 'saved' | 'abandoned', recordRef: string | null) => {
     const m = metrics.current;
@@ -199,18 +197,21 @@ export function RecordForm({
       method: m.method,
       outcome,
       openedAt: m.openedAt,
-      finishedAt: new Date(),
+      // 端末の時計が途中で戻っても、開いた時刻より前にはしない（DB の check で弾かれて計測が消えるため）
+      finishedAt: new Date(Math.max(Date.now(), m.openedAt.getTime())),
       draftFields: filled.length,
       draftFieldsChanged: filled.filter(([field, v]) => latestValues.current[field] !== v).length,
       warningsShown: m.warningsShown,
       recordRef,
     });
   };
-  // 保存せずに画面を離れたら「離脱」として送る。
+  // 保存せずに画面を離れたら「離脱」として送る。既存の記録を開いて見ただけ（何も変えずに戻った・削除した）は入力ではないので送らない。
   // ponytail: アプリを強制終了したときは送れない（離脱率は少なめに出る）。必要なら開いた時点で1行作り、終わりで更新する
   useEffect(
     () => () => {
-      if (!metrics.current.saved) finishSession('abandoned', null);
+      const m = metrics.current;
+      if (m.saved || (target && !m.touched)) return;
+      finishSession('abandoned', null);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -234,6 +235,10 @@ export function RecordForm({
       { text: '入力を続ける', style: 'cancel' },
       { text: '破棄して戻る', style: 'destructive', onPress: () => navigation.dispatch(data.action) },
     ]);
+  });
+  useEffect(() => {
+    latestValues.current = values;
+    if (dirty) metrics.current.touched = true;
   });
 
   /** 写真・音声で読み取った値を入れる。読み取れなかった項目は今の入力を残す */
@@ -266,8 +271,8 @@ export function RecordForm({
       m.draftValues.note = d.note.slice(0, 200);
       filled.push('メモ');
     }
-    // タイヤ・ブレーキは「整備」として読み取るので、整備と出ても選び直しを勧めない
-    const sameKind = d.category === kind || (wear && d.category === 'maintenance');
+    // タイヤ・ブレーキは走行距離を中心に読み取る（金額は使わない）。整備・走行距離と出ても選び直しを勧めない
+    const sameKind = d.category === kind || (wear && (d.category === 'maintenance' || d.category === 'odometer'));
     const otherKind = d.category && !sameKind ? `内容は「${kindLabel(d.category)}」のようです。項目が違う場合は選び直してください。` : '';
     setDraftNotice(
       filled.length > 0
@@ -348,7 +353,7 @@ export function RecordForm({
 
   return (
     <View style={{ gap: spacing.md }}>
-      {!target && <QuickInput kind={isWearKind(kind) ? 'maintenance' : kind} today={bundle.today} onDraft={applyDraft} />}
+      {!target && <QuickInput kind={isWearKind(kind) ? 'odometer' : kind} today={bundle.today} onDraft={applyDraft} />}
       {draftNotice && <Notice title="読み取った内容を確認してください">{draftNotice}</Notice>}
       <Card>
         <AppText variant="heading">{kindLabel(kind)}</AppText>

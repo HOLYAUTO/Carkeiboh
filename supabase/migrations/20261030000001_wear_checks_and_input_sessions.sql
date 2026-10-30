@@ -80,8 +80,8 @@ as
 create table public.input_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  -- 車両を消しても計測は残す（利用者を消したときは消える）
-  vehicle_id uuid references public.vehicles (id) on delete set null,
+  -- 本人の車両だけ（下の外部キー）。車両を消しても計測は残す（利用者を消したときは消える）
+  vehicle_id uuid,
   -- 記録の項目（「記録する」で選んだもの。oil_change / tire / brake / fuel / odometer など）
   kind text not null check (char_length(kind) <= 30),
   mode text not null check (mode in ('new', 'edit')),
@@ -99,6 +99,7 @@ create table public.input_sessions (
   record_ref text check (record_ref is null or char_length(record_ref) <= 80),
   app_version text check (app_version is null or char_length(app_version) <= 40),
   created_at timestamptz not null default now(),
+  foreign key (vehicle_id, user_id) references public.vehicles (id, user_id) on delete set null (vehicle_id),
   check (finished_at >= opened_at),
   check (draft_fields_changed <= draft_fields),
   check ((outcome = 'saved') = (record_ref is not null))
