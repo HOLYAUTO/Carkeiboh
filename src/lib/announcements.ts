@@ -56,7 +56,8 @@ function usePublishedAnnouncements() {
   return useQuery({
     queryKey: ['announcements', userId],
     enabled: !!userId,
-    staleTime: 5 * 60_000,
+    // 公開したお知らせが早めに出るよう、1分たったら（前面に戻したときなどに）読み直す
+    staleTime: 60_000,
     queryFn: async () => {
       const now = new Date().toISOString();
       return unwrap(

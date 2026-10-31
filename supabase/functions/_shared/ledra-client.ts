@@ -33,6 +33,8 @@ export interface LedraClient {
   confirmLink(token: string, consent: LedraConsent): Promise<{ linkId: string; shopName: string | null }>;
   fetchOilRecords(linkId: string, cursor: string | null): Promise<{ records: unknown[]; nextCursor: string | null; hasMore: boolean }>;
   revokeLink(linkId: string): Promise<void>;
+  /** 廃車にしたことを伝える（以後 Ledra 側でも、その車両の連携・記録を受け付けない）。解除済みの連携でも送れる */
+  reportScrapped(linkId: string, scrappedOn: string): Promise<void>;
 }
 
 const TIMEOUT_MS = 15_000;
@@ -102,6 +104,16 @@ export function ledraClientFromEnv(): LedraClient {
       // すでに無効なら解除できたものとみなす
       if (res.ok || [404, 410].includes(res.status)) return;
       throw await fail(res, '連携の解除');
+    },
+
+    async reportScrapped(linkId, scrappedOn) {
+      const res = await call(`/v1/consumer-links/${encodeURIComponent(linkId)}/vehicle-status`, {
+        method: 'POST',
+        body: JSON.stringify({ status: 'scrapped', effective_on: scrappedOn }),
+      });
+      // 404 は「Ledra 側がまだこの API に対応していない」場合もあるため、届いたとはみなさず再送する
+      if (res.ok) return;
+      throw await fail(res, '廃車の通知');
     },
   };
 }
