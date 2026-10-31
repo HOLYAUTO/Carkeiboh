@@ -9,7 +9,10 @@ function fakeAdmin() {
   const chain = (table: string, op: string, value: unknown) => {
     calls.push({ table, op, value });
     const c: Record<string, unknown> = {};
-    for (const m of ['eq', 'in']) c[m] = () => c;
+    for (const m of ['eq', 'in']) c[m] = (col: string, v: unknown) => {
+      calls.push({ table, op: m, value: [col, v] });
+      return c;
+    };
     c.select = () => Promise.resolve({ data: [], error: null });
     c.then = (resolve: (v: unknown) => void) => resolve({ data: null, error: null });
     return c;
@@ -54,7 +57,7 @@ describe('Ledra の差分の取り込み', () => {
     const r = await syncLink(admin, ledra(async () => ({ records: [tire], nextCursor: 'wc1', hasMore: false })), link);
     expect(r).toEqual({ status: 'ok', imported: 2, skipped: 0, removed: 0 });
     expect(calls.filter((c) => c.op === 'upsert').map((c) => c.table)).toEqual(['oil_changes', 'wear_checks']);
-    const cursors = calls.filter((c) => c.table === 'ledra_links').map((c) => c.value as Record<string, unknown>);
+    const cursors = calls.filter((c) => c.table === 'ledra_links' && c.op === 'update').map((c) => c.value as Record<string, unknown>);
     expect(cursors[0]).toMatchObject({ sync_cursor: 'oc1' });
     expect(cursors[1]).toMatchObject({ wear_sync_cursor: 'wc1' });
     expect(cursors[1]).not.toHaveProperty('sync_cursor');
@@ -72,5 +75,14 @@ describe('Ledra の差分の取り込み', () => {
     const r = await syncLink(admin, ledra(async () => { throw new LedraLinkInactiveError('HTTP 410'); }), link);
     expect(r).toEqual({ status: 'inactive' });
     expect(calls.some((c) => (c.value as { status?: string })?.status === 'revoked_by_provider')).toBe(true);
+  });
+
+  it('ブレーキの取消で、同じ点検のタイヤの記録は消さない（種類ごとに消す）', async () => {
+    const { admin, calls } = fakeAdmin();
+    const brakeVoid = { ...tire, kind: 'brake', remaining_mm: null, voided: true };
+    await syncLink(admin, ledra(async () => ({ records: [tire, brakeVoid], nextCursor: 'wc1', hasMore: false })), link);
+    const i = calls.findIndex((c) => c.table === 'wear_checks' && c.op === 'delete');
+    expect(i).toBeGreaterThan(-1);
+    expect(calls.slice(i, i + 5)).toContainEqual({ table: 'wear_checks', op: 'eq', value: ['kind', 'brake'] });
   });
 });

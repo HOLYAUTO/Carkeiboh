@@ -33,6 +33,8 @@ interface Stream {
   onConflict: string;
   cursorColumn: 'sync_cursor' | 'wear_sync_cursor';
   toInsert: (raw: unknown, link: LedraLinkRow) => object | null;
+  /** 取消を種類（kind）ごとに消す。1回の点検からタイヤとブレーキが同じ記録IDで来るため、片方の取消でもう片方を消さない */
+  voidByKind?: boolean;
 }
 
 async function pull(admin: SupabaseClient, link: LedraLinkRow, stream: Stream, counts: Counts) {
@@ -40,15 +42,17 @@ async function pull(admin: SupabaseClient, link: LedraLinkRow, stream: Stream, c
   for (let page = 0; page < MAX_PAGES; page++) {
     const { records, nextCursor, hasMore } = await stream.fetch(link.ledra_link_id, cursor);
     // 整備工場が取り消した記録は消す（オイル交換に紐づく金額の支出も外部キーの連鎖で消える）
-    const voided = records.map(voidedRecordId).filter((id) => id !== null);
-    if (voided.length > 0) {
-      const { data: gone, error } = await admin
-        .from(stream.table)
-        .delete()
-        .eq('vehicle_id', link.vehicle_id)
-        .eq('source', 'ledra')
-        .in('ledra_record_id', voided)
-        .select('id');
+    const groups = new Map<string | null, string[]>();
+    for (const r of records) {
+      const id = voidedRecordId(r);
+      if (id === null) continue;
+      const kind = stream.voidByKind ? String((r as { kind?: unknown }).kind) : null;
+      groups.set(kind, [...(groups.get(kind) ?? []), id]);
+    }
+    for (const [kind, ids] of groups) {
+      let q = admin.from(stream.table).delete().eq('vehicle_id', link.vehicle_id).eq('source', 'ledra');
+      if (kind !== null) q = q.eq('kind', kind);
+      const { data: gone, error } = await q.in('ledra_record_id', ids).select('id');
       if (error) throw new Error(`取り消された記録の削除に失敗しました: ${error.message}`);
       counts.removed += gone?.length ?? 0;
     }
@@ -90,10 +94,13 @@ export async function syncLink(admin: SupabaseClient, ledra: LedraClient, link: 
         onConflict: 'vehicle_id,kind,ledra_record_id',
         cursorColumn: 'wear_sync_cursor',
         toInsert: toWearCheckInsert,
+        voidByKind: true,
       }, counts);
     } catch (e) {
-      // オイル交換だけに同意した連携（2026-10-31 より前の同意）。タイヤ・ブレーキは取り込まない
+      // オイル交換だけに同意した連携（2026-10-31 より前の同意）、または鍵に passport:wear_records が無い。
+      // 連携は止めずにタイヤ・ブレーキだけ飛ばす。鍵の設定漏れに気づけるようログには残す
       if (!(e instanceof LedraNotConsentedError)) throw e;
+      console.warn(`ledra link ${link.id}: タイヤ・ブレーキの記録は 403（同意の範囲外か、鍵に passport:wear_records が無い）`);
     }
     if (counts.skipped > 0) console.warn(`ledra link ${link.id}: 不正な記録 ${counts.skipped} 件を取り込みませんでした`);
     return { status: 'ok', ...counts };

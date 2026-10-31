@@ -96,7 +96,7 @@ export function toWearCheckInsert(
   const workDate = typeof r.work_date === 'string' ? r.work_date.slice(0, 10) : '';
   if (!recordId || !kind || !isIsoDate(workDate)) return null;
   const odo = typeof r.odo_km === 'number' && Number.isFinite(r.odo_km) ? Math.round(r.odo_km) : null;
-  const mm = typeof r.remaining_mm === 'number' && r.remaining_mm >= 0 && r.remaining_mm <= 30 ? Math.round(r.remaining_mm * 10) / 10 : null;
+  const mm = typeof r.remaining_mm === 'number' && r.remaining_mm >= 0 && r.remaining_mm <= 30 ? Math.round((r.remaining_mm + Number.EPSILON) * 10) / 10 : null;
   const shop = typeof r.shop_name === 'string' && r.shop_name.trim() ? r.shop_name.trim().slice(0, 100) : null;
   return {
     vehicle_id: link.vehicle_id,
