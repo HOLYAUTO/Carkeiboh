@@ -36,6 +36,7 @@ Deno.serve(
       .select('id')
       .eq('id', body.vehicleId)
       .eq('user_id', user.id)
+      .eq('status', 'active')
       .maybeSingle();
     if (!vehicle) throw new HttpError(404, 'vehicle_not_found');
 
@@ -72,7 +73,7 @@ Deno.serve(
         throw new HttpError(
           409,
           'already_linked',
-          'この車両は、すでにカーケイボーと連携しています（別のアカウントで連携している可能性があります）。前の連携を解除してからお試しください。',
+          'この車両は、すでにイジログと連携しています（別のアカウントで連携している可能性があります）。前の連携を解除してからお試しください。',
         );
       }
       throw e;

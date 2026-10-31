@@ -39,7 +39,7 @@ export default function Shops() {
   return (
     <Screen header={header} refreshControl={<RefreshControl refreshing={shops.isRefetching} onRefresh={() => void shops.refetch()} tintColor={colors.textSecondary} />}>
       {/* 掲載料をいただいている店舗であることを明示する（広告であることが分かるように） */}
-      <AppText variant="caption">【PR】カーケイボーに掲載している整備工場です。距離は現在地からの直線距離です。</AppText>
+      <AppText variant="caption">【PR】イジログに掲載している整備工場です。距離は現在地からの直線距離です。</AppText>
       {(location.state.status === 'denied' || location.state.status === 'unavailable') && (
         <Card>
           <AppText variant="caption">

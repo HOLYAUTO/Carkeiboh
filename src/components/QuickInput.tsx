@@ -11,7 +11,7 @@ import {
   type DraftCategory,
   type RecordDraft,
 } from '@shared/record-draft.ts';
-import { recognizeTextOnDevice } from '../../modules/carkeibo-ocr';
+import { recognizeTextOnDevice } from '../../modules/ijilog-ocr';
 import { invokeFunction } from '../lib/supabase';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
 import { AppText, Button, Card } from './ui';

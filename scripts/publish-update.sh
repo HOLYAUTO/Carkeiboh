@@ -2,9 +2,9 @@
 # 本番（production）に EAS Update を配る。必ずこのスクリプトを使う（eas update を直接実行しない）。
 #
 # 理由：Expo のアカウント（cartrust）には Ledra 用の共有の環境変数（EXPO_PUBLIC_SUPABASE_URL など）があり、
-# eas update --environment production で作ると、カーケイボーの値ではなく Ledra の Supabase に向いた版になることがある
+# eas update --environment production で作ると、イジログの値ではなく Ledra の Supabase に向いた版になることがある
 # （2026-10-29 に実際に起き、iPhone でログインできなくなった）。
-# このスクリプトは接続先をカーケイボーに固定して書き出し、中身に別の Supabase が入っていないことを確かめてから配る。
+# このスクリプトは接続先をイジログに固定して書き出し、中身に別の Supabase が入っていないことを確かめてから配る。
 #
 # 使い方: ./scripts/publish-update.sh "変更の内容"
 #   DRY_RUN=1 を付けると、書き出しと確認だけを行い、配らない
@@ -12,7 +12,7 @@ set -euo pipefail
 
 MESSAGE="${1:?使い方: ./scripts/publish-update.sh \"変更の内容\"}"
 CHANNEL=production
-# カーケイボー専用の Supabase（公開してよい値。eas.json の production ビルドにも同じ値を書いている）
+# イジログ専用の Supabase（公開してよい値。eas.json の production ビルドにも同じ値を書いている）
 SUPABASE_URL=https://ympxgzyvjujnfuoyhilu.supabase.co
 SUPABASE_REF=ympxgzyvjujnfuoyhilu
 
@@ -28,7 +28,7 @@ fi
 rm -rf dist
 "${EAS[@]}" env:exec production "EXPO_PUBLIC_SUPABASE_URL=$SUPABASE_URL npx expo export --platform all --output-dir dist"
 
-# 書き出した中身の確認：Supabase の接続先がカーケイボーのものだけであること
+# 書き出した中身の確認：Supabase の接続先がイジログのものだけであること
 bundles=$(find dist/_expo/static/js -name '*.hbc' -o -name '*.js' | grep -E '/(ios|android)/')
 [ -n "$bundles" ] || { echo "書き出した版が見つかりません。" >&2; exit 1; }
 for f in $bundles; do

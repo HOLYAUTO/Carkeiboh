@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, usePreventRemove } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@domain/costs.ts';
 import { checkOdoEntry } from '@domain/odo.ts';
@@ -20,7 +20,7 @@ import {
 } from '../lib/data';
 import { parseInteger, parseMillimeters } from '../lib/format';
 import type { RecordDraft } from '@shared/record-draft.ts';
-import { cardShadow, fonts, radius, spacing, useColors } from '../theme';
+import { cardShadow, fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
 import { QuickInput } from './QuickInput';
 import { AppText, Button, Card, DateField, Field, Notice, ToggleRow } from './ui';
 
@@ -88,6 +88,23 @@ export function KindPicker({ onSelect }: { onSelect: (k: RecordKind) => void }) 
         </Pressable>
       ))}
     </View>
+  );
+}
+
+/** 見出しの左上の「戻る」。標準の戻るボタンと同じく、山かっこと文字で出す */
+function HeaderBackButton({ onPress }: { onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="戻る"
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: MIN_TAP, paddingRight: spacing.xs, opacity: pressed ? 0.6 : 1 })}
+    >
+      <Ionicons name="chevron-back" size={24} color={colors.accentText} />
+      <Text style={{ fontFamily: fonts.regular, fontSize: 17, color: colors.accentText }}>戻る</Text>
+    </Pressable>
   );
 }
 
@@ -240,6 +257,14 @@ export function RecordForm({
     latestValues.current = values;
     if (dirty) metrics.current.touched = true;
   });
+  // iOS の見出しの標準の「戻る」は、上の確認で離脱を止めている間、押しても何も起きないことがある（2026-10-31 報告）。
+  // 「戻る」を JS で戻すボタンに替えて必ず確認が出るようにし、入力中は横スワイプで戻る操作も止める
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => <HeaderBackButton onPress={() => navigation.goBack()} />,
+      gestureEnabled: !dirty,
+    });
+  }, [navigation, dirty]);
 
   /** 写真・音声で読み取った値を入れる。読み取れなかった項目は今の入力を残す */
   const applyDraft = (d: RecordDraft, via: 'photo' | 'voice') => {

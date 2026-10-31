@@ -8,7 +8,7 @@ import { requireEnv } from './http.ts';
 export class LedraTokenError extends Error {}
 /** 連携が Ledra 側で無効（解除済み・所有者移転など） */
 export class LedraLinkInactiveError extends Error {}
-/** この車両は Ledra 側で、すでにカーケイボーと連携している（別のアカウントの連携が残っているなど） */
+/** この車両は Ledra 側で、すでにイジログと連携している（別のアカウントの連携が残っているなど） */
 export class LedraAlreadyLinkedError extends Error {}
 /** 連携の同意（または鍵のスコープ）にタイヤ・ブレーキの記録が含まれていない。連携は有効のまま */
 export class LedraNotConsentedError extends Error {}
@@ -18,7 +18,7 @@ export interface LedraConsent {
   recipient: string;
   items: readonly string[];
   agreed_at: string;
-  /** 利用者を特定しない、連携ごとの参照ID（カーケイボー側の ledra_links.id） */
+  /** 利用者を特定しない、連携ごとの参照ID（イジログ側の ledra_links.id） */
   consumer_link_ref: string;
   /** 同意画面に提供元として表示した店舗名 */
   provider_shop_name: string;
@@ -42,6 +42,8 @@ export interface LedraClient {
   fetchOilRecords(linkId: string, cursor: string | null): Promise<RecordsPage>;
   fetchWearRecords(linkId: string, cursor: string | null): Promise<RecordsPage>;
   revokeLink(linkId: string): Promise<void>;
+  /** 廃車にしたことを伝える（以後 Ledra 側でも、その車両の連携・記録を受け付けない）。解除済みの連携でも送れる */
+  reportScrapped(linkId: string, scrappedOn: string): Promise<void>;
 }
 
 const TIMEOUT_MS = 15_000;
@@ -126,6 +128,16 @@ export function ledraClientFromEnv(): LedraClient {
       // すでに無効なら解除できたものとみなす
       if (res.ok || [404, 410].includes(res.status)) return;
       throw await fail(res, '連携の解除');
+    },
+
+    async reportScrapped(linkId, scrappedOn) {
+      const res = await call(`/v1/consumer-links/${encodeURIComponent(linkId)}/vehicle-status`, {
+        method: 'POST',
+        body: JSON.stringify({ status: 'scrapped', effective_on: scrappedOn }),
+      });
+      // 404 は「Ledra 側がまだこの API に対応していない」場合もあるため、届いたとはみなさず再送する
+      if (res.ok) return;
+      throw await fail(res, '廃車の通知');
     },
   };
 }

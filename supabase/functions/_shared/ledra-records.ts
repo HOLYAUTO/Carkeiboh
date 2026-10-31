@@ -1,5 +1,5 @@
 /**
- * Ledra の外部API（別紙02で Ledra 側に追加）の応答を、カーケイボーの記録に変換する。
+ * Ledra の外部API（別紙02で Ledra 側に追加）の応答を、イジログの記録に変換する。
  * API の形は docs/ledra-api-contract.md（2026-10-23 確定：Ledra 側がこの形に合わせる）。
  */
 import { isIsoDate } from './domain/dates.ts';
@@ -81,7 +81,7 @@ export interface WearCheckInsert {
 }
 
 /**
- * タイヤ・ブレーキの記録（docs/ledra-api-contract.md 4章）。想定外の項目は取り込まない。
+ * タイヤ・ブレーキの記録（docs/ledra-api-contract.md 5章）。想定外の項目は取り込まない。
  * 不正な記録・取り消された記録は null。残り mm が範囲外なら mm だけ捨てる（記録は残す）
  */
 export function toWearCheckInsert(

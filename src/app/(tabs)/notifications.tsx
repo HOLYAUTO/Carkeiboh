@@ -1,14 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Linking, View } from 'react-native';
+import { Alert, Linking, Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ANNOUNCEMENT_LABELS } from '@domain/announcements.ts';
 import { REMINDER_LABELS, type ReminderKind } from '@domain/reminders.ts';
-import { AppText, Button, Card, Divider, ErrorView, IconButton, ListRow, Notice, Screen, ScreenHeader, SectionTitle, Skeleton, ToggleRow } from '../../components/ui';
+import { AppText, Badge, Button, Card, Divider, ErrorView, IconButton, ListRow, Notice, Screen, ScreenHeader, SectionTitle, Skeleton, ToggleRow } from '../../components/ui';
 import { setShopNewsOptIn, useAnnouncements } from '../../lib/announcements';
 import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
-import { daysLeft, fullDate, km } from '../../lib/format';
+import { daysLeft, fullDate, jstDateTime, km } from '../../lib/format';
 import { getPushStatus, registerForPush, type PushStatus } from '../../lib/push';
-import { spacing } from '../../theme';
+import { fonts, MIN_TAP, spacing, useColors } from '../../theme';
 
 const ITEMS: { kind: ReminderKind; column: keyof VehicleRow; description: string }[] = [
   { kind: 'oil', column: 'notify_oil', description: '推定の残りが500km、目安日の1か月前・2週間前・当日（距離と期間の早い方）' },
@@ -20,6 +22,7 @@ const ITEMS: { kind: ReminderKind; column: keyof VehicleRow; description: string
 ];
 
 export default function Notifications() {
+  const colors = useColors();
   const { bundle } = useVehicleBundle();
   const invalidate = useInvalidate();
   const qc = useQueryClient();
@@ -84,7 +87,7 @@ export default function Notifications() {
     const status = await registerForPush(true);
     setPush(status);
     if (status === 'denied') {
-      Alert.alert('通知がオフになっています', '端末の設定アプリから、カーケイボーの通知を許可してください。', [
+      Alert.alert('通知がオフになっています', '端末の設定アプリから、イジログの通知を許可してください。', [
         { text: '閉じる', style: 'cancel' },
         { text: '設定を開く', onPress: () => Linking.openSettings() },
       ]);
@@ -134,6 +137,33 @@ export default function Notifications() {
       </AppText>
 
       <SectionTitle action={{ label: '一覧を見る', onPress: () => router.push('/announcements') }}>お知らせ</SectionTitle>
+      {announcements.visible && announcements.visible.length > 0 && (
+        <Card style={{ gap: 0, paddingVertical: spacing.sm }}>
+          {announcements.visible.slice(0, 3).map((a, i) => {
+            const isNew = announcements.unread?.some((u) => u.id === a.id) ?? false;
+            return (
+              <View key={a.id}>
+                {i > 0 && <Divider />}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${isNew ? '未読。' : ''}${ANNOUNCEMENT_LABELS[a.category]}。${a.title}`}
+                  onPress={() => router.push({ pathname: '/announcements/[id]', params: { id: a.id } })}
+                  style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: MIN_TAP + 8, paddingVertical: spacing.sm, opacity: pressed ? 0.6 : 1 })}
+                >
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs }}>
+                      {isNew && <Badge label="NEW" />}
+                      <AppText variant="caption">{ANNOUNCEMENT_LABELS[a.category]}・{jstDateTime(a.published_at).slice(0, 10)}</AppText>
+                    </View>
+                    <AppText numberOfLines={2} style={{ fontFamily: fonts.semibold }}>{a.title}</AppText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </Pressable>
+              </View>
+            );
+          })}
+        </Card>
+      )}
       <Card style={{ gap: 0, paddingVertical: spacing.sm }}>
         <ToggleRow
           title="アップデート・修正のお知らせ"

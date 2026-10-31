@@ -1,4 +1,4 @@
--- タイヤ・ブレーキの記録と、入力の手間の計測（2026-10-30。docs/open-questions.md 43・44）
+-- タイヤ・ブレーキの記録と、入力の手間の計測（2026-10-30。docs/open-questions.md 49・50）
 --
 -- 1) wear_checks：タイヤ・ブレーキを点検・交換した記録。溝・パッドの残り（mm）は任意。
 --    利用者が自分で入れる記録と、整備工場が Ledra で作った記録（証明付き）を同じ表に持つ。
@@ -56,7 +56,12 @@ create policy "wear_checks: 自分で入力した記録を削除" on public.wear
   for delete to authenticated
   using (user_id = (select auth.uid()) and source = 'manual');
 
--- タイヤ・ブレーキの記録は、オイル交換とは別の差分の位置で取り込む（docs/ledra-api-contract.md 4章）
+-- 手放したクルマ（乗り換え・廃車）には、タイヤ・ブレーキも記録を足せない（20261031000001 の他の記録と同じ）
+create trigger wear_checks_ensure_vehicle_active
+  before insert or update or delete on public.wear_checks
+  for each row execute function public.ensure_vehicle_active();
+
+-- タイヤ・ブレーキの記録は、オイル交換とは別の差分の位置で取り込む（docs/ledra-api-contract.md 5章）
 alter table public.ledra_links add column wear_sync_cursor text;
 
 -- 走行距離を入れた記録は、ペースの計算にも使う（列の並びと型は元のビューと同じ）
