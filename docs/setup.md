@@ -184,12 +184,9 @@ select a.sponsor_name, a.title, e.action, count(*) as times, count(distinct e.us
 「カーケイボー」に他社の商標登録があるため、アプリ名だけでなく識別子も `ijilog` に変えた。
 アプリID が変わるとストアでは別のアプリになるので、次の順で切り替える。
 
-1. **Expo**：expo.dev のプロジェクト設定で、プロジェクト名（slug）を `carkeibo` から `ijilog` に変える。
-   `app.json` の `extra.eas.projectId` はそのまま使うので、環境変数・プッシュ通知の送り先は引き継がれる。
-   名前を変えずに `slug` を変えると、ビルドの最初に「slug が合わない」というエラーで止まる。
-   - 新しいプロジェクトを作り直す場合は `projectId`・`updates.url` を差し替え、EAS の環境変数を設定し直す。
-     このときは古いアプリの端末とプッシュ通知の送り先のプロジェクトが分かれ、Expo Push は1回の送信に別のプロジェクトのトークンを混ぜられない。
-     古いアプリを使う人がいなくなるまで、`push_tokens` から古いトークンを消すなどの対応が要る
+1. **Expo**：expo.dev のプロジェクトの表示名（Display name）を `ijilog` にした（2026-10-31）。
+   slug（`carkeibo`）は expo.dev の URL に出るだけで利用者には見えないため、変えずに残す。
+   `app.json` の `slug` と `extra.eas.projectId` もそのままなので、環境変数・プッシュ通知の送り先は引き継がれる
 2. **Apple**：App Store Connect で新しいアプリ（バンドルID `app.ijilog`、名前「イジログ」）を作る。
    - バンドルID と Sign in with Apple の設定は、`eas build` が Apple Developer に自動で作る
    - 作ったアプリの「Apple ID」（数字）を `eas.json` の `submit.production.ios.ascAppId` に入れる
