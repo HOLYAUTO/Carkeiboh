@@ -6,7 +6,7 @@ import { extractLinkToken } from '@shared/ledra-records.ts';
 import { AppText, Button, Loading, Notice, Screen } from '../../components/ui';
 import { radius, spacing, themedStyles, useColors } from '../../theme';
 
-/** 整備工場が表示した「カーケイボー連携用QR」を読み取る */
+/** 整備工場が表示した「イジログ連携用QR」を読み取る */
 export default function Scan() {
   const colors = useColors();
   const styles = useStyles();
@@ -37,7 +37,7 @@ export default function Scan() {
         onBarcodeScanned={({ data }) => {
           if (handled.current) return;
           if (!extractLinkToken(data)) {
-            setError('連携用のQRコードではないようです。整備工場で「カーケイボー連携用QR」を表示してもらってください。');
+            setError('連携用のQRコードではないようです。整備工場で「イジログ連携用QR」を表示してもらってください。');
             return;
           }
           handled.current = true;

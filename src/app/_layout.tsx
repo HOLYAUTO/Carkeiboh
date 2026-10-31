@@ -120,6 +120,7 @@ function RootNavigator() {
         <Stack.Screen name="vehicles/new" options={{ title: 'クルマを追加' }} />
         <Stack.Screen name="vehicles/release" options={{ title: 'クルマを手放す' }} />
         <Stack.Screen name="plan" options={{ title: '複数台プラン' }} />
+        <Stack.Screen name="share" options={{ title: 'アプリを紹介する' }} />
         <Stack.Screen name="shops/[id]" options={{ title: '整備工場' }} />
         <Stack.Screen name="ledra/scan" options={{ title: 'QRコードを読み取る', presentation: 'modal' }} />
         <Stack.Screen name="ledra/consent" options={{ title: '整備工場との連携' }} />

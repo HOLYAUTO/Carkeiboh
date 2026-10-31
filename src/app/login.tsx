@@ -28,7 +28,7 @@ export default function Login() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
         <View style={{ marginTop: 72, marginBottom: spacing.xl, gap: spacing.sm }}>
-          <AppText variant="title" style={{ fontSize: 28, lineHeight: 36 }}>カーケイボー</AppText>
+          <AppText variant="title" style={{ fontSize: 28, lineHeight: 36 }}>イジログ</AppText>
           <AppText style={{ color: colors.textSecondary }}>
             次のオイル交換まであと何km、今年クルマにいくらかかったか。開いた瞬間に分かる、クルマの家計簿です。
           </AppText>
@@ -97,7 +97,7 @@ export default function Login() {
         </Card>
 
         <AppText variant="caption" style={{ textAlign: 'center', marginTop: spacing.md }}>
-          カーケイボーは{APP_OWNER}のアプリです。
+          イジログは{APP_OWNER}のアプリです。
         </AppText>
       </Screen>
     </KeyboardAvoidingView>

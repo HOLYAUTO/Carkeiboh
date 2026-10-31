@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 import { AppText, Button, Card, DateField, Divider, ErrorView, Loading, Screen, SectionTitle, ToggleRow } from '../../components/ui';
 import { releaseVehicle, selectVehicle, todayJst, useVehicle, useVehicles, type ReleaseReason } from '../../lib/data';
+import { APP_NAME } from '../../lib/config';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
 
 const REASONS: { value: ReleaseReason; title: string; description: string; icon: 'swap-horizontal' | 'close-circle-outline' }[] = [
@@ -17,7 +18,7 @@ const REASONS: { value: ReleaseReason; title: string; description: string; icon:
   {
     value: 'scrapped',
     title: '廃車',
-    description: 'このクルマには、カーケイボーでも整備工場（Ledra）でも、以後だれも記録を足せなくなります。',
+    description: `このクルマには、${APP_NAME}でも整備工場（Ledra）でも、以後だれも記録を足せなくなります。`,
     icon: 'close-circle-outline',
   },
 ];

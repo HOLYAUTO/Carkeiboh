@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "カーケイボー",
+    "name": "イジログ",
     "slug": "carkeibo",
-    "scheme": "carkeibo",
+    "scheme": "ijilog",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "description": "株式会社たにぐち自動車のクルマの家計簿アプリ。オイル交換の目安と維持費がひと目で分かります。",
     "ios": {
-      "bundleIdentifier": "app.carkeibo",
+      "bundleIdentifier": "app.ijilog",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
@@ -17,7 +17,7 @@
       }
     },
     "android": {
-      "package": "app.carkeibo",
+      "package": "app.ijilog",
       "adaptiveIcon": {
         "backgroundColor": "#f5f5f7",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -79,7 +79,7 @@
         }
       ],
       "expo-image",
-      "./modules/carkeibo-ocr/app.plugin.js"
+      "./modules/ijilog-ocr/app.plugin.js"
     ],
     "experiments": {
       "typedRoutes": true

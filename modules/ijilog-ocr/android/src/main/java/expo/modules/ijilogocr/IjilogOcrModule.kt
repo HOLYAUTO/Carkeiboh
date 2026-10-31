@@ -1,4 +1,4 @@
-package expo.modules.carkeiboocr
+package expo.modules.ijilogocr
 
 import android.net.Uri
 import com.google.mlkit.vision.common.InputImage
@@ -11,14 +11,14 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /** 端末の中で写真の文字を読む。画像は外部に送らない */
-class CarkeiboOcrModule : Module() {
+class IjilogOcrModule : Module() {
   private var recognizer: TextRecognizer? = null
 
   private fun getRecognizer(): TextRecognizer =
     recognizer ?: TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build()).also { recognizer = it }
 
   override fun definition() = ModuleDefinition {
-    Name("CarkeiboOcr")
+    Name("IjilogOcr")
 
     AsyncFunction("recognizeAsync") { uri: String, promise: Promise ->
       val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()

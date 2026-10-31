@@ -4,12 +4,12 @@ import { requireOptionalNativeModule } from 'expo';
  * 端末の中で写真の文字を読む（外部に送らない）。
  * iOS は Apple Vision、Android は ML Kit（日本語）。上から順に1行ずつ返す
  */
-interface CarkeiboOcrNative {
+interface IjilogOcrNative {
   recognizeAsync(uri: string): Promise<string[]>;
 }
 
 // 開発ビルドにだけ入るネイティブモジュール。Expo Go などでは null になり、呼び出し側でサーバーの読み取りに回す
-const native = requireOptionalNativeModule<CarkeiboOcrNative>('CarkeiboOcr');
+const native = requireOptionalNativeModule<IjilogOcrNative>('IjilogOcr');
 
 export const isOnDeviceOcrAvailable = native != null;
 

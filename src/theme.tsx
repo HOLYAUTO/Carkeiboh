@@ -42,7 +42,7 @@ export const cardShadow = {
   elevation: 2,
 } as const;
 
-const THEME_KEY = 'carkeibo.theme';
+const THEME_KEY = 'ijilog.theme';
 
 interface ThemeValue {
   choice: ThemeChoice;

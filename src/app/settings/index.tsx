@@ -95,6 +95,11 @@ export default function Settings() {
         <ListRow title="お知らせ" detail="アップデート・修正、たにぐち自動車の最新情報" onPress={() => router.push('/announcements')} />
       </Card>
 
+      <SectionTitle>紹介</SectionTitle>
+      <Card style={{ gap: 0, paddingVertical: 4 }}>
+        <ListRow title="アプリを紹介する" detail="QRコード・リンクでダウンロードページを案内" onPress={() => router.push('/share')} />
+      </Card>
+
       <SectionTitle>整備工場との連携</SectionTitle>
       <Card>
         {linked ? (
@@ -119,7 +124,7 @@ export default function Settings() {
               </AppText>
             )}
             <AppText variant="caption">
-              Ledra を使っている整備工場で「カーケイボー連携用QR」を表示してもらい、読み取ると、オイル交換の記録を自動で受け取れます。
+              Ledra を使っている整備工場で「イジログ連携用QR」を表示してもらい、読み取ると、オイル交換の記録を自動で受け取れます。
             </AppText>
             <ListRow title="QRコードを読み取って連携する" onPress={() => router.push('/ledra/scan')} />
           </>
@@ -150,7 +155,7 @@ export default function Settings() {
       </Card>
 
       <AppText variant="caption" style={{ textAlign: 'center', marginTop: spacing.md }}>
-        カーケイボーは{APP_OWNER}のアプリです。{'\n'}開発・管理：{DEVELOPER}（{APP_OWNER}の委託先）
+        イジログは{APP_OWNER}のアプリです。{'\n'}開発・管理：{DEVELOPER}（{APP_OWNER}の委託先）
       </AppText>
     </Screen>
   );
