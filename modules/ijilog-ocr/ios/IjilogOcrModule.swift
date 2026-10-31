@@ -2,9 +2,9 @@ import ExpoModulesCore
 import Vision
 
 /// 端末の中で写真の文字を読む。画像は外部に送らない
-public class CarkeiboOcrModule: Module {
+public class IjilogOcrModule: Module {
   public func definition() -> ModuleDefinition {
-    Name("CarkeiboOcr")
+    Name("IjilogOcr")
 
     AsyncFunction("recognizeAsync") { (uri: URL, promise: Promise) in
       DispatchQueue.global(qos: .userInitiated).async {

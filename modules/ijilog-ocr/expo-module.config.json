@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["IjilogOcrModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.ijilogocr.IjilogOcrModule"]
+  }
+}

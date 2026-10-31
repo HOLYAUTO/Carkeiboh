@@ -1,12 +1,12 @@
 # Supabase CLI の設定（ローカル開発用）。本番の値はダッシュボードと secrets で設定する。docs/setup.md を参照
-project_id = "carkeibo"
+project_id = "ijilog"
 
 [api]
 schemas = ["public"]
 
 [auth]
-site_url = "carkeibo://"
-additional_redirect_urls = ["carkeibo://**"]
+site_url = "ijilog://"
+additional_redirect_urls = ["ijilog://**"]
 
 [auth.email]
 enable_signup = true
@@ -16,7 +16,8 @@ otp_expiry = 600
 
 [auth.external.apple]
 enabled = true
-client_id = "app.carkeibo"
+# 旧アプリID（app.carkeibo）のアプリが残っている間は、両方からのサインインを受け付ける
+client_id = "app.ijilog,app.carkeibo"
 secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
 
 [auth.external.google]

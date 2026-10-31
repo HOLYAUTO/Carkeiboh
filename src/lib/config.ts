@@ -8,11 +8,12 @@ export const config = {
   /** 【要確認】複数台プランの料金表示（例：「月額 300円」）。決まるまでは「準備中」と出す */
   plusPriceLabel: process.env.EXPO_PUBLIC_PLUS_PRICE_LABEL ?? '',
   /**
-   * 【要確認】紹介用QRコードのリンク。仮にストアのページ（アプリID から決まる）を入れている。
-   * ストアで公開するまでは開けないため、テスト配布中は TestFlight の公開リンクなどに差し替える
+   * 【要確認】紹介用QRコードのリンク。iPhone は今の TestFlight の公開リンク（旧アプリID のアプリ）を仮に入れている。
+   * 新しいアプリID（app.ijilog）で App Store Connect に登録したら、その公開リンクに差し替える。
+   * Android はストアのページ（アプリID から決まる）。公開するまでは開けないため、内部テストの参加リンクに差し替える
    */
-  iosInstallUrl: process.env.EXPO_PUBLIC_IOS_INSTALL_URL || 'https://apps.apple.com/jp/app/id6826598349',
-  androidInstallUrl: process.env.EXPO_PUBLIC_ANDROID_INSTALL_URL || 'https://play.google.com/store/apps/details?id=app.carkeibo',
+  iosInstallUrl: process.env.EXPO_PUBLIC_IOS_INSTALL_URL || 'https://testflight.apple.com/join/dPU8XZDb',
+  androidInstallUrl: process.env.EXPO_PUBLIC_ANDROID_INSTALL_URL || 'https://play.google.com/store/apps/details?id=app.ijilog',
 };
 
 /** 画面に出すアプリ名。「カーケイボー」は他社の商標登録があるため使わない（2026-10-31 変更） */
