@@ -86,3 +86,21 @@ describe('Ledra の差分の取り込み', () => {
     expect(calls.slice(i, i + 5)).toContainEqual({ table: 'wear_checks', op: 'eq', value: ['kind', 'brake'] });
   });
 });
+
+describe('ledra-client のタイヤ・ブレーキ取得', () => {
+  it('404（Ledra に API がまだ無い）でも連携を止めない扱いにする', async () => {
+    const { ledraClientFromEnv } = await import('../ledra-client.ts');
+    const g = globalThis as unknown as { Deno?: unknown; fetch: typeof fetch };
+    const savedFetch = g.fetch;
+    g.Deno = { env: { get: (k: string) => ({ LEDRA_API_BASE_URL: 'https://ledra.test/api', LEDRA_API_KEY: 'k' })[k] } };
+    try {
+      for (const [status, error] of [[404, LedraNotConsentedError], [403, LedraNotConsentedError], [410, LedraLinkInactiveError]] as const) {
+        g.fetch = (async () => new Response('', { status })) as typeof fetch;
+        await expect(ledraClientFromEnv().fetchWearRecords('lnk', null)).rejects.toBeInstanceOf(error);
+      }
+    } finally {
+      g.fetch = savedFetch;
+      delete g.Deno;
+    }
+  });
+});

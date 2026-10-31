@@ -113,9 +113,10 @@ export function ledraClientFromEnv(): LedraClient {
 
     async fetchWearRecords(linkId, cursor) {
       const res = await call(`/v1/consumer-links/${encodeURIComponent(linkId)}/wear-records${since(cursor)}`);
-      if ([404, 410].includes(res.status)) throw new LedraLinkInactiveError(`HTTP ${res.status}`);
-      // 403 は、オイル交換だけに同意した連携（または鍵にスコープが無い）。連携は止めない
-      if (res.status === 403) throw new LedraNotConsentedError(`HTTP ${res.status}`);
+      if (res.status === 410) throw new LedraLinkInactiveError(`HTTP ${res.status}`);
+      // 403 は、オイル交換だけに同意した連携（または鍵にスコープが無い）。連携は止めない。
+      // 404 も止めない：Ledra 側にこの API がまだ出ていないときも 404 になる（連携が無いことは、先に読むオイル交換の 404 で分かる）
+      if (res.status === 403 || res.status === 404) throw new LedraNotConsentedError(`HTTP ${res.status}`);
       if (!res.ok) throw await fail(res, 'タイヤ・ブレーキの記録の取得');
       return toPage(await res.json(), cursor);
     },
