@@ -7,6 +7,7 @@ export default defineConfig({
     alias: { '@domain': fileURLToPath(new URL('./supabase/functions/_shared/domain', import.meta.url)) },
   },
   test: {
-    include: ['tests/**/*.test.ts'],
+    // Edge Functions 側の試験は supabase/functions/ に置く（Deno の import を含むので、アプリの tsc の対象外）
+    include: ['tests/**/*.test.ts', 'supabase/functions/_shared/__tests__/*.test.ts'],
   },
 });

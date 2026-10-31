@@ -56,6 +56,9 @@ create policy "wear_checks: 自分で入力した記録を削除" on public.wear
   for delete to authenticated
   using (user_id = (select auth.uid()) and source = 'manual');
 
+-- タイヤ・ブレーキの記録は、オイル交換とは別の差分の位置で取り込む（docs/ledra-api-contract.md 4章）
+alter table public.ledra_links add column wear_sync_cursor text;
+
 -- 走行距離を入れた記録は、ペースの計算にも使う（列の並びと型は元のビューと同じ）
 create or replace view public.odometer_points
 with (security_invoker = true)

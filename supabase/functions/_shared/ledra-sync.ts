@@ -1,5 +1,5 @@
-import { LedraLinkInactiveError, type LedraClient } from './ledra-client.ts';
-import { toOilChangeInsert, voidedRecordId } from './ledra-records.ts';
+import { LedraLinkInactiveError, LedraNotConsentedError, type LedraClient, type RecordsPage } from './ledra-client.ts';
+import { toOilChangeInsert, toWearCheckInsert, voidedRecordId } from './ledra-records.ts';
 import type { SupabaseClient } from './supabase.ts';
 
 export interface LedraLinkRow {
@@ -9,8 +9,12 @@ export interface LedraLinkRow {
   ledra_link_id: string;
   status: 'active' | 'revoked_by_user' | 'revoked_by_provider';
   sync_cursor: string | null;
+  wear_sync_cursor: string | null;
   last_error: string | null;
 }
+
+/** 取り込む列（定期取得・連携の確定で同じものを読む） */
+export const LEDRA_LINK_COLUMNS = 'id, vehicle_id, user_id, ledra_link_id, status, sync_cursor, wear_sync_cursor, last_error';
 
 /** 1回の取得で読むページ数の上限（暴走防止。残りは次の回に取得する） */
 const MAX_PAGES = 20;
@@ -20,48 +24,79 @@ export type SyncResult =
   | { status: 'inactive' }
   | { status: 'error'; message: string };
 
-/** 前回取得以降の差分を取り込む */
-export async function syncLink(admin: SupabaseClient, ledra: LedraClient, link: LedraLinkRow): Promise<SyncResult> {
-  let cursor = link.sync_cursor;
-  let imported = 0;
-  let skipped = 0;
-  let removed = 0;
-  try {
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const { records, nextCursor, hasMore } = await ledra.fetchOilRecords(link.ledra_link_id, cursor);
-      // 整備工場が取り消した記録は消す（紐づく金額の支出も外部キーの連鎖で消える）
-      const voided = records.map(voidedRecordId).filter((id) => id !== null);
-      if (voided.length > 0) {
-        const { data: gone, error } = await admin
-          .from('oil_changes')
-          .delete()
-          .eq('vehicle_id', link.vehicle_id)
-          .eq('source', 'ledra')
-          .in('ledra_record_id', voided)
-          .select('id');
-        if (error) throw new Error(`取り消された記録の削除に失敗しました: ${error.message}`);
-        removed += gone?.length ?? 0;
-      }
-      const live = records.filter((r) => voidedRecordId(r) === null);
-      const rows = live.map((r) => toOilChangeInsert(r, link));
-      const valid = rows.filter((r) => r !== null);
-      skipped += rows.length - valid.length;
-      if (valid.length > 0) {
-        // Ledra 側で訂正された記録は上書きする（記録IDで重複させない）
-        const { error } = await admin.from('oil_changes').upsert(valid, { onConflict: 'vehicle_id,ledra_record_id' });
-        if (error) throw new Error(`記録の保存に失敗しました: ${error.message}`);
-        imported += valid.length;
-      }
-      cursor = nextCursor;
-      // 取り込みが済んだところまで、ページごとに位置を進める
-      await admin
-        .from('ledra_links')
-        .update({ sync_cursor: cursor, last_synced_at: new Date().toISOString(), last_error: null })
-        .eq('id', link.id);
-      if (!hasMore) break;
+type Counts = { imported: number; skipped: number; removed: number };
+
+/** 記録の種類ごとの違い（取得先・保存先・差分の位置の列） */
+interface Stream {
+  fetch: (linkId: string, cursor: string | null) => Promise<RecordsPage>;
+  table: 'oil_changes' | 'wear_checks';
+  onConflict: string;
+  cursorColumn: 'sync_cursor' | 'wear_sync_cursor';
+  toInsert: (raw: unknown, link: LedraLinkRow) => object | null;
+}
+
+async function pull(admin: SupabaseClient, link: LedraLinkRow, stream: Stream, counts: Counts) {
+  let cursor = link[stream.cursorColumn];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { records, nextCursor, hasMore } = await stream.fetch(link.ledra_link_id, cursor);
+    // 整備工場が取り消した記録は消す（オイル交換に紐づく金額の支出も外部キーの連鎖で消える）
+    const voided = records.map(voidedRecordId).filter((id) => id !== null);
+    if (voided.length > 0) {
+      const { data: gone, error } = await admin
+        .from(stream.table)
+        .delete()
+        .eq('vehicle_id', link.vehicle_id)
+        .eq('source', 'ledra')
+        .in('ledra_record_id', voided)
+        .select('id');
+      if (error) throw new Error(`取り消された記録の削除に失敗しました: ${error.message}`);
+      counts.removed += gone?.length ?? 0;
     }
-    if (skipped > 0) console.warn(`ledra link ${link.id}: 不正な記録 ${skipped} 件を取り込みませんでした`);
-    return { status: 'ok', imported, skipped, removed };
+    const live = records.filter((r) => voidedRecordId(r) === null);
+    const rows = live.map((r) => stream.toInsert(r, link));
+    const valid = rows.filter((r) => r !== null);
+    counts.skipped += rows.length - valid.length;
+    if (valid.length > 0) {
+      // Ledra 側で訂正された記録は上書きする（記録IDで重複させない）
+      const { error } = await admin.from(stream.table).upsert(valid, { onConflict: stream.onConflict });
+      if (error) throw new Error(`記録の保存に失敗しました: ${error.message}`);
+      counts.imported += valid.length;
+    }
+    cursor = nextCursor;
+    // 取り込みが済んだところまで、ページごとに位置を進める
+    await admin
+      .from('ledra_links')
+      .update({ [stream.cursorColumn]: cursor, last_synced_at: new Date().toISOString(), last_error: null })
+      .eq('id', link.id);
+    if (!hasMore) break;
+  }
+}
+
+/** 前回取得以降の差分を取り込む（オイル交換 → タイヤ・ブレーキの順） */
+export async function syncLink(admin: SupabaseClient, ledra: LedraClient, link: LedraLinkRow): Promise<SyncResult> {
+  const counts: Counts = { imported: 0, skipped: 0, removed: 0 };
+  try {
+    await pull(admin, link, {
+      fetch: (id, c) => ledra.fetchOilRecords(id, c),
+      table: 'oil_changes',
+      onConflict: 'vehicle_id,ledra_record_id',
+      cursorColumn: 'sync_cursor',
+      toInsert: toOilChangeInsert,
+    }, counts);
+    try {
+      await pull(admin, link, {
+        fetch: (id, c) => ledra.fetchWearRecords(id, c),
+        table: 'wear_checks',
+        onConflict: 'vehicle_id,kind,ledra_record_id',
+        cursorColumn: 'wear_sync_cursor',
+        toInsert: toWearCheckInsert,
+      }, counts);
+    } catch (e) {
+      // オイル交換だけに同意した連携（2026-10-31 より前の同意）。タイヤ・ブレーキは取り込まない
+      if (!(e instanceof LedraNotConsentedError)) throw e;
+    }
+    if (counts.skipped > 0) console.warn(`ledra link ${link.id}: 不正な記録 ${counts.skipped} 件を取り込みませんでした`);
+    return { status: 'ok', ...counts };
   } catch (e) {
     if (e instanceof LedraLinkInactiveError) {
       // 所有者移転・店舗側での解除など。以後は取得しない

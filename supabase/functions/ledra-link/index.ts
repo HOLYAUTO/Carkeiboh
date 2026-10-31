@@ -8,7 +8,7 @@ import {
   extractLinkToken,
   TOKEN_INVALID_MESSAGE,
 } from '../_shared/ledra-records.ts';
-import { syncLink, type LedraLinkRow } from '../_shared/ledra-sync.ts';
+import { LEDRA_LINK_COLUMNS, syncLink, type LedraLinkRow } from '../_shared/ledra-sync.ts';
 import { adminClient, requireUser } from '../_shared/supabase.ts';
 
 interface Body {
@@ -88,7 +88,7 @@ Deno.serve(
         consent: { ...consent, shop_name: confirmed.shopName ?? consent.provider_shop_name },
         consented_at: agreedAt,
       })
-      .select('id, vehicle_id, user_id, ledra_link_id, status, sync_cursor, last_error')
+      .select(LEDRA_LINK_COLUMNS)
       .single();
     if (error || !link) {
       // こちらで記録できなかった連携は Ledra 側でも解除しておく（同意の記録がない提供をしないため）
