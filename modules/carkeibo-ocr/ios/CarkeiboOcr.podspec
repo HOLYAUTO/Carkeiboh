@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
   s.name           = 'CarkeiboOcr'
   s.version        = '1.0.0'
   s.summary        = '端末の中で写真の文字を読む（Apple Vision）'
-  s.description    = 'カーケイボーのレシート・メーターの読み取り用。日本語と英数字を認識する'
+  s.description    = 'イジログのレシート・メーターの読み取り用。日本語と英数字を認識する'
   s.license        = 'UNLICENSED'
   s.author         = '株式会社HOLY'
   s.homepage       = 'https://github.com/holy-auto/Carkeiboh'

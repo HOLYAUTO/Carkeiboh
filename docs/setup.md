@@ -1,9 +1,9 @@
 # セットアップと配布の手順
 
 アカウント（Apple Developer、Google Play Console、Supabase、Expo）は株式会社HOLY 名義で作り、
-将来たにぐち自動車へ移管できるよう、すべてカーケイボー専用にします（Ledra と共有しない）。
+将来たにぐち自動車へ移管できるよう、すべてイジログ専用にします（Ledra と共有しない）。
 
-## 1. Supabase（カーケイボー専用の組織・プロジェクト）
+## 1. Supabase（イジログ専用の組織・プロジェクト）
 
 1. 専用の組織とプロジェクトを作る（リージョンは東京）
 2. マイグレーションを適用する
@@ -21,13 +21,13 @@
    npx supabase functions deploy
    npx supabase secrets set LEDRA_API_BASE_URL=... LEDRA_API_KEY=... CRON_SECRET=... EXPO_ACCESS_TOKEN=... ANTHROPIC_API_KEY=...
    ```
-   - `ANTHROPIC_API_KEY` は「写真で入力」（`read-record-photo`）で使う。カーケイボー専用の Claude API キーを発行する
+   - `ANTHROPIC_API_KEY` は「写真で入力」（`read-record-photo`）で使う。イジログ専用の Claude API キーを発行する
 5. 定期実行を登録する：拡張 `pg_cron`・`pg_net` を有効にし、Vault に `project_url`・`cron_secret` を登録してから `supabase/cron.example.sql` を実行
    - Ledra 取得：毎時（`ledra-sync`）
    - 事前通知：毎日 UTC 0:00 = 日本時間 9:00（`notify-dispatch`）
    - お知らせのプッシュ通知：10分ごと（`announce-dispatch`）
 
-## 2. Expo / EAS（カーケイボー専用のプロジェクト）
+## 2. Expo / EAS（イジログ専用のプロジェクト）
 
 1. `npx eas-cli@latest init` でプロジェクトを作り、`app.json` の `extra.eas.projectId` に入る ID を確認する
 2. アプリID は `app.carkeibo`（iOS のバンドルID・Android のパッケージ名。公開後は変更できない）
@@ -58,8 +58,8 @@ DRY_RUN=1 ./scripts/publish-update.sh "変更の内容"  # 書き出しと接続
 ```
 
 - **`eas update` を直接実行しない**：Expo のアカウント（cartrust）には Ledra 用の共有の環境変数（`EXPO_PUBLIC_SUPABASE_URL` など）があり、
-  直接実行するとカーケイボーではなく Ledra の Supabase に向いた版が配られることがある（2026-10-29 に起き、ログインできなくなった）。
-  スクリプトは接続先をカーケイボーに固定して書き出し、中身にほかの Supabase が入っていないことを確かめてから配る
+  直接実行するとイジログではなく Ledra の Supabase に向いた版が配られることがある（2026-10-29 に起き、ログインできなくなった）。
+  スクリプトは接続先をイジログに固定して書き出し、中身にほかの Supabase が入っていないことを確かめてから配る
 - ビルド（`eas build`）は `eas.json` の production に接続先を書いて固定している
 
 - ビルドの種類（`eas.json` の `development` / `preview` / `production`）ごとに、同じ名前の channel の更新を受け取る
@@ -177,4 +177,4 @@ select a.sponsor_name, a.title, e.action, count(*) as times, count(distinct e.us
 - Supabase：専用の組織ごと移管できる（組織のオーナー変更）
 - Expo：専用のプロジェクトをたにぐち自動車のアカウントへ移管できる
 - App Store / Google Play：アプリの移管手続き（販売元が変わる）。アプリID は変わらない
-- 秘密情報はカーケイボー専用に発行しているため、移管時に Ledra 側へ影響しない（Ledra の API キーは移管後に再発行を推奨）
+- 秘密情報はイジログ専用に発行しているため、移管時に Ledra 側へ影響しない（Ledra の API キーは移管後に再発行を推奨）

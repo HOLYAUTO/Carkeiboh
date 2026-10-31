@@ -44,7 +44,7 @@ describe('未読', () => {
 describe('プッシュ通知の文面', () => {
   it('どこからのお知らせかを題名に付ける', () => {
     expect(announcementPushMessage({ category: 'app_update', title: '1.1 を配信しました', body: '不具合を直しました' })).toEqual({
-      title: 'カーケイボーからのお知らせ：1.1 を配信しました',
+      title: 'イジログからのお知らせ：1.1 を配信しました',
       body: '不具合を直しました',
     });
     expect(announcementPushMessage({ category: 'shop_news', title: '冬タイヤの予約開始', body: 'x' }).title).toBe('たにぐち自動車より：冬タイヤの予約開始');

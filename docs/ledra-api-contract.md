@@ -1,9 +1,9 @@
-# Ledra 外部API の仕様（カーケイボー連携）
+# Ledra 外部API の仕様（イジログ連携）
 
 別紙02「Ledra 側開発依頼書：カーケイボー連携API」で Ledra に追加する API の形です。
 **2026-10-23 確定：Ledra 側がこの形に合わせて実装する。** Ledra 側の実装は holy-auto/Ledra #1397（設計書 `docs/consumer-app-oil-records-design.md`）。
 
-カーケイボー側の呼び出しは次の2ファイルにまとまっています。
+イジログ側の呼び出しは次の2ファイルにまとまっています。
 
 - `supabase/functions/_shared/ledra-client.ts`（呼び出し）
 - `supabase/functions/_shared/ledra-records.ts`（応答の変換・QR の読み取り・同意の文言）
@@ -12,12 +12,12 @@
 
 - 接続先 `LEDRA_API_BASE_URL` は `https://<Ledra のホスト>/api`（下のパスはこの後ろに付く）
 - `Authorization: Bearer <LEDRA_API_KEY>`
-- キーはカーケイボー専用に、Ledra の外部API管理画面（`/admin/platform/passport-consumers`）で発行したもの。
+- キーはイジログ専用に、Ledra の外部API管理画面（`/admin/platform/passport-consumers`）で発行したもの。
   スコープは `passport:oil_records`（2026-10-23 確定。Ledra の既存の命名 `passport:verify` 等に合わせた）。
   **このスコープを明示した鍵が要る**（全スコープ `*` の鍵では `403`）
 - 成功の応答には `ok: true` が付く（読まなくてよい）。エラーは `{ error, message }`
 - `401`（鍵が無効）・`403`（スコープ不足）・`429`（レート制限・月間上限）は**設定や回数の問題**で、連携の状態とは関係ない
-- キーはカーケイボーのサーバー（Supabase Edge Functions の secrets）だけに置き、アプリには埋め込まない
+- キーはイジログのサーバー（Supabase Edge Functions の secrets）だけに置き、アプリには埋め込まない
 
 ## QR コード
 
@@ -33,7 +33,7 @@
 GET /v1/consumer-link-tokens/{token}
 ```
 
-| 応答 | カーケイボー側の扱い |
+| 応答 | イジログ側の扱い |
 | --- | --- |
 | `200` `{ "shop_name": "たにぐち自動車 本店", "expires_at": "2026-10-23T01:38:45.000Z" }` | 同意画面の「提供元」に店舗名を表示する |
 | `410`（`400` / `404` も同じ扱い） | 「QR の有効期限が切れたか、すでに使われています」と表示し、同意画面を出さない |
@@ -53,13 +53,13 @@ POST /v1/consumer-links
     "recipient": "株式会社たにぐち自動車",
     "items": ["作業日", "走行距離（ODO）", "オイル交換の有無", "オイルフィルター交換の有無", "店舗名"],
     "agreed_at": "2026-10-23T01:23:45.000Z",
-    "consumer_link_ref": "<カーケイボー側の連携ID（利用者のアカウントIDではない）>",
+    "consumer_link_ref": "<イジログ側の連携ID（利用者のアカウントIDではない）>",
     "provider_shop_name": "<同意画面に提供元として表示した店舗名>"
   }
 }
 ```
 
-| 応答 | カーケイボー側の扱い |
+| 応答 | イジログ側の扱い |
 | --- | --- |
 | `201` `{ "link_id": "...", "shop_name": "..." }` | 連携成立。`shop_name` は任意（なければ事前照会の店舗名を使う） |
 | `410`（`400` / `404` も同じ扱い） | 「QR の有効期限が切れたか、すでに使われています」と表示 |
@@ -111,4 +111,4 @@ DELETE /v1/consumer-links/{link_id}
 ```
 
 - `204` を返す（解除済みの連携も `204`）。`404` / `410` も解除済みとみなす
-- 失敗した場合、カーケイボー側は取得を先に止め、解除の通知を1時間ごとに再送する
+- 失敗した場合、イジログ側は取得を先に止め、解除の通知を1時間ごとに再送する

@@ -40,7 +40,7 @@ export const ANNOUNCEMENT_PUSH_BODY_MAX = 100;
 
 /** プッシュ通知の題名と本文。題名の頭に、どこからのお知らせかを付ける */
 export function announcementPushMessage(a: Pick<AnnouncementLike, 'category' | 'title' | 'body'>): { title: string; body: string } {
-  const prefix = a.category === 'shop_news' ? 'たにぐち自動車より' : 'カーケイボーからのお知らせ';
+  const prefix = a.category === 'shop_news' ? 'たにぐち自動車より' : 'イジログからのお知らせ';
   const flat = a.body.replace(/\s+/g, ' ').trim();
   const chars = [...flat];
   const body = chars.length > ANNOUNCEMENT_PUSH_BODY_MAX ? `${chars.slice(0, ANNOUNCEMENT_PUSH_BODY_MAX - 1).join('')}…` : flat;

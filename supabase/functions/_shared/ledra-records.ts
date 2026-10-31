@@ -1,5 +1,5 @@
 /**
- * Ledra の外部API（別紙02で Ledra 側に追加）の応答を、カーケイボーの記録に変換する。
+ * Ledra の外部API（別紙02で Ledra 側に追加）の応答を、イジログの記録に変換する。
  * API の形は docs/ledra-api-contract.md（2026-10-23 確定：Ledra 側がこの形に合わせる）。
  */
 import { isIsoDate } from './domain/dates.ts';

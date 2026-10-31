@@ -84,7 +84,7 @@ export default function Notifications() {
     const status = await registerForPush(true);
     setPush(status);
     if (status === 'denied') {
-      Alert.alert('通知がオフになっています', '端末の設定アプリから、カーケイボーの通知を許可してください。', [
+      Alert.alert('通知がオフになっています', '端末の設定アプリから、イジログの通知を許可してください。', [
         { text: '閉じる', style: 'cancel' },
         { text: '設定を開く', onPress: () => Linking.openSettings() },
       ]);

@@ -63,12 +63,12 @@ export default function Consent() {
   return (
     <Screen>
       <AppText>
-        整備工場で記録したオイル交換を、カーケイボーに自動で取り込みます。内容を確認して、同意する場合のみ連携してください。
+        整備工場で記録したオイル交換を、イジログに自動で取り込みます。内容を確認して、同意する場合のみ連携してください。
       </AppText>
       <Card>
         <Item label="提供元">{`${shopName}\n（車両履歴サービス「Ledra」を利用する整備工場）`}</Item>
         <Divider />
-        <Item label="提供先">{`${CONSENT_RECIPIENT}（カーケイボーの運営者）`}</Item>
+        <Item label="提供先">{`${CONSENT_RECIPIENT}（イジログの運営者）`}</Item>
         <Divider />
         <Item label="受け取る項目">{`このクルマのオイル交換に関する記録のみ\n${CONSENT_ITEMS.map((i) => `・${i}`).join('\n')}`}</Item>
         <Divider />
@@ -77,11 +77,11 @@ export default function Consent() {
         <Item label="取り込みのタイミング">連携した時点と、その後1時間ごと</Item>
         <Divider />
         <Item label="解除の方法">
-          カーケイボーの「設定 → 整備工場との連携 → 連携を解除する」からいつでも解除できます。解除すると以後の取り込みは止まります。クルマの所有者が変わった場合は自動で終了します。
+          イジログの「設定 → 整備工場との連携 → 連携を解除する」からいつでも解除できます。解除すると以後の取り込みは止まります。クルマの所有者が変わった場合は自動で終了します。
         </Item>
       </Card>
       <AppText variant="caption">
-        取り込んだ記録は「証明付き」として表示し、アプリでは内容を変更できません。カーケイボーの開発・管理は株式会社HOLY（{CONSENT_RECIPIENT}の委託先）が行います。
+        取り込んだ記録は「証明付き」として表示し、アプリでは内容を変更できません。イジログの開発・管理は株式会社HOLY（{CONSENT_RECIPIENT}の委託先）が行います。
       </AppText>
       <View style={{ gap: spacing.sm }}>
         <Button title={`同意して${shopName}と連携する`} loading={busy} disabled={!vehicle.data} onPress={agree} />

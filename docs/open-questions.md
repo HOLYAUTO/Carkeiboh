@@ -10,7 +10,7 @@
 | 1 | LINEログイン（01 9-1） | 初期版に入れない | ログイン画面は Apple・Google・メール＋確認コード |
 | 2 | Ledra API の形（02） | `docs/ledra-api-contract.md` の形に Ledra 側が合わせる | 同文書を仕様として確定 |
 | 3 | 同意画面の提供元（店舗名）（01 5.5） | 02 にトークンの事前照会APIを入れる | 同意画面で店舗名を表示。確定時に表示した店舗名を同意の控えに残す（`ledra-preview` 関数） |
-| 4 | 画面イメージ（01 4章） | 画像が届くまで Ledra の UI を参考にする。**見た目を参考にカーケイボー側で作り直し、Ledra のコードは使わない**（01 2章の権利の決定を守るため） | 下記「画面の作り方」のとおり |
+| 4 | 画面イメージ（01 4章） | 画像が届くまで Ledra の UI を参考にする。**見た目を参考にイジログ側で作り直し、Ledra のコードは使わない**（01 2章の権利の決定を守るため） | 下記「画面の作り方」のとおり |
 
 ### 画面の作り方（決定 4 の中身）
 
@@ -79,4 +79,12 @@
 
 | # | 項目 | 内容 | 判断が必要なこと | 場所 |
 | --- | --- | --- | --- | --- |
-| 42 | 本番の更新が Ledra の Supabase に向いた | `eas update --environment production` で配った版が、アカウント共有の環境変数（Ledra 用）の `EXPO_PUBLIC_SUPABASE_URL` を使い、iPhone でログインできなくなった（キーはカーケイボーのものだったため、Ledra 側で読み書きはされていない）。接続先を固定して配り直し、以後は `scripts/publish-update.sh` で配る。ビルドは `eas.json` で接続先を固定 | 根本的には、カーケイボーを Ledra と別の Expo アカウントへ移すか、共有の環境変数を Ledra のプロジェクトだけの変数に変える（Ledra 側の設定変更が必要）。preview・development の環境は、いまも Ledra の接続先しかない | `scripts/publish-update.sh`、`eas.json`、`docs/setup.md` 2章 |
+| 42 | 本番の更新が Ledra の Supabase に向いた | `eas update --environment production` で配った版が、アカウント共有の環境変数（Ledra 用）の `EXPO_PUBLIC_SUPABASE_URL` を使い、iPhone でログインできなくなった（キーはイジログのものだったため、Ledra 側で読み書きはされていない）。接続先を固定して配り直し、以後は `scripts/publish-update.sh` で配る。ビルドは `eas.json` で接続先を固定 | 根本的には、イジログを Ledra と別の Expo アカウントへ移すか、共有の環境変数を Ledra のプロジェクトだけの変数に変える（Ledra 側の設定変更が必要）。preview・development の環境は、いまも Ledra の接続先しかない | `scripts/publish-update.sh`、`eas.json`、`docs/setup.md` 2章 |
+
+## 2026-10-31 の要望で変えたもの（戻る・アプリ名・紹介用QRコード）
+
+| # | 項目 | 仮の値・実装 | 判断が必要なこと | 場所 |
+| --- | --- | --- | --- | --- |
+| 43 | 入力画面の「戻る」が効かない | 入力途中（未保存）の記録画面で、iOS の見出しの標準の「戻る」を押しても何も起きなかった（離脱の確認で止めている間、標準のボタンから確認が呼ばれないため）。記録の入力・編集画面は「戻る」を自前のボタンにし、押すと必ず「入力中の内容を破棄しますか」を出す。入力中は横スワイプで戻る操作を止める（入力していなければスワイプで戻れる） | — | `src/components/RecordForm.tsx` |
+| 44 | アプリ名 | 「カーケイボー」に他社の商標登録があるため、画面・通知・文書のアプリ名を「イジログ」に変えた。**ストアのアプリID（`app.carkeibo`）・URLスキーム（`carkeibo://`）・EAS の slug は公開後・連携後に変えられないため、そのまま残す**（利用者には見えない）。ホーム画面のアイコンの下の名前はネイティブの設定のため、OTA 更新では変わらず、次のストア用ビルドから変わる | ストア（App Store Connect・Google Play）の表示名を「イジログ」に変えること。Ledra 側の「カーケイボー連携用QR」の表記を「イジログ連携用QR」に変えてもらうこと。お知らせの題名（`announcements.ts`）を変えたので Edge Functions の再デプロイ | `app.json`、`src/lib/config.ts`（`APP_NAME`）ほか |
+| 45 | 紹介用QRコード | 「設定 → アプリを紹介する」で、iPhone／Android を切り替えてダウンロードページの QRコードを出す。「リンクを送る」で LINE・メールなどに両方のリンクを送れる。リンクは仮にストアのページ（`https://apps.apple.com/jp/app/id6826598349`・`https://play.google.com/store/apps/details?id=app.carkeibo`）。ストアで公開するまでは開けないので、テスト配布中は `EXPO_PUBLIC_IOS_INSTALL_URL`・`EXPO_PUBLIC_ANDROID_INSTALL_URL` に TestFlight の公開リンクなどを入れる | 公開前に配る場合の招待リンク。1つのQRで両方に振り分けたい場合は、端末を見分けてストアへ送るWebページが別に要る | `src/app/share.tsx`、`src/lib/config.ts` |
