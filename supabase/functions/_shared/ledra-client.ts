@@ -8,7 +8,7 @@ import { requireEnv } from './http.ts';
 export class LedraTokenError extends Error {}
 /** 連携が Ledra 側で無効（解除済み・所有者移転など） */
 export class LedraLinkInactiveError extends Error {}
-/** この車両は Ledra 側で、すでにカーケイボーと連携している（別のアカウントの連携が残っているなど） */
+/** この車両は Ledra 側で、すでにイジログと連携している（別のアカウントの連携が残っているなど） */
 export class LedraAlreadyLinkedError extends Error {}
 
 export interface LedraConsent {
@@ -16,7 +16,7 @@ export interface LedraConsent {
   recipient: string;
   items: readonly string[];
   agreed_at: string;
-  /** 利用者を特定しない、連携ごとの参照ID（カーケイボー側の ledra_links.id） */
+  /** 利用者を特定しない、連携ごとの参照ID（イジログ側の ledra_links.id） */
   consumer_link_ref: string;
   /** 同意画面に提供元として表示した店舗名 */
   provider_shop_name: string;

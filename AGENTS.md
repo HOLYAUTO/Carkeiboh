@@ -42,7 +42,7 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## このリポジトリについて
 
-- カーケイボー（株式会社たにぐち自動車のアプリ）。Ledra のコードを複製・流用しない。Ledra とは外部API だけで接続する
+- イジログ（株式会社たにぐち自動車のアプリ）。Ledra のコードを複製・流用しない。Ledra とは外部API だけで接続する
 - 予測・通知・維持費・ODO の計算は `supabase/functions/_shared/domain` に置き、アプリ（`@domain/*`）と Edge Functions の両方から使う。Deno でも動くよう、相対 import には `.ts` を付け、外部パッケージに依存しない
 - DB を変えたら `npm run test:rls`、計算を変えたら `npm test` を流す
 - 決まっていない項目は推測で埋めず、仮の値で実装して `docs/open-questions.md` に追記する

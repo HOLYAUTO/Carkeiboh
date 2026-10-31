@@ -9,7 +9,7 @@ const MLKIT_DEPENDENCIES = 'com.google.mlkit.vision.DEPENDENCIES';
 // ocr_japanese：日本語の文字認識（このモジュール）、barcode_ui：QRコードの読み取り（expo-camera）
 const MLKIT_MODELS = 'ocr_japanese,barcode_ui';
 
-module.exports = function withCarkeiboOcr(config) {
+module.exports = function withIjilogOcr(config) {
   return withAndroidManifest(config, (c) => {
     const manifest = AndroidConfig.Manifest.ensureToolsAvailable(c.modResults);
     const app = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);

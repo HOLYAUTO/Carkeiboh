@@ -1,9 +1,9 @@
 # セットアップと配布の手順
 
 アカウント（Apple Developer、Google Play Console、Supabase、Expo）は株式会社HOLY 名義で作り、
-将来たにぐち自動車へ移管できるよう、すべてカーケイボー専用にします（Ledra と共有しない）。
+将来たにぐち自動車へ移管できるよう、すべてイジログ専用にします（Ledra と共有しない）。
 
-## 1. Supabase（カーケイボー専用の組織・プロジェクト）
+## 1. Supabase（イジログ専用の組織・プロジェクト）
 
 1. 専用の組織とプロジェクトを作る（リージョンは東京）
 2. マイグレーションを適用する
@@ -15,26 +15,26 @@
    - **Email**：確認コード（OTP）でログインする。メールテンプレート「Magic Link」の本文に `{{ .Token }}` を入れ、6桁のコードが届くようにする
    - **Apple**：Services ID・Key を登録。iPhone は端末のサインイン（ID トークン）、Android はブラウザ経由
    - **Google**：OAuth クライアントを登録
-   - Redirect URLs に `carkeibo://auth/callback` を追加
+   - Redirect URLs に `ijilog://auth/callback` を追加
 4. Edge Functions をデプロイし、secrets を設定する
    ```sh
    npx supabase functions deploy
    npx supabase secrets set LEDRA_API_BASE_URL=... LEDRA_API_KEY=... CRON_SECRET=... EXPO_ACCESS_TOKEN=... ANTHROPIC_API_KEY=...
    ```
-   - `ANTHROPIC_API_KEY` は「写真で入力」（`read-record-photo`）で使う。カーケイボー専用の Claude API キーを発行する
+   - `ANTHROPIC_API_KEY` は「写真で入力」（`read-record-photo`）で使う。イジログ専用の Claude API キーを発行する
 5. 定期実行を登録する：拡張 `pg_cron`・`pg_net` を有効にし、Vault に `project_url`・`cron_secret` を登録してから `supabase/cron.example.sql` を実行
    - Ledra 取得：毎時（`ledra-sync`）
    - 事前通知：毎日 UTC 0:00 = 日本時間 9:00（`notify-dispatch`）
    - お知らせのプッシュ通知：10分ごと（`announce-dispatch`）
 
-## 2. Expo / EAS（カーケイボー専用のプロジェクト）
+## 2. Expo / EAS（イジログ専用のプロジェクト）
 
 1. `npx eas-cli@latest init` でプロジェクトを作り、`app.json` の `extra.eas.projectId` に入る ID を確認する
-2. アプリID は `app.carkeibo`（iOS のバンドルID・Android のパッケージ名。公開後は変更できない）
+2. アプリID は `app.ijilog`（iOS のバンドルID・Android のパッケージ名。公開後は変更できない）
 3. 環境変数（EAS の Environment variables）に `.env.example` の `EXPO_PUBLIC_*` を設定する
 4. プッシュ通知の資格情報：iOS は APNs キー、Android は FCM v1 のサービスアカウントキーを EAS に登録する
 5. 開発ビルド：`npx eas-cli@latest build --profile development`
-   - 音声入力（`expo-speech-recognition`）・位置情報・端末での写真の読み取り（`modules/carkeibo-ocr`）はネイティブモジュールを使うため、Expo Go では動かない（音声入力は「使えません」と案内し、写真はサーバーでの読み取りだけになる）。開発ビルドで確かめる
+   - 音声入力（`expo-speech-recognition`）・位置情報・端末での写真の読み取り（`modules/ijilog-ocr`）はネイティブモジュールを使うため、Expo Go では動かない（音声入力は「使えません」と案内し、写真はサーバーでの読み取りだけになる）。開発ビルドで確かめる
    - Android の端末での読み取りは、Google Play 開発者サービスが日本語の文字認識モデルを取得してから使える（インストール直後に取得を始める。取得前はサーバーでの読み取りに回る）
 
 ## 3. 限定配布（TestFlight・Google Play 内部テスト）
@@ -58,8 +58,8 @@ DRY_RUN=1 ./scripts/publish-update.sh "変更の内容"  # 書き出しと接続
 ```
 
 - **`eas update` を直接実行しない**：Expo のアカウント（cartrust）には Ledra 用の共有の環境変数（`EXPO_PUBLIC_SUPABASE_URL` など）があり、
-  直接実行するとカーケイボーではなく Ledra の Supabase に向いた版が配られることがある（2026-10-29 に起き、ログインできなくなった）。
-  スクリプトは接続先をカーケイボーに固定して書き出し、中身にほかの Supabase が入っていないことを確かめてから配る
+  直接実行するとイジログではなく Ledra の Supabase に向いた版が配られることがある（2026-10-29 に起き、ログインできなくなった）。
+  スクリプトは接続先をイジログに固定して書き出し、中身にほかの Supabase が入っていないことを確かめてから配る
 - ビルド（`eas build`）は `eas.json` の production に接続先を書いて固定している
 
 - ビルドの種類（`eas.json` の `development` / `preview` / `production`）ごとに、同じ名前の channel の更新を受け取る
@@ -177,4 +177,24 @@ select a.sponsor_name, a.title, e.action, count(*) as times, count(distinct e.us
 - Supabase：専用の組織ごと移管できる（組織のオーナー変更）
 - Expo：専用のプロジェクトをたにぐち自動車のアカウントへ移管できる
 - App Store / Google Play：アプリの移管手続き（販売元が変わる）。アプリID は変わらない
-- 秘密情報はカーケイボー専用に発行しているため、移管時に Ledra 側へ影響しない（Ledra の API キーは移管後に再発行を推奨）
+- 秘密情報はイジログ専用に発行しているため、移管時に Ledra 側へ影響しない（Ledra の API キーは移管後に再発行を推奨）
+
+## 9. アプリID の切り替え（app.carkeibo → app.ijilog、2026-10-31）
+
+「カーケイボー」に他社の商標登録があるため、アプリ名だけでなく識別子も `ijilog` に変えた。
+アプリID が変わるとストアでは別のアプリになるので、次の順で切り替える。
+
+1. **Expo**：expo.dev のプロジェクトの表示名（Display name）を `ijilog` にした（2026-10-31）。
+   slug（`carkeibo`）は expo.dev の URL に出るだけで利用者には見えないため、変えずに残す。
+   `app.json` の `slug` と `extra.eas.projectId` もそのままなので、環境変数・プッシュ通知の送り先は引き継がれる
+2. **Apple**：App Store Connect で新しいアプリ（バンドルID `app.ijilog`、名前「イジログ」）を作る。
+   - バンドルID と Sign in with Apple の設定は、`eas build` が Apple Developer に自動で作る
+   - 作ったアプリの「Apple ID」（数字）を `eas.json` の `submit.production.ios.ascAppId` に入れる
+3. **Google**：Google Play Console で新しいアプリ（パッケージ名 `app.ijilog`）を作る。最初の1回は、ビルドした AAB を手でアップロードする
+4. **Supabase**：Authentication → Providers → Apple の Client IDs を `app.ijilog,app.carkeibo` にする（古いアプリが残っている間は両方を入れる）。
+   Redirect URLs に `ijilog://auth/callback` を追加する
+5. ビルドして配る（3章）。新しい TestFlight の公開リンク・内部テストの参加リンクを、
+   EAS の環境変数 `EXPO_PUBLIC_IOS_INSTALL_URL`・`EXPO_PUBLIC_ANDROID_INSTALL_URL` に入れる（アプリの「アプリを紹介する」の QRコードに出る）
+6. 今のテスターに、新しいアプリを入れ直してもらう。同じ Apple ID・メールでログインすれば記録はそのまま残る。
+   画面の色・選んでいたクルマの設定は端末に保存しているので、初めの状態に戻る。
+   古いアプリは、全員が移ったら TestFlight の配布を止める

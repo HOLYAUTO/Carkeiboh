@@ -92,7 +92,7 @@ export function useVehicles() {
   });
 }
 
-const SELECTED_VEHICLE_KEY = 'carkeibo.selectedVehicleId';
+const SELECTED_VEHICLE_KEY = 'ijilog.selectedVehicleId';
 
 function useSelectedVehicleId() {
   return useQuery({
