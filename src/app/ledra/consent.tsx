@@ -70,7 +70,7 @@ export default function Consent() {
         <Divider />
         <Item label="提供先">{`${CONSENT_RECIPIENT}（イジログの運営者）`}</Item>
         <Divider />
-        <Item label="受け取る項目">{`このクルマのオイル交換に関する記録のみ\n${CONSENT_ITEMS.map((i) => `・${i}`).join('\n')}`}</Item>
+        <Item label="受け取る項目">{`このクルマのオイル交換・タイヤ・ブレーキに関する記録のみ\n${CONSENT_ITEMS.map((i) => `・${i}`).join('\n')}`}</Item>
         <Divider />
         <Item label="受け取らない項目">お名前・住所・電話番号、オイル交換以外の整備内容、写真、金額</Item>
         <Divider />

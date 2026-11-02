@@ -1,7 +1,7 @@
 // 定期取得（1時間ごと、pg_cron から呼ぶ）。有効な連携の差分を取り込み、届かなかった解除通知を再送する
 import { handle, json, requireCronSecret, requirePost } from '../_shared/http.ts';
 import { ledraClientFromEnv } from '../_shared/ledra-client.ts';
-import { notifyRevoke, notifyScrapped, REVOKE_NOTIFY_FAILED, syncLink, type LedraLinkRow } from '../_shared/ledra-sync.ts';
+import { LEDRA_LINK_COLUMNS, notifyRevoke, notifyScrapped, REVOKE_NOTIFY_FAILED, syncLink, type LedraLinkRow } from '../_shared/ledra-sync.ts';
 import { adminClient } from '../_shared/supabase.ts';
 
 Deno.serve(
@@ -13,7 +13,7 @@ Deno.serve(
 
     const { data: links, error } = await admin
       .from('ledra_links')
-      .select('id, vehicle_id, user_id, ledra_link_id, status, sync_cursor, last_error')
+      .select(LEDRA_LINK_COLUMNS)
       .eq('status', 'active');
     if (error) throw error;
 

@@ -42,7 +42,7 @@ export interface OdometerPointRow {
   vehicle_id: string;
   date: string;
   odo_km: number;
-  source: 'reading' | 'oil_change' | 'expense';
+  source: 'reading' | 'oil_change' | 'expense' | 'wear_check';
 }
 
 export interface MeterReplacementRow {

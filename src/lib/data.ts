@@ -3,6 +3,7 @@
  * RLS により、ここで読めるのは本人のデータだけ。
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { toJstDate, type IsoDate } from '@domain/dates.ts';
 import type { ExpenseCategory } from '@domain/costs.ts';
@@ -42,6 +43,24 @@ export interface OdometerReadingRow {
   created_at: string;
 }
 
+/** タイヤ・ブレーキの点検・交換。Ledra から来た記録（source = 'ledra'）は編集できない */
+export interface WearCheckRow {
+  id: string;
+  vehicle_id: string;
+  kind: WearKind;
+  performed_on: IsoDate;
+  odo_km: number | null;
+  replaced: boolean;
+  /** Postgres の numeric は文字列で届く */
+  remaining_mm: string | number | null;
+  note: string | null;
+  source: 'manual' | 'ledra';
+  shop_name: string | null;
+  created_at: string;
+}
+
+export type WearKind = 'tire' | 'brake';
+
 export interface LedraLinkRow {
   id: string;
   status: 'active' | 'revoked_by_user' | 'revoked_by_provider';
@@ -62,6 +81,7 @@ export interface VehicleBundle {
   vehicle: VehicleRow;
   oilChanges: OilChangeRow[];
   expenses: ExpenseRow[];
+  wearChecks: WearCheckRow[];
   readings: OdometerReadingRow[];
   points: OdometerPointRow[];
   meterReplacements: MeterReplacementRow[];
@@ -153,9 +173,10 @@ export function useVehicleBundle() {
     enabled: !!vehicleId,
     queryFn: async (): Promise<VehicleBundle> => {
       if (!v) throw new Error('vehicle_not_loaded');
-      const [oil, expenses, readings, points, meters, deadlines, links, logs] = await Promise.all([
+      const [oil, expenses, wear, readings, points, meters, deadlines, links, logs] = await Promise.all([
         supabase.from('oil_changes').select('*').eq('vehicle_id', v.id).order('performed_on', { ascending: false }),
         supabase.from('expenses').select('*').eq('vehicle_id', v.id).order('spent_on', { ascending: false }),
+        supabase.from('wear_checks').select('*').eq('vehicle_id', v.id).order('performed_on', { ascending: false }),
         supabase.from('odometer_readings').select('*').eq('vehicle_id', v.id).order('read_on', { ascending: false }),
         supabase.from('odometer_points').select('vehicle_id, date, odo_km, source').eq('vehicle_id', v.id),
         supabase.from('meter_replacements').select('*').eq('vehicle_id', v.id).order('replaced_on'),
@@ -175,6 +196,7 @@ export function useVehicleBundle() {
         vehicle: v,
         ...rows,
         expenses: unwrap(expenses) as ExpenseRow[],
+        wearChecks: unwrap(wear) as WearCheckRow[],
         readings: unwrap(readings) as OdometerReadingRow[],
         ledraLink: linkRows[0] ?? null,
         notifications: unwrap(logs) as NotificationLogRow[],
@@ -399,6 +421,38 @@ export async function deleteExpense(id: string) {
   unwrap(await supabase.from('expenses').delete().eq('id', id));
 }
 
+export interface WearCheckInput {
+  id?: string;
+  vehicleId: string;
+  kind: WearKind;
+  date: IsoDate;
+  odoKm: number | null;
+  replaced: boolean;
+  remainingMm: number | null;
+  note: string | null;
+}
+
+export async function saveWearCheck(input: WearCheckInput): Promise<{ id: string }> {
+  const row = {
+    vehicle_id: input.vehicleId,
+    kind: input.kind,
+    performed_on: input.date,
+    odo_km: input.odoKm,
+    replaced: input.replaced,
+    remaining_mm: input.remainingMm,
+    note: input.note,
+  };
+  return unwrap(
+    input.id
+      ? await supabase.from('wear_checks').update(row).eq('id', input.id).select('id').single()
+      : await supabase.from('wear_checks').insert(row).select('id').single(),
+  ) as { id: string };
+}
+
+export async function deleteWearCheck(id: string) {
+  unwrap(await supabase.from('wear_checks').delete().eq('id', id));
+}
+
 export async function saveOdoReading(input: { id?: string; vehicleId: string; date: IsoDate; odoKm: number }): Promise<{ id: string }> {
   const row = { vehicle_id: input.vehicleId, read_on: input.date, odo_km: input.odoKm };
   return unwrap(
@@ -477,5 +531,46 @@ export function logShopAction(shopId: string, action: ShopAction) {
     .insert({ shop_id: shopId, action })
     .then(({ error }) => {
       if (error) console.warn('送客の記録に失敗しました', error.message);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// 入力の計測（実証実験の KPI 用。docs/open-questions.md 50）
+// ---------------------------------------------------------------------------
+
+export interface InputSession {
+  vehicleId: string;
+  kind: string;
+  mode: 'new' | 'edit';
+  method: 'manual' | 'photo' | 'voice';
+  outcome: 'saved' | 'abandoned';
+  openedAt: Date;
+  finishedAt: Date;
+  draftFields: number;
+  draftFieldsChanged: number;
+  warningsShown: number;
+  recordRef: string | null;
+}
+
+/** 記録画面1回分の計測を送る。送れなくても利用者の操作は止めない */
+export function logInputSession(s: InputSession) {
+  supabase
+    .from('input_sessions')
+    .insert({
+      vehicle_id: s.vehicleId,
+      kind: s.kind,
+      mode: s.mode,
+      method: s.method,
+      outcome: s.outcome,
+      opened_at: s.openedAt.toISOString(),
+      finished_at: s.finishedAt.toISOString(),
+      draft_fields: Math.min(s.draftFields, 20),
+      draft_fields_changed: Math.min(s.draftFieldsChanged, s.draftFields, 20),
+      warnings_shown: Math.min(s.warningsShown, 20),
+      record_ref: s.recordRef,
+      app_version: Constants.expoConfig?.version ?? null,
+    })
+    .then(({ error }) => {
+      if (error) console.warn('入力の計測を送れませんでした', error.message);
     });
 }
