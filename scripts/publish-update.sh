@@ -26,7 +26,7 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 rm -rf dist
-"${EAS[@]}" env:exec production "EXPO_PUBLIC_SUPABASE_URL=$SUPABASE_URL npx expo export --platform all --output-dir dist"
+"${EAS[@]}" env:exec production "node scripts/export-update.mjs $SUPABASE_URL"
 
 # 書き出した中身の確認：Supabase の接続先がイジログのものだけであること
 bundles=$(find dist/_expo/static/js -name '*.hbc' -o -name '*.js' | grep -E '/(ios|android)/')
