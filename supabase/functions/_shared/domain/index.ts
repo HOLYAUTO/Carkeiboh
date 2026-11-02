@@ -6,3 +6,4 @@ export * from './costs.ts';
 export * from './reminders.ts';
 export * from './vehicle.ts';
 export * from './announcements.ts';
+export * from './billing.ts';

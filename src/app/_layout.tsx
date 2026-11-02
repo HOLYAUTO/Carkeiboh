@@ -10,7 +10,8 @@ import { AppState, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorView, Loading } from '../components/ui';
 import { AuthProvider, useAuth } from '../lib/auth';
-import { useVehicle } from '../lib/data';
+import { useBillingListener } from '../lib/billing';
+import { usePlan, useVehicle } from '../lib/data';
 import { fonts, ThemeProvider, useColors, useTheme } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -60,9 +61,14 @@ function RootNavigator() {
   const colors = useColors();
   const { session, loading } = useAuth();
   const vehicle = useVehicle();
+  const plan = usePlan();
   const signedIn = !!session;
-  const checkingVehicle = signedIn && vehicle.isPending;
   const hasVehicle = !!vehicle.data;
+  // プランを読めなかったときは、残すクルマの選択を求めずに進める（ほかの画面でも上限は DB が守る）
+  const checkingVehicle = signedIn && (vehicle.isPending || (hasVehicle && plan.isPending));
+  // 複数台プランの期限が切れて上限を超えているときは、残すクルマを選ぶまでほかの画面に進めない
+  const mustChooseVehicle = signedIn && hasVehicle && plan.data?.mustChooseVehicle === true;
+  useBillingListener();
 
   useEffect(() => {
     if (!loading && !checkingVehicle) SplashScreen.hideAsync().catch(() => {});
@@ -100,7 +106,10 @@ function RootNavigator() {
       <Stack.Protected guard={signedIn && !hasVehicle}>
         <Stack.Screen name="onboarding" options={{ title: 'クルマの登録', headerBackVisible: false }} />
       </Stack.Protected>
-      <Stack.Protected guard={signedIn && hasVehicle}>
+      <Stack.Protected guard={mustChooseVehicle}>
+        <Stack.Screen name="keep-vehicle" options={{ title: '残すクルマを選ぶ', headerBackVisible: false }} />
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn && hasVehicle && !mustChooseVehicle}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="records/new" options={{ title: '記録する' }} />
         <Stack.Screen name="records/index" options={{ title: '記録の一覧' }} />
@@ -119,11 +128,14 @@ function RootNavigator() {
         <Stack.Screen name="vehicles/index" options={{ title: 'クルマの切り替え・追加' }} />
         <Stack.Screen name="vehicles/new" options={{ title: 'クルマを追加' }} />
         <Stack.Screen name="vehicles/release" options={{ title: 'クルマを手放す' }} />
-        <Stack.Screen name="plan" options={{ title: '複数台プラン' }} />
         <Stack.Screen name="share" options={{ title: 'アプリを紹介する' }} />
         <Stack.Screen name="shops/[id]" options={{ title: '整備工場' }} />
         <Stack.Screen name="ledra/scan" options={{ title: 'QRコードを読み取る', presentation: 'modal' }} />
         <Stack.Screen name="ledra/consent" options={{ title: '整備工場との連携' }} />
+      </Stack.Protected>
+      {/* 残すクルマを選ぶ画面からも開けるよう、別にしておく（最初に開く画面にならないよう最後に置く） */}
+      <Stack.Protected guard={signedIn && hasVehicle}>
+        <Stack.Screen name="plan" options={{ title: '複数台プラン' }} />
       </Stack.Protected>
     </Stack>
   );

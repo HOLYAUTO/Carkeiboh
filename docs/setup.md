@@ -26,6 +26,7 @@
    - Ledra 取得：毎時（`ledra-sync`）
    - 事前通知：毎日 UTC 0:00 = 日本時間 9:00（`notify-dispatch`）
    - お知らせのプッシュ通知：10分ごと（`announce-dispatch`）
+   - 複数台プランの定期購入の照合：毎日 UTC 19:17 = 日本時間 4:17（`billing-reconcile`。6章）
 
 ## 2. Expo / EAS（イジログ専用のプロジェクト）
 
@@ -106,13 +107,55 @@ select s.name, r.action, count(*) as times, count(distinct r.user_id) as users
  group by s.name, r.action order by s.name, r.action;
 ```
 
-## 6. 複数台プラン
+## 6. 複数台プラン（アプリ内課金）
 
-2台目からは複数台プラン（`profiles.plan = 'plus'`）が必要です。アプリ内課金の仕組みが決まるまでは、試験用に SQL で切り替えます。
+2台目からは複数台プランが必要です。App Store / Google Play のアプリ内課金で申し込み、購入の確認はサーバー（Edge Functions）が自前で行います（外部の課金サービスは使わない）。
 
-```sql
-update public.profiles set plan = 'plus' where id = '<利用者のID>';
-```
+- 購入の流れ：アプリで購入 → `billing-verify` がストアの API に状態をたずねて `billing_purchases` に記録 → アプリが購入を完了にする
+- 更新・解約・返金：ストアからの通知を `billing-notify` が受け取り、ストアの API で状態を取り直す。通知の取りこぼしは `billing-reconcile`（毎日）で補う
+- プランは記録の「使える期限（`entitled_until`）」から毎回求める（`effective_plan`）。期限を過ぎれば、通知が届かなくても無料プランに戻る
+- 解約後に上限を超えたら、アプリが「残すクルマを選ぶ」画面を出す。選ばなかったクルマは休止（`vehicles.plan_suspended_at`）になり、記録・お知らせ・Ledra 連携の対象外になる（データは消さない）
+- 再契約すると、休止から90日以内のクルマは自動で戻る。90日を過ぎたものは、復旧の事務手数料（1回限りの購入）も要る。Ledra 連携は取り込みの位置を進めずに止めているので、戻すと止まっていた間の記録を取り込む
+
+### ストアに登録する商品
+
+App Store Connect と Google Play Console で、**同じ商品ID** を使う（`supabase/functions/_shared/domain/billing.ts`）。料金は仮の値（`docs/open-questions.md` 30）。
+
+| 商品ID | 種類 | 料金（仮） |
+| --- | --- | --- |
+| `ijilog_plus_monthly` | 自動更新の定期購入（1か月）。Google Play は基本プランを1つ（自動更新・1か月）作る | 月額500円（税込） |
+| `ijilog_restore_fee` | App Store は「消耗型」、Google Play は「1回限りのアイテム」 | 1,000円（税込） |
+
+- App Store Connect：先に「有料 App 契約」を結び、銀行口座・税務情報を登録する。定期購入はサブスクリプショングループ「複数台プラン」を作ってその中に置く。審査用のスクリーンショットと説明も要る
+- Google Play Console：収益化の設定（お支払いプロファイル）を済ませる
+
+### サーバーの鍵と通知の設定
+
+1. **App Store Server API の鍵**：App Store Connect → ユーザとアクセス → 統合 → 「アプリ内課金」でキーを作り、.p8 ファイルを保存する（再ダウンロードできない）
+2. **Google Play の権限**：EAS Submit と同じサービスアカウントに、Play Console の「ユーザーと権限」で「財務データ、注文、解約アンケートの回答を表示」と「注文と定期購入の管理」を追加する
+3. secrets を設定する
+   ```sh
+   npx supabase secrets set \
+     APPLE_BUNDLE_ID=app.ijilog \
+     APPLE_IAP_ISSUER_ID=<発行者ID> APPLE_IAP_KEY_ID=<キーID> APPLE_IAP_PRIVATE_KEY="$(cat SubscriptionKey_XXXX.p8)" \
+     GOOGLE_PLAY_PACKAGE_NAME=app.ijilog GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="$(cat service-account.json)" \
+     BILLING_NOTIFY_SECRET=<長い乱数>
+   ```
+   鍵のファイルは設定したら手元から消す
+4. **App Store の通知**：App Store Connect → アプリ → App 情報 → 「App Store サーバー通知」の本番・サンドボックスの両方に、次の URL（バージョン2）を入れる
+   `https://<project-ref>.supabase.co/functions/v1/billing-notify?source=apple&key=<BILLING_NOTIFY_SECRET>`
+5. **Google Play の通知**：サービスアカウントと同じ Google Cloud のプロジェクトで Pub/Sub のトピックを作り、`google-play-developer-notifications@system.gserviceaccount.com` にパブリッシャーの権限を付ける。そのトピックに push のサブスクリプションを作り、エンドポイントを
+   `https://<project-ref>.supabase.co/functions/v1/billing-notify?source=google&key=<BILLING_NOTIFY_SECRET>` にする。Play Console → 収益化のセットアップ → 「リアルタイム デベロッパー通知」にトピック名を入れ、「テスト通知を送信」で届くことを確かめる
+6. 定期実行：`supabase/cron.example.sql` の `billing-reconcile-daily` を登録する
+
+### 試験
+
+- iOS：TestFlight（サンドボックス）で購入すると、`billing_purchases.environment = 'sandbox'` で記録される。サンドボックスでは1か月の定期購入が5分で更新される
+- Android：Play Console の「ライセンス テスト」にテスト用の Google アカウントを登録し、内部テストのビルドで購入する
+- 課金を使わずに複数台プランにするとき（運営・試験用）：
+  ```sql
+  update public.profiles set plan = 'plus' where id = '<利用者のID>';
+  ```
 
 ## 7. お知らせ・スポンサー広告（運営スタッフ）
 

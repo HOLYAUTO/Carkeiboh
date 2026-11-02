@@ -38,6 +38,7 @@ Deno.serve(
       .eq('id', body.vehicleId)
       .eq('user_id', user.id)
       .eq('status', 'active')
+      .is('plan_suspended_at', null)
       .maybeSingle();
     if (!vehicle) throw new HttpError(404, 'vehicle_not_found', 'このクルマはすでに手放しているか、見つかりません。');
 

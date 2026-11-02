@@ -53,3 +53,20 @@ select cron.schedule(
   );
   $$
 );
+
+-- 複数台プランの定期購入の照合：毎日 日本時間 4:17（= UTC 19:17）。ストアからの通知が届かなかった場合の取りこぼしを防ぐ
+select cron.schedule(
+  'billing-reconcile-daily',
+  '17 19 * * *',
+  $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/billing-reconcile',
+    headers := jsonb_build_object(
+      'content-type', 'application/json',
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 300000
+  );
+  $$
+);

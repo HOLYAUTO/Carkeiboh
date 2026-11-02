@@ -31,12 +31,12 @@ Deno.serve(
       throw new HttpError(409, 'consent_outdated', '同意画面の内容が更新されました。アプリを最新にして、もう一度お試しください。');
     }
 
+    // 手放したクルマ・複数台プランの解約で休止中のクルマ（残すクルマを選ぶ前の対象外のクルマを含む）とは連携しない
     const { data: vehicle } = await admin
-      .from('vehicles')
+      .from('vehicles_in_service')
       .select('id')
       .eq('id', body.vehicleId)
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .maybeSingle();
     if (!vehicle) throw new HttpError(404, 'vehicle_not_found');
 
