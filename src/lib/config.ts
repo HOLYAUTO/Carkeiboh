@@ -8,11 +8,10 @@ export const config = {
   /** 【要確認】複数台プランの料金表示（例：「月額 300円」）。決まるまでは「準備中」と出す */
   plusPriceLabel: process.env.EXPO_PUBLIC_PLUS_PRICE_LABEL ?? '',
   /**
-   * 【要確認】紹介用QRコードのリンク。iPhone は今の TestFlight の公開リンク（旧アプリID のアプリ）を仮に入れている。
-   * 新しいアプリID（app.ijilog）で App Store Connect に登録したら、その公開リンクに差し替える。
-   * Android はストアのページ（アプリID から決まる）。公開するまでは開けないため、内部テストの参加リンクに差し替える
+   * 紹介用QRコードのリンク。iPhone は TestFlight の公開リンク（イジログ app.ijilog、2026-11-02 作成）。
+   * 【要確認】Android はストアのページ（アプリID から決まる）。公開するまでは開けないため、内部テストの参加リンクに差し替える
    */
-  iosInstallUrl: process.env.EXPO_PUBLIC_IOS_INSTALL_URL || 'https://testflight.apple.com/join/dPU8XZDb',
+  iosInstallUrl: process.env.EXPO_PUBLIC_IOS_INSTALL_URL || 'https://testflight.apple.com/join/j6YE2zFp',
   androidInstallUrl: process.env.EXPO_PUBLIC_ANDROID_INSTALL_URL || 'https://play.google.com/store/apps/details?id=app.ijilog',
 };
 
