@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractLinkToken, toOilChangeInsert, voidedRecordId } from '../../supabase/functions/_shared/ledra-records.ts';
+import { extractLinkToken, toOilChangeInsert, toWearCheckInsert, voidedRecordId } from '../../supabase/functions/_shared/ledra-records.ts';
 
 const link = { id: 'link-1', vehicle_id: 'veh-1', user_id: 'user-1' };
 
@@ -76,5 +76,36 @@ describe('QR からトークンを取り出す', () => {
     expect(extractLinkToken('https://example.com/')).toBeNull();
     expect(extractLinkToken('short')).toBeNull();
     expect(extractLinkToken('車台番号 ABC123-4567890')).toBeNull();
+  });
+});
+
+describe('タイヤ・ブレーキの記録の取り込み', () => {
+  it('受け取る項目だけを取り込む。残り mm は小数1桁、範囲外の mm は捨てて記録は残す', () => {
+    expect(
+      toWearCheckInsert(
+        { record_id: 'i1', kind: 'tire', work_date: '2026-10-31', odo_km: null, replaced: false, remaining_mm: 4.25, shop_name: ' 本店 ', notes: '社内メモ' },
+        link,
+      ),
+    ).toEqual({
+      vehicle_id: 'veh-1',
+      user_id: 'user-1',
+      kind: 'tire',
+      performed_on: '2026-10-31',
+      odo_km: null,
+      replaced: false,
+      remaining_mm: 4.3,
+      source: 'ledra',
+      ledra_link_id: 'link-1',
+      ledra_record_id: 'i1',
+      shop_name: '本店',
+    });
+    expect(toWearCheckInsert({ record_id: 'i1', kind: 'brake', work_date: '2026-10-31', remaining_mm: 31 }, link)?.remaining_mm).toBeNull();
+  });
+
+  it('種類・日付・記録IDが不正なもの、取り消されたものは取り込まない', () => {
+    expect(toWearCheckInsert({ record_id: 'i1', kind: 'oil', work_date: '2026-10-31' }, link)).toBeNull();
+    expect(toWearCheckInsert({ record_id: 'i1', kind: 'tire', work_date: 'x' }, link)).toBeNull();
+    expect(toWearCheckInsert({ record_id: '', kind: 'tire', work_date: '2026-10-31' }, link)).toBeNull();
+    expect(toWearCheckInsert({ record_id: 'i1', kind: 'tire', work_date: '2026-10-31', voided: true }, link)).toBeNull();
   });
 });

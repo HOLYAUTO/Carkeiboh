@@ -1,18 +1,20 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
-import { RecordForm, type EditTarget, type RecordKind } from '../../components/RecordForm';
+import { RecordForm, wearTitle, type EditTarget, type RecordKind } from '../../components/RecordForm';
 import { AppText, Badge, Button, Card, ErrorView, Field, Loading, Num, Screen } from '../../components/ui';
 import {
   deleteExpense,
   deleteOdoReading,
   deleteOilChange,
+  deleteWearCheck,
   saveOilChangeAmount,
   useInvalidate,
   useVehicleBundle,
   type OilChangeRow,
   type VehicleBundle,
   type ExpenseRow,
+  type WearCheckRow,
 } from '../../lib/data';
 import { fullDate, km, parseInteger } from '../../lib/format';
 import { spacing } from '../../theme';
@@ -41,6 +43,12 @@ export default function EditRecord() {
       target = { type: 'expense', row };
       kind = row.category;
     }
+  } else if (type === 'wear') {
+    const row = data.wearChecks.find((w) => w.id === rowId);
+    if (row) {
+      target = { type: 'wear', row };
+      kind = row.kind;
+    }
   } else if (type === 'odometer') {
     const row = data.readings.find((r) => r.id === rowId);
     if (row) {
@@ -53,6 +61,7 @@ export default function EditRecord() {
   if (target.type === 'oil' && target.row.source === 'ledra') {
     return <LedraRecord bundle={data} row={target.row} expense={target.expense} />;
   }
+  if (target.type === 'wear' && target.row.source === 'ledra') return <LedraWearRecord row={target.row} />;
 
   const remove = () =>
     Alert.alert('この記録を削除しますか', '削除すると元に戻せません。', [
@@ -64,6 +73,7 @@ export default function EditRecord() {
           try {
             if (target!.type === 'oil') await deleteOilChange(target!.row.id);
             else if (target!.type === 'expense') await deleteExpense(target!.row.id);
+            else if (target!.type === 'wear') await deleteWearCheck(target!.row.id);
             else await deleteOdoReading(target!.row.id);
             await invalidate();
             router.back();
@@ -115,11 +125,30 @@ function LedraRecord({ bundle, row, expense }: { bundle: VehicleBundle; row: Oil
         <Info label="走行距離（ODO）" value={km(row.odo_km)} />
         <Info label="オイル交換" value={row.oil_changed ? 'あり' : 'なし'} />
         <Info label="オイルフィルター交換" value={row.filter_changed ? 'あり' : 'なし'} />
-        {row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
+        {!!row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
       </Card>
       <Card>
         <Field label="金額（任意）" value={amount} onChangeText={setAmount} keyboardType="number-pad" suffix="円" hint="入力すると維持費に1件として数えます。" />
         <Button title="金額を保存する" disabled={!valid} loading={busy} onPress={save} />
+      </Card>
+    </Screen>
+  );
+}
+
+/** Ledra から来たタイヤ・ブレーキの記録：編集できない（費用は「整備」から記録する） */
+function LedraWearRecord({ row }: { row: WearCheckRow }) {
+  return (
+    <Screen>
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AppText variant="heading">{wearTitle(row)}</AppText>
+          <Badge label="証明付き" />
+        </View>
+        <AppText variant="caption">整備工場の記録（Ledra）から取り込んだ記録です。内容は変更できません。</AppText>
+        <Info label="作業日" value={fullDate(row.performed_on)} />
+        {row.odo_km != null && <Info label="走行距離（ODO）" value={km(row.odo_km)} />}
+        <Info label={row.kind === 'tire' ? '溝の深さ' : 'パッドの厚さ'} value={row.remaining_mm != null ? `${Number(row.remaining_mm)}mm` : '—'} />
+        {!!row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
       </Card>
     </Screen>
   );

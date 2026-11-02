@@ -87,7 +87,7 @@
 | --- | --- | --- | --- | --- |
 | 43 | 入力画面の「戻る」が効かない | 入力途中（未保存）の記録画面で、iOS の見出しの標準の「戻る」を押しても何も起きなかった（離脱の確認で止めている間、標準のボタンから確認が呼ばれないため）。記録の入力・編集画面は「戻る」を自前のボタンにし、押すと必ず「入力中の内容を破棄しますか」を出す。入力中は横スワイプで戻る操作を止める（入力していなければスワイプで戻れる） | — | `src/components/RecordForm.tsx` |
 | 44 | アプリ名 | 「カーケイボー」に他社の商標登録があるため、画面・通知・文書のアプリ名を「イジログ」に変えた。ホーム画面のアイコンの下の名前はネイティブの設定のため、OTA 更新では変わらず、次のストア用ビルドから変わる | ストア（App Store Connect・Google Play）の表示名を「イジログ」に変えること。Ledra 側の「カーケイボー連携用QR」の表記を「イジログ連携用QR」に変えてもらうこと。お知らせの題名（`announcements.ts`）を変えたので Edge Functions の再デプロイ | `app.json`、`src/lib/config.ts`（`APP_NAME`）ほか |
-| 45 | 紹介用QRコード | 「設定 → アプリを紹介する」で、iPhone／Android を切り替えてダウンロードページの QRコードを出す。「リンクを送る」で LINE・メールなどに両方のリンクを送れる。iPhone は仮に今の TestFlight の公開リンク（`https://testflight.apple.com/join/dPU8XZDb`、**旧アプリID `app.carkeibo` のアプリ**）、Android は仮に Google Play のページ（`https://play.google.com/store/apps/details?id=app.ijilog`、公開するまで開けない）。`EXPO_PUBLIC_IOS_INSTALL_URL`・`EXPO_PUBLIC_ANDROID_INSTALL_URL` で差し替えられる | 新しいアプリID で App Store Connect に登録したら、その TestFlight の公開リンクに差し替える。Android の内部テストの参加リンク。1つのQRで両方に振り分けたい場合は、端末を見分けてストアへ送るWebページが別に要る | `src/app/share.tsx`、`src/lib/config.ts` |
+| 45 | 紹介用QRコード | 「設定 → アプリを紹介する」で、iPhone／Android を切り替えてダウンロードページの QRコードを出す。「リンクを送る」で LINE・メールなどに両方のリンクを送れる。iPhone は新しいアプリID `app.ijilog` の TestFlight の公開リンク（`https://testflight.apple.com/join/j6YE2zFp`、2026-11-02 差し替え。旧アプリの `https://testflight.apple.com/join/dPU8XZDb` から変更）、Android は仮に Google Play のページ（`https://play.google.com/store/apps/details?id=app.ijilog`、公開するまで開けない）。`EXPO_PUBLIC_IOS_INSTALL_URL`・`EXPO_PUBLIC_ANDROID_INSTALL_URL` で差し替えられる | Android の内部テストの参加リンク（Google Play Console で新しいアプリを作ってから）。App Store で公開したら iPhone もストアのページに差し替える。1つのQRで両方に振り分けたい場合は、端末を見分けてストアへ送るWebページが別に要る | `src/app/share.tsx`、`src/lib/config.ts` |
 | 46 | アプリID などの識別子 | 2026-10-31 の判断で、商標のある名前を識別子にも残さないよう変えた：バンドルID・パッケージ名 `app.carkeibo` → `app.ijilog`、URLスキーム `carkeibo://` → `ijilog://`、expo.dev の表示名 → `ijilog`（slug `carkeibo` は expo.dev の URL に出るだけなので残す）、端末での文字の読み取りモジュール `carkeibo-ocr` → `ijilog-ocr`、端末に保存する設定のキー `carkeibo.*` → `ijilog.*`。**アプリID が変わるため、ストアでは別のアプリになる**（今の TestFlight・内部テストのアプリには更新が届かない。利用者は新しいアプリを入れ直し、同じ Apple ID・メールでログインすれば記録はそのまま）。`ijilog` の綴りは仮 | `app.ijilog` が Apple・Google で使えるか（他社が使っていたら別の ID にする）。Google Play Console で新しいアプリを作る（App Store Connect は 2026-10-31 に作成済み：Apple ID `6829197837`、`eas.json` に設定）。手順は `docs/setup.md` 9章 | `app.json`、`eas.json`、`modules/ijilog-ocr`、`supabase/config.toml` |
 
 ## 2026-10-31 の要望で追加したもの（クルマを手放す）
@@ -96,3 +96,14 @@
 | --- | --- | --- | --- | --- |
 | 47 | クルマを手放す（乗り換え・廃車） | 「車両情報と周期 → このクルマを手放す」から、乗り換えか廃車を選ぶ。手放したクルマはアプリに出さず、記録は DB に残す（アカウント削除ではすべて消える）。以後そのクルマには記録を足せず、台数の上限にも数えない。整備工場との連携は解除し、廃車のときは Ledra にも伝える（Ledra 側の API は未実装。届くまで1時間ごとに再送）。最後の1台を手放すと、新しいクルマの登録に進む | Ledra 側の実装（`docs/ledra-api-contract.md` 4章）。手放したクルマの記録を本人があとから見返せるようにするか（いまは見られない） | `supabase/functions/vehicle-release`、`src/app/vehicles/release.tsx`、マイグレーション `20261031000001_vehicle_release.sql` |
 | 48 | 次の持ち主への記録の引き継ぎ・有料閲覧・還元 | 未実装。乗り換えのとき本人が「引き継げるようにする」を選べるところまで（既定はオフ） | 同じクルマだと判断する方法、前の持ち主の同意、課金と分配の方法など（`docs/vehicle-history-design.md`） | `docs/vehicle-history-design.md` |
+
+## 2026-10-30 実証実験（PoC）向けに追加したもの（タイヤ・ブレーキ・入力の計測）
+
+実証実験で「一般の利用者が記録を作れるか」「よくある整備（オイル・タイヤ・ブレーキ）の記録にかかる手間」「記録の信頼度」を測るために追加した。
+
+| # | 項目 | 仮の値・実装 | 判断が必要なこと | 場所 |
+| --- | --- | --- | --- | --- |
+| 49 | タイヤ・ブレーキの記録 | 「記録する」に「タイヤ」「ブレーキ」を追加（オイル交換の隣）。日付・走行距離（任意）・交換したか・いちばん減っているところの残り mm（任意、小数1桁）・メモ。点検だけでも記録できる。`wear_checks` に保存し、走行距離はペースの計算にも使う。Ledra から来た記録（証明付き）を入れる列は用意済みで、利用者は作れない・変えられない | 費用を同じ画面で入れるか（いまは「整備」の支出で別に記録。オイルのように紐づけていない）。4本それぞれの溝を残すか（いまは最小値1つ。リテラシーの低い方でも入れられるよう1つにした）。残りが少ないときの通知（いまは無し） | `src/components/RecordForm.tsx`、マイグレーション `20261031000002_wear_checks_and_input_sessions.sql` |
+| 50 | 入力の計測 | 記録画面を開いてから保存・離脱までの時刻、項目、新規か編集か、最後に使った入力の補助（手入力・写真・音声）、写真・音声で埋まった項目の数と保存までに直した数、走行距離の確認が出た数を `input_sessions` に1回1行で送る。利用者は書き込むだけで読めない。集計はサーバー側で行う | プライバシーポリシーへの記載（案：`docs/legal/privacy-policy-items.md`）。保存期間。アプリを強制終了したときの離脱は記録できない（離脱率は少なめに出る） | `src/lib/data.ts` の `logInputSession`、`src/components/RecordForm.tsx` |
+| 51 | 整備工場が測ったタイヤ・ブレーキの記録の取り込み | **実装（2026-10-31）**：整備工場が Ledra の点検表で測った値（タイヤ溝・ブレーキパッドの mm）を、定期取得でオイル交換と一緒に取り込む（`docs/ledra-api-contract.md` 4章）。同意の項目に3つを足し、版を `2026-10-31.1` に上げた。オイル交換だけに同意した連携は、タイヤ・ブレーキを飛ばす | 既存の連携の同意の取り直し（導線は無い）。点検記録の取り消しが伝わらない。施工証明書の交換記録はまだ渡していない | `supabase/functions/_shared/ledra-sync.ts`、`supabase/functions/_shared/ledra-records.ts` |
+| 52 | 実証実験の参加者と結果の扱い | — | 参加者の同意（実証実験への参加・計測・結果を合計の数で共同検討先へ示すこと）。たにぐち自動車の了承。利用目的のプライバシーポリシーへの記載 | — |

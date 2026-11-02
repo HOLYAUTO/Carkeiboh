@@ -10,6 +10,8 @@ export class LedraTokenError extends Error {}
 export class LedraLinkInactiveError extends Error {}
 /** この車両は Ledra 側で、すでにイジログと連携している（別のアカウントの連携が残っているなど） */
 export class LedraAlreadyLinkedError extends Error {}
+/** 連携の同意（または鍵のスコープ）にタイヤ・ブレーキの記録が含まれていない。連携は有効のまま */
+export class LedraNotConsentedError extends Error {}
 
 export interface LedraConsent {
   version: string;
@@ -27,17 +29,35 @@ export interface LedraTokenPreview {
   expiresAt: string | null;
 }
 
+export interface RecordsPage {
+  records: unknown[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 export interface LedraClient {
   /** 同意の前に、QR を表示した店舗名を確かめる（トークンは消費しない） */
   previewToken(token: string): Promise<LedraTokenPreview>;
   confirmLink(token: string, consent: LedraConsent): Promise<{ linkId: string; shopName: string | null }>;
-  fetchOilRecords(linkId: string, cursor: string | null): Promise<{ records: unknown[]; nextCursor: string | null; hasMore: boolean }>;
+  fetchOilRecords(linkId: string, cursor: string | null): Promise<RecordsPage>;
+  fetchWearRecords(linkId: string, cursor: string | null): Promise<RecordsPage>;
   revokeLink(linkId: string): Promise<void>;
   /** 廃車にしたことを伝える（以後 Ledra 側でも、その車両の連携・記録を受け付けない）。解除済みの連携でも送れる */
   reportScrapped(linkId: string, scrappedOn: string): Promise<void>;
 }
 
 const TIMEOUT_MS = 15_000;
+
+const since = (cursor: string | null) => (cursor ? `?since=${encodeURIComponent(cursor)}` : '');
+
+function toPage(body: unknown, cursor: string | null): RecordsPage {
+  const b = body as { records?: unknown; next_cursor?: unknown; has_more?: unknown } | null;
+  return {
+    records: Array.isArray(b?.records) ? b.records : [],
+    nextCursor: typeof b?.next_cursor === 'string' ? b.next_cursor : cursor,
+    hasMore: b?.has_more === true,
+  };
+}
 
 export function ledraClientFromEnv(): LedraClient {
   const base = requireEnv('LEDRA_API_BASE_URL').replace(/\/+$/, '');
@@ -86,17 +106,21 @@ export function ledraClientFromEnv(): LedraClient {
     },
 
     async fetchOilRecords(linkId, cursor) {
-      const q = cursor ? `?since=${encodeURIComponent(cursor)}` : '';
-      const res = await call(`/v1/consumer-links/${encodeURIComponent(linkId)}/oil-records${q}`);
+      const res = await call(`/v1/consumer-links/${encodeURIComponent(linkId)}/oil-records${since(cursor)}`);
       // 403 は「鍵のスコープ不足」で設定ミス。連携を切らずにエラーとして残す
       if ([404, 410].includes(res.status)) throw new LedraLinkInactiveError(`HTTP ${res.status}`);
       if (!res.ok) throw await fail(res, '記録の取得');
-      const body = await res.json();
-      return {
-        records: Array.isArray(body?.records) ? body.records : [],
-        nextCursor: typeof body?.next_cursor === 'string' ? body.next_cursor : cursor,
-        hasMore: body?.has_more === true,
-      };
+      return toPage(await res.json(), cursor);
+    },
+
+    async fetchWearRecords(linkId, cursor) {
+      const res = await call(`/v1/consumer-links/${encodeURIComponent(linkId)}/wear-records${since(cursor)}`);
+      if (res.status === 410) throw new LedraLinkInactiveError(`HTTP ${res.status}`);
+      // 403 は、オイル交換だけに同意した連携（または鍵にスコープが無い）。連携は止めない。
+      // 404 も止めない：Ledra 側にこの API がまだ出ていないときも 404 になる（連携が無いことは、先に読むオイル交換の 404 で分かる）
+      if (res.status === 403 || res.status === 404) throw new LedraNotConsentedError(`HTTP ${res.status}`);
+      if (!res.ok) throw await fail(res, 'タイヤ・ブレーキの記録の取得');
+      return toPage(await res.json(), cursor);
     },
 
     async revokeLink(linkId) {

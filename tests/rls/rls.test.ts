@@ -476,6 +476,84 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
+  it('タイヤ・ブレーキ：他人の記録は見えず、Ledra から来た記録は書き換えられない', async () => {
+    const link = await asAdmin(`select id from public.ledra_links where user_id = $1`, [alice]);
+    await asAdmin(
+      `insert into public.wear_checks (vehicle_id, user_id, kind, performed_on, odo_km, remaining_mm, source, ledra_link_id, ledra_record_id)
+       values ($1, $2, 'tire', '2026-10-01', 41000, 4.5, 'ledra', $3, 'rec_1')`,
+      [aliceVehicle, alice, link.rows[0].id],
+    );
+    await asAdmin(`insert into public.wear_checks (vehicle_id, user_id, kind, performed_on, odo_km) values ($1, $2, 'brake', '2026-09-01', 30100)`, [
+      bobVehicle,
+      bob,
+    ]);
+    await asUser(alice, async (c) => {
+      const mine = await c.query(`select user_id::text as owner, source from public.wear_checks`);
+      expect(mine.rows).toEqual([{ owner: alice, source: 'ledra' }]);
+      // 走行距離はペースの計算にも入る
+      const points = await c.query(`select source from public.odometer_points where source = 'wear_check'`);
+      expect(points.rowCount).toBe(1);
+      const u = await c.query(`update public.wear_checks set remaining_mm = 8 where source = 'ledra'`);
+      expect(u.rowCount).toBe(0);
+      const d = await c.query(`delete from public.wear_checks where source = 'ledra'`);
+      expect(d.rowCount).toBe(0);
+      await expectFail(
+        c,
+        () =>
+          c.query(
+            `insert into public.wear_checks (vehicle_id, kind, performed_on, source, ledra_record_id) values ($1, 'tire', '2026-10-02', 'ledra', 'fake')`,
+            [aliceVehicle],
+          ),
+        /row-level security/,
+      );
+      await expectFail(
+        c,
+        () => c.query(`insert into public.wear_checks (vehicle_id, kind, performed_on) values ($1, 'brake', '2026-10-02')`, [bobVehicle]),
+        /violates foreign key constraint/,
+      );
+      const own = await c.query(
+        `insert into public.wear_checks (vehicle_id, kind, performed_on, replaced, remaining_mm) values ($1, 'tire', '2026-10-20', true, 8.0) returning id`,
+        [aliceVehicle],
+      );
+      const edited = await c.query(`update public.wear_checks set remaining_mm = 7.5 where id = $1`, [own.rows[0].id]);
+      expect(edited.rowCount).toBe(1);
+      await expectFail(
+        c,
+        () => c.query(`insert into public.wear_checks (vehicle_id, kind, performed_on, remaining_mm) values ($1, 'tire', '2026-10-20', 31)`, [aliceVehicle]),
+        /check constraint/,
+      );
+    });
+  });
+
+  it('入力の計測は本人の分を追加できるだけで、読めない・変えられない', async () => {
+    const insert = (c: pg.PoolClient, userId: string, vehicleId: string) =>
+      c.query(
+        `insert into public.input_sessions (user_id, vehicle_id, kind, mode, method, outcome, opened_at, finished_at, record_ref)
+         values ($1, $2, 'tire', 'new', 'voice', 'saved', now() - interval '40 seconds', now(), 'wear:x')`,
+        [userId, vehicleId],
+      );
+    await asUser(alice, async (c) => {
+      await insert(c, alice, aliceVehicle);
+      await expectFail(c, () => insert(c, bob, bobVehicle), /row-level security/);
+      await expectFail(c, () => insert(c, alice, bobVehicle), /violates foreign key constraint/);
+      await expectFail(c, () => c.query(`select * from public.input_sessions`), /permission denied/);
+      await expectFail(c, () => c.query(`delete from public.input_sessions`), /permission denied/);
+      // 保存したのに記録の参照が無い行は受け付けない
+      await expectFail(
+        c,
+        () =>
+          c.query(
+            `insert into public.input_sessions (vehicle_id, kind, mode, method, outcome, opened_at, finished_at) values ($1, 'tire', 'new', 'manual', 'saved', now(), now())`,
+            [aliceVehicle],
+          ),
+        /check constraint/,
+      );
+    });
+    await asUser(null, async (c) => {
+      await expectFail(c, () => c.query(`select * from public.wear_checks`), /permission denied/);
+    });
+  });
+
   it('手放したクルマ（乗り換え・廃車）には記録を足せず、台数の上限にも数えない', async () => {
     const dave = randomUUID();
     await asAdmin(`insert into auth.users (id) values ($1)`, [dave]);
@@ -500,6 +578,7 @@ describe.skipIf(!pool)('RLS', () => {
           /vehicle_released/,
         );
         await expectFail(c, () => c.query(`insert into public.odometer_readings (vehicle_id, read_on, odo_km) values ($1, '2026-10-02', 100)`, [oldId]), /vehicle_released/);
+        await expectFail(c, () => c.query(`insert into public.wear_checks (vehicle_id, kind, performed_on) values ($1, 'tire', '2026-10-02')`, [oldId]), /vehicle_released/);
         await expectFail(c, () => c.query(`update public.expenses set amount_yen = 1 where vehicle_id = $1`, [oldId]), /vehicle_released/);
         await expectFail(c, () => c.query(`delete from public.expenses where vehicle_id = $1`, [oldId]), /vehicle_released/);
         await expectFail(c, () => c.query(`update public.vehicles set name = 'x' where id = $1`, [oldId]), /vehicle_released/);
@@ -683,8 +762,13 @@ describe.skipIf(!pool)('RLS', () => {
       `insert into public.expenses (vehicle_id, user_id, spent_on, category, amount_yen, oil_change_id) values ($1, $2, '2026-10-01', 'oil_change', 4000, $3)`,
       [v.rows[0].id, carol, o.rows[0].id],
     );
+    await asAdmin(`insert into public.wear_checks (vehicle_id, user_id, kind, performed_on) values ($1, $2, 'tire', '2026-10-01')`, [v.rows[0].id, carol]);
+    await asAdmin(
+      `insert into public.input_sessions (user_id, vehicle_id, kind, mode, method, outcome, opened_at, finished_at) values ($1, $2, 'tire', 'new', 'manual', 'abandoned', now(), now())`,
+      [carol, v.rows[0].id],
+    );
     await asAdmin(`delete from auth.users where id = $1`, [carol]);
-    for (const t of ['profiles', 'vehicles', 'oil_changes', 'expenses']) {
+    for (const t of ['profiles', 'vehicles', 'oil_changes', 'expenses', 'wear_checks', 'input_sessions']) {
       const col = t === 'profiles' ? 'id' : 'user_id';
       const r = await asAdmin(`select count(*)::int as n from public.${t} where ${col} = $1`, [carol]);
       expect(r.rows[0].n, t).toBe(0);
