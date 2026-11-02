@@ -8,7 +8,8 @@ export const config = {
   /** 【要確認】複数台プランの料金表示（例：「月額 300円」）。決まるまでは「準備中」と出す */
   plusPriceLabel: process.env.EXPO_PUBLIC_PLUS_PRICE_LABEL ?? '',
   /**
-   * 紹介用QRコードのリンク。iPhone は TestFlight の公開リンク（イジログ app.ijilog、2026-11-02 作成）。
+   * 紹介用QRコードのリンク。iPhone は新しいアプリID（app.ijilog）の TestFlight の公開リンク（2026-11-02）。
+   * App Store で公開したら、ストアのページに差し替える。
    * 【要確認】Android はストアのページ（アプリID から決まる）。公開するまでは開けないため、内部テストの参加リンクに差し替える
    */
   iosInstallUrl: process.env.EXPO_PUBLIC_IOS_INSTALL_URL || 'https://testflight.apple.com/join/j6YE2zFp',
