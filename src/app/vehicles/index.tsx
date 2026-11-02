@@ -55,6 +55,11 @@ export default function Vehicles() {
               ? `登録できるのは${vehicleLimit}台までです。手放したクルマは「車両情報と周期」の「このクルマを手放す」から外せます。`
               : '2台目からは複数台プラン（有料）で登録できます。'}
         </AppText>
+        {plan.data.suspendedRestorable + plan.data.suspendedNeedsFee > 0 && (
+          <AppText variant="caption">
+            休止中のクルマが{plan.data.suspendedRestorable + plan.data.suspendedNeedsFee}台あります（データは残っています）。表示を戻すには「複数台プラン」をご覧ください。
+          </AppText>
+        )}
         <ListRow
           title={canAdd ? 'クルマを追加する' : planName === 'plus' ? '上限に達しています' : '複数台プランを見る'}
           onPress={canAdd ? () => router.push('/vehicles/new') : planName === 'plus' ? undefined : () => router.push('/plan')}

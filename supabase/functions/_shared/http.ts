@@ -46,7 +46,7 @@ export async function readJson<T>(req: Request): Promise<Partial<T>> {
   }
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
+export function timingSafeEqual(a: string, b: string): boolean {
   const ea = new TextEncoder().encode(a);
   const eb = new TextEncoder().encode(b);
   if (ea.length !== eb.length) return false;

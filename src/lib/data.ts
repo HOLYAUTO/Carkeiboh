@@ -108,8 +108,9 @@ export function useVehicles() {
     // 利用者ごとに分け、ログインし直したときに前のアカウントのデータを使わない
     queryKey: ['vehicles', userId],
     enabled: !!userId,
-    // 手放したクルマ（乗り換え・廃車）は記録を残したまま、アプリには出さない
-    queryFn: async () => unwrap(await supabase.from('vehicles').select('*').eq('status', 'active').order('created_at')) as VehicleRow[],
+    // 手放したクルマ（乗り換え・廃車）と、複数台プランの解約で休止中のクルマは、記録を残したままアプリには出さない
+    queryFn: async () =>
+      unwrap(await supabase.from('vehicles').select('*').eq('status', 'active').is('plan_suspended_at', null).order('created_at')) as VehicleRow[],
   });
 }
 
@@ -148,20 +149,46 @@ export function useVehicle() {
 
 export type Plan = 'free' | 'plus';
 
-/** プランと、そのプランで登録できる台数（上限は DB の vehicle_limit と同じものを使う） */
+/** DB の plan_status() の結果 */
+export interface PlanStatus {
+  plan: Plan;
+  /** そのプランで登録できる台数（DB の vehicle_limit と同じ） */
+  vehicleLimit: number;
+  /** 表示している（手放しておらず休止もしていない）クルマの台数 */
+  visibleCount: number;
+  /** 解約後に上限を超えている。残すクルマを選ぶまで、ほかの画面に進めない */
+  mustChooseVehicle: boolean;
+  /** 休止中で、再契約だけで表示を戻せる台数 */
+  suspendedRestorable: number;
+  /** 休止から90日を過ぎ、表示を戻すのに事務手数料も要る台数 */
+  suspendedNeedsFee: number;
+  /** 事務手数料なしで戻せる期限がいちばん早いもの */
+  restoreFreeUntil: string | null;
+  hasUnusedRestoreFee: boolean;
+  /** 運営が手で付けた複数台プラン（ストアの購入ではない） */
+  manualPlus: boolean;
+  subscription: { platform: 'ios' | 'android'; entitledUntil: string | null; autoRenew: boolean | null; active: boolean } | null;
+}
+
+/** プランと、休止中のクルマの状態 */
 export function usePlan() {
   const { session } = useAuth();
   const userId = session?.user.id;
   return useQuery({
     queryKey: ['plan', userId],
     enabled: !!userId,
-    queryFn: async () => {
-      const profile = unwrap(await supabase.from('profiles').select('plan').eq('id', userId!).maybeSingle()) as { plan: Plan } | null;
-      const plan = profile?.plan ?? 'free';
-      const limit = unwrap(await supabase.rpc('vehicle_limit', { p_plan: plan })) as number;
-      return { plan, vehicleLimit: limit };
-    },
+    queryFn: async () => unwrap(await supabase.rpc('plan_status')) as PlanStatus,
   });
+}
+
+/** 解約後に残すクルマを1台選ぶ。ほかのクルマは休止になる */
+export async function keepVehicle(vehicleId: string) {
+  unwrap(await supabase.rpc('keep_vehicle', { p_vehicle_id: vehicleId }));
+}
+
+/** 再契約・事務手数料の支払いのあとに、休止中のクルマの表示を戻す。戻した台数を返す */
+export async function restoreSuspendedVehicles(): Promise<number> {
+  return unwrap(await supabase.rpc('restore_suspended_vehicles')) as number;
 }
 
 export function useVehicleBundle() {

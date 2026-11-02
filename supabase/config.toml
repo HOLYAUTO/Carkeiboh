@@ -35,3 +35,10 @@ verify_jwt = false
 
 [functions.announce-dispatch]
 verify_jwt = false
+
+[functions.billing-reconcile]
+verify_jwt = false
+
+# ストア（App Store / Google Play）からの通知は利用者の JWT を持たないので、URL の key で確認する
+[functions.billing-notify]
+verify_jwt = false

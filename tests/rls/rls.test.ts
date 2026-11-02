@@ -599,6 +599,154 @@ describe.skipIf(!pool)('RLS', () => {
     }
   });
 
+  describe('複数台プランの課金', () => {
+    const erin = randomUUID();
+    const vehicles: string[] = [];
+
+    /** 定期購入の記録を、使える期限を指定して入れる（サーバーが確認したことにする） */
+    async function setSubscription(entitledUntil: string | null) {
+      await asAdmin(
+        `insert into public.billing_purchases (user_id, platform, kind, product_id, store_ref, entitled_until, auto_renew)
+         values ($1, 'ios', 'subscription', 'ijilog_plus_monthly', 'otx_erin', $2, true)
+         on conflict (platform, store_ref) do update set entitled_until = excluded.entitled_until`,
+        [erin, entitledUntil],
+      );
+    }
+    async function planStatus() {
+      return asUser(erin, async (c) => (await c.query(`select public.plan_status() as s`)).rows[0].s);
+    }
+
+    beforeAll(async () => {
+      await asAdmin(`insert into auth.users (id) values ($1)`, [erin]);
+      await setSubscription(new Date(Date.now() + 86400000).toISOString());
+      for (const name of ['1台目', '2台目', '3台目']) {
+        const r = await asAdmin(
+          `insert into public.vehicles (user_id, name, annual_km_estimate, oil_interval_km, created_at)
+           values ($1, $2, 5000, 5000, now() - make_interval(mins => $3)) returning id`,
+          [erin, name, 10 - vehicles.length],
+        );
+        vehicles.push(r.rows[0].id);
+      }
+    });
+
+    afterAll(async () => {
+      await asAdmin(`delete from auth.users where id = $1`, [erin]);
+    });
+
+    it('購入の記録は本人だけが読め、利用者は書き込めない', async () => {
+      await asUser(erin, async (c) => {
+        const r = await c.query(`select store_ref from public.billing_purchases`);
+        expect(r.rows.map((x) => x.store_ref)).toEqual(['otx_erin']);
+        await expectFail(c, () =>
+          c.query(
+            `insert into public.billing_purchases (user_id, platform, kind, product_id, store_ref, entitled_until)
+             values ($1, 'android', 'subscription', 'x', 'tok', now() + interval '1 year')`,
+            [erin],
+          ),
+          /permission denied/,
+        );
+        await expectFail(c, () => c.query(`update public.billing_purchases set entitled_until = now() + interval '1 year'`), /permission denied/);
+        await expectFail(c, () => c.query(`select public.apply_plan_restore($1)`, [erin]), /permission denied/);
+        await expectFail(c, () => c.query(`select * from public.vehicles_in_service`), /permission denied/);
+      });
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select count(*)::int as n from public.billing_purchases`);
+        expect(r.rows[0].n).toBe(0);
+      });
+    });
+
+    it('使える定期購入がある間は複数台プラン。期限を過ぎると無料プランに戻り、残す1台を選ぶまで追加できない', async () => {
+      let s = await planStatus();
+      expect(s).toMatchObject({ plan: 'plus', vehicleLimit: 5, visibleCount: 3, mustChooseVehicle: false });
+      expect(s.subscription).toMatchObject({ platform: 'ios', autoRenew: true, active: true });
+
+      await setSubscription(new Date(Date.now() - 1000).toISOString());
+      s = await planStatus();
+      expect(s).toMatchObject({ plan: 'free', vehicleLimit: 1, visibleCount: 3, mustChooseVehicle: true });
+      expect(s.subscription.active).toBe(false);
+      await asUser(erin, async (c) => {
+        await expectFail(c, () =>
+          c.query(`insert into public.vehicles (name, annual_km_estimate, oil_interval_km) values ('4台目', 5000, 5000)`),
+          /vehicle_limit_reached/,
+        );
+      });
+      // 選ぶまでは、登録の古い1台だけをお知らせ・Ledra 連携の対象にする
+      const inService = await asAdmin(`select id from public.vehicles_in_service where user_id = $1`, [erin]);
+      expect(inService.rows.map((r) => r.id)).toEqual([vehicles[0]]);
+    });
+
+    it('残す1台を選ぶと、ほかは休止になる。休止中のクルマには書き込めず、休止の状態も自分では変えられない', async () => {
+      await asUser(erin, async (c) => {
+        await expectFail(c, () => c.query(`select public.keep_vehicle($1)`, [bobVehicle]), /vehicle_not_found/);
+        await expectFail(c, () => c.query(`update public.vehicles set plan_suspended_at = now() where id = $1`, [vehicles[0]]), /suspend_via_server/);
+      });
+      await asUser(erin, async (c) => {
+        const r = await c.query(`select public.keep_vehicle($1) as n`, [vehicles[1]]);
+        expect(r.rows[0].n).toBe(2);
+        await c.query('commit');
+      });
+
+      const s = await planStatus();
+      expect(s).toMatchObject({ plan: 'free', visibleCount: 1, mustChooseVehicle: false, suspendedRestorable: 2, suspendedNeedsFee: 0 });
+      const inService = await asAdmin(`select id from public.vehicles_in_service where user_id = $1`, [erin]);
+      expect(inService.rows.map((r) => r.id)).toEqual([vehicles[1]]);
+
+      await asUser(erin, async (c) => {
+        await expectFail(c, () => c.query(`update public.vehicles set name = 'x' where id = $1`, [vehicles[0]]), /vehicle_suspended/);
+        await expectFail(c, () => c.query(`update public.vehicles set plan_suspended_at = null where id = $1`, [vehicles[0]]), /vehicle_suspended/);
+        await expectFail(c, () => c.query(`delete from public.vehicles where id = $1`, [vehicles[0]]), /vehicle_suspended/);
+        await expectFail(c, () =>
+          c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen) values ($1, '2026-10-02', 'fuel', 100)`, [vehicles[0]]),
+          /vehicle_suspended/,
+        );
+        await expectFail(c, () => c.query(`select public.register_deadline($1, 'shaken', '2027-01-01')`, [vehicles[2]]), /vehicle_suspended/);
+        // 残したクルマには書ける
+        await c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen) values ($1, '2026-10-02', 'fuel', 100)`, [vehicles[1]]);
+        // 無料プランで上限に達していれば、休止を戻せない
+        const r = await c.query(`select public.restore_suspended_vehicles() as n`);
+        expect(r.rows[0].n).toBe(0);
+      });
+    });
+
+    it('再契約すると、休止から90日以内のクルマは戻る。90日を過ぎたものは事務手数料を払うまで戻らない', async () => {
+      // 1台は休止から91日たったことにする
+      await asAdmin(`update public.vehicles set plan_suspended_at = now() - interval '91 days' where id = $1`, [vehicles[2]]);
+      let s = await planStatus();
+      expect(s).toMatchObject({ suspendedRestorable: 1, suspendedNeedsFee: 1, hasUnusedRestoreFee: false });
+
+      await setSubscription(new Date(Date.now() + 30 * 86400000).toISOString());
+      let restored = await asAdmin(`select public.apply_plan_restore($1) as n`, [erin]);
+      expect(restored.rows[0].n).toBe(1);
+      s = await planStatus();
+      expect(s).toMatchObject({ plan: 'plus', visibleCount: 2, suspendedRestorable: 0, suspendedNeedsFee: 1 });
+
+      // 事務手数料の購入（サーバーが確認したことにする）
+      await asAdmin(
+        `insert into public.billing_purchases (user_id, platform, kind, product_id, store_ref)
+         values ($1, 'ios', 'restore_fee', 'ijilog_restore_fee', 'tx_fee_erin')`,
+        [erin],
+      );
+      expect((await planStatus()).hasUnusedRestoreFee).toBe(true);
+      restored = await asUser(erin, async (c) => {
+        const r = await c.query(`select public.restore_suspended_vehicles() as n`);
+        await c.query('commit');
+        return r;
+      });
+      expect(restored.rows[0].n).toBe(1);
+      s = await planStatus();
+      expect(s).toMatchObject({ visibleCount: 3, suspendedNeedsFee: 0, hasUnusedRestoreFee: false });
+      const fee = await asAdmin(`select used_at from public.billing_purchases where store_ref = 'tx_fee_erin'`);
+      expect(fee.rows[0].used_at).not.toBeNull();
+      const inService = await asAdmin(`select count(*)::int as n from public.vehicles_in_service where user_id = $1`, [erin]);
+      expect(inService.rows[0].n).toBe(3);
+    });
+
+    it('返金された定期購入では複数台プランにならない', async () => {
+      await asAdmin(`update public.billing_purchases set revoked_at = now() where store_ref = 'otx_erin'`);
+      expect((await planStatus()).plan).toBe('free');
+    });
+  });
+
   it('アカウント削除でデータがすべて消える', async () => {
     const carol = randomUUID();
     await asAdmin(`insert into auth.users (id) values ($1)`, [carol]);

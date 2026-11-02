@@ -79,7 +79,8 @@
         }
       ],
       "expo-image",
-      "./modules/ijilog-ocr/app.plugin.js"
+      "./modules/ijilog-ocr/app.plugin.js",
+      "expo-iap"
     ],
     "experiments": {
       "typedRoutes": true
