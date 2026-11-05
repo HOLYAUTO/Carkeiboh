@@ -46,3 +46,8 @@ Docs: https://docs.expo.dev/eas/index.md
 - 予測・通知・維持費・ODO の計算は `supabase/functions/_shared/domain` に置き、アプリ（`@domain/*`）と Edge Functions の両方から使う。Deno でも動くよう、相対 import には `.ts` を付け、外部パッケージに依存しない
 - DB を変えたら `npm run test:rls`、計算を変えたら `npm test` を流す
 - 決まっていない項目は推測で埋めず、仮の値で実装して `docs/open-questions.md` に追記する
+- マイグレーションは、`supabase/migrations/` に作った時点で本番の Supabase に適用する（2026-11-05 決定。マージを待たない）
+  - 適用先はイジログの本番プロジェクト「カーケイボー」（`ympxgzyvjujnfuoyhilu`、`eas.json` の `EXPO_PUBLIC_SUPABASE_URL` と同じ）。同じ組織にある Ledra・Ledra-staging には絶対に当てない
+  - 当てる前に `npm run test:rls` を通し、`supabase_migrations.schema_migrations` を見て未適用のものだけを当てる
+  - 適用の仕組みが履歴に現在時刻の番号を付けたら、ファイル名の番号（例：`20261105000001`）に直す（`supabase db push` で同じものを二重に流さないため）
+  - 当てたら列・制約が入ったことを確かめ、PR の説明に「本番に適用済み」と書く
