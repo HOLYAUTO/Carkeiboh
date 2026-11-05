@@ -1,11 +1,17 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { OIL_INTERVAL_KM_CHOICES, OIL_INTERVAL_MONTH_CHOICES } from '@domain/service.ts';
-import { AppText, Button, Card, ErrorView, Field, Loading, Screen, SectionTitle } from '../../components/ui';
+import { DEFAULT_FILTER_INTERVAL, OIL_INTERVAL_KM_CHOICES, OIL_INTERVAL_MONTH_CHOICES } from '@domain/service.ts';
+import { distanceUnitLabel, fromKm, toKm, type DistanceUnit } from '@domain/units.ts';
+import { AppText, Button, Card, ErrorView, Field, Loading, Screen, SectionTitle, Segmented } from '../../components/ui';
 import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
-import { parseInteger } from '../../lib/format';
+import { km, parseInteger } from '../../lib/format';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
+
+const UNIT_OPTIONS: { value: DistanceUnit; label: string }[] = [
+  { value: 'km', label: 'km' },
+  { value: 'mile', label: 'mile（マイル）' },
+];
 
 function Chips<T extends number>({ options, value, onChange, unit }: { options: readonly T[]; value: number | null; onChange: (v: T) => void; unit: string }) {
   const colors = useColors();
@@ -43,16 +49,35 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
   const invalidate = useInvalidate();
   const [name, setName] = useState(vehicle.name);
   const [plate, setPlate] = useState(vehicle.plate_number ?? '');
-  const [annual, setAnnual] = useState(String(vehicle.annual_km_estimate));
-  const [oilKm, setOilKm] = useState(vehicle.oil_interval_km != null ? String(vehicle.oil_interval_km) : '');
+  // 距離の入力欄はメーターの単位で見せ、保存するときに km に直す
+  const [unit, setUnit] = useState<DistanceUnit>(vehicle.distance_unit === 'mile' ? 'mile' : 'km');
+  const shown = (value: number | null) => (value != null ? String(fromKm(value, unit)) : '');
+  const [annual, setAnnual] = useState(shown(vehicle.annual_km_estimate));
+  const [oilKm, setOilKm] = useState(shown(vehicle.oil_interval_km));
   const [oilMonths, setOilMonths] = useState<number | null>(vehicle.oil_interval_months);
-  const [filterKm, setFilterKm] = useState(vehicle.filter_interval_km != null ? String(vehicle.filter_interval_km) : '');
+  const [filterKm, setFilterKm] = useState(shown(vehicle.filter_interval_km));
   const [filterMonths, setFilterMonths] = useState(vehicle.filter_interval_months != null ? String(vehicle.filter_interval_months) : '');
   const [busy, setBusy] = useState(false);
 
-  const annualKm = parseInteger(annual);
-  const oilKmN = parseInteger(oilKm);
-  const filterKmN = parseInteger(filterKm);
+  const inKm = (text: string) => {
+    const n = parseInteger(text);
+    return n == null ? null : toKm(n, unit);
+  };
+  const annualKm = inKm(annual);
+  const oilKmN = inKm(oilKm);
+  const filterKmN = inKm(filterKm);
+  /** 単位を切り替えたら、入力中の値も新しい単位に直す（同じ距離のまま） */
+  const changeUnit = (next: DistanceUnit) => {
+    const convert = (text: string) => {
+      const n = parseInteger(text);
+      return n == null || !Number.isFinite(n) ? text : String(fromKm(toKm(n, unit), next));
+    };
+    setAnnual(convert(annual));
+    setOilKm(convert(oilKm));
+    setFilterKm(convert(filterKm));
+    setUnit(next);
+  };
+  const unitLabel = distanceUnitLabel(unit);
   const filterMonthsN = parseInteger(filterMonths);
   const inRange = (v: number | null, min: number, max: number) => v == null || (Number.isFinite(v) && v >= min && v <= max);
   const valid =
@@ -67,6 +92,7 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
       await updateVehicle(vehicle.id, {
         name: name.trim(),
         plate_number: plate.trim() || null,
+        distance_unit: unit,
         annual_km_estimate: annualKm!,
         oil_interval_km: oilKmN,
         oil_interval_months: oilMonths,
@@ -87,14 +113,23 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
       <Card>
         <Field label="車名" value={name} onChangeText={setName} maxLength={50} />
         <Field label="ナンバー（任意）" value={plate} onChangeText={setPlate} maxLength={30} />
-        <Field label="年間走行距離の目安" value={annual} onChangeText={setAnnual} keyboardType="number-pad" suffix="km" hint="走行距離の記録が2件以上たまるまで、ペースの計算に使います。" />
+        <Field label="年間走行距離の目安" value={annual} onChangeText={setAnnual} keyboardType="number-pad" suffix={unitLabel} hint="走行距離の記録が2件以上たまるまで、ペースの計算に使います。" />
+      </Card>
+
+      <SectionTitle>メーターの単位</SectionTitle>
+      <Card>
+        <Segmented options={UNIT_OPTIONS} value={unit} onChange={changeUnit} />
+        <AppText variant="caption">
+          走行距離の入力と表示、お知らせの距離をこの単位にします。これまでの記録は同じ距離のまま換算して表示します（1mile = 1.609344km）。燃費は km/L で表示します。
+        </AppText>
       </Card>
 
       <SectionTitle>オイルの周期</SectionTitle>
       <Card>
         <AppText variant="label">距離</AppText>
-        <Chips options={OIL_INTERVAL_KM_CHOICES} value={oilKmN} onChange={(v) => setOilKm(String(v))} unit="km" />
-        <Field label="距離を入力（任意の値）" value={oilKm} onChangeText={setOilKm} keyboardType="number-pad" suffix="km" />
+        {/* 選択肢は km のきりのよい値なので、mile のときは入力欄だけにする */}
+        {unit === 'km' && <Chips options={OIL_INTERVAL_KM_CHOICES} value={oilKmN} onChange={(v) => setOilKm(String(v))} unit="km" />}
+        <Field label={unit === 'km' ? '距離を入力（任意の値）' : '距離'} value={oilKm} onChangeText={setOilKm} keyboardType="number-pad" suffix={unitLabel} />
         <AppText variant="label">期間</AppText>
         <Chips options={OIL_INTERVAL_MONTH_CHOICES} value={oilMonths} onChange={setOilMonths} unit="か月" />
         <AppText variant="caption">距離と期間の早い方を次回の目安にします。</AppText>
@@ -102,7 +137,7 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
 
       <SectionTitle>オイルフィルターの周期</SectionTitle>
       <Card>
-        <Field label="距離" value={filterKm} onChangeText={setFilterKm} keyboardType="number-pad" suffix="km" hint="既定は 10,000km です。" />
+        <Field label="距離" value={filterKm} onChangeText={setFilterKm} keyboardType="number-pad" suffix={unitLabel} hint={`既定は ${km(DEFAULT_FILTER_INTERVAL.km!, unit)} です。`} />
         <Field label="期間（任意）" value={filterMonths} onChangeText={setFilterMonths} keyboardType="number-pad" suffix="か月" />
       </Card>
 

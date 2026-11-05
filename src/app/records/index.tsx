@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
 import { AppText, Badge, Card, Divider, ErrorView, Loading, Num, Screen } from '../../components/ui';
 import { wearTitle } from '../../components/RecordForm';
-import { useVehicleBundle } from '../../lib/data';
+import { useVehicleBundle, vehicleUnit } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
 import { spacing, useColors } from '../../theme';
 
@@ -24,14 +24,25 @@ export default function Records() {
   const { bundle } = useVehicleBundle();
   const items = useMemo<Item[]>(() => {
     if (!bundle.data) return [];
-    const { oilChanges, expenses, wearChecks, readings } = bundle.data;
+    const { oilChanges, expenses, wearChecks, readings, vehicle } = bundle.data;
+    const unit = vehicleUnit(vehicle);
+    const dist = (n: number) => km(n, unit);
+    /** 給油は「32.15L・¥172/L・満タン」も添える */
+    const fuelDetail = (e: (typeof expenses)[number]) =>
+      e.category !== 'fuel'
+        ? []
+        : [
+            e.fuel_liters != null ? `${Number(e.fuel_liters)}L` : null,
+            e.fuel_unit_price != null ? `¥${Number(e.fuel_unit_price)}/L${e.fuel_price_basis === 'tax_excluded' ? '（税抜）' : ''}` : null,
+            e.fuel_full_tank ? '満タン' : null,
+          ];
     const oilAmounts = new Map(expenses.filter((e) => e.oil_change_id).map((e) => [e.oil_change_id!, e.amount_yen]));
     const list: Item[] = [
       ...oilChanges.map((o) => ({
         id: `oil:${o.id}`,
         date: o.performed_on,
         title: o.oil_changed && o.filter_changed ? 'オイル・フィルター交換' : o.oil_changed ? 'オイル交換' : 'オイルフィルター交換',
-        detail: [km(o.odo_km), o.shop_name].filter(Boolean).join('・'),
+        detail: [dist(o.odo_km), o.shop_name].filter(Boolean).join('・'),
         amount: oilAmounts.get(o.id) ?? null,
         verified: o.source === 'ledra',
         sortKey: o.created_at,
@@ -40,7 +51,7 @@ export default function Records() {
         id: `wear:${w.id}`,
         date: w.performed_on,
         title: wearTitle(w),
-        detail: [w.remaining_mm != null ? `残り ${Number(w.remaining_mm)}mm` : null, w.odo_km != null ? km(w.odo_km) : null, w.shop_name]
+        detail: [w.remaining_mm != null ? `残り ${Number(w.remaining_mm)}mm` : null, w.odo_km != null ? dist(w.odo_km) : null, w.shop_name]
           .filter(Boolean)
           .join('・'),
         amount: null,
@@ -53,7 +64,7 @@ export default function Records() {
           id: `expense:${e.id}`,
           date: e.spent_on,
           title: EXPENSE_CATEGORY_LABELS[e.category],
-          detail: [e.odo_km != null ? km(e.odo_km) : null, e.note].filter(Boolean).join('・'),
+          detail: [...fuelDetail(e), e.odo_km != null ? dist(e.odo_km) : null, e.note].filter(Boolean).join('・'),
           amount: e.amount_yen,
           verified: false,
           sortKey: e.created_at,
@@ -62,7 +73,7 @@ export default function Records() {
         id: `odometer:${r.id}`,
         date: r.read_on,
         title: r.source === 'onboarding' ? '走行距離（初回設定）' : '走行距離',
-        detail: km(r.odo_km),
+        detail: dist(r.odo_km),
         amount: null,
         verified: false,
         sortKey: r.created_at,

@@ -139,6 +139,49 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
+  it('給油の詳細は本人の給油の記録にだけ付けられ、値の範囲を DB でも確かめる', async () => {
+    await asUser(alice, async (c) => {
+      const ok = await c.query(
+        `insert into public.expenses (vehicle_id, spent_on, category, amount_yen, odo_km, fuel_liters, fuel_unit_price, fuel_type, fuel_price_basis, fuel_full_tank)
+         values ($1, '2026-11-01', 'fuel', 5529, 41200, 32.15, 172.0, 'regular', 'tax_included', true) returning fuel_liters`,
+        [aliceVehicle],
+      );
+      expect(Number(ok.rows[0].fuel_liters)).toBe(32.15);
+      // 給油以外の項目には付けられない
+      await expectFail(
+        c,
+        () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, fuel_liters) values ($1, '2026-11-01', 'maintenance', 100, 10)`, [aliceVehicle]),
+        /expenses_fuel_details_only_for_fuel/,
+      );
+      // 単価には税込か税抜かが要る
+      await expectFail(
+        c,
+        () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, fuel_unit_price) values ($1, '2026-11-01', 'fuel', 100, 172)`, [aliceVehicle]),
+        /expenses_fuel_price_basis_required/,
+      );
+      await expectFail(
+        c,
+        () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, fuel_type) values ($1, '2026-11-01', 'fuel', 100, 'gasoline')`, [aliceVehicle]),
+        /check constraint/,
+      );
+      await expectFail(
+        c,
+        () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, fuel_liters) values ($1, '2026-11-01', 'fuel', 100, 0)`, [aliceVehicle]),
+        /check constraint/,
+      );
+    });
+  });
+
+  it('メーターの単位は km か mile だけで、既定は km', async () => {
+    const r = await asAdmin(`select distance_unit from public.vehicles where id = $1`, [aliceVehicle]);
+    expect(r.rows[0].distance_unit).toBe('km');
+    await asUser(alice, async (c) => {
+      const u = await c.query(`update public.vehicles set distance_unit = 'mile' where id = $1`, [aliceVehicle]);
+      expect(u.rowCount).toBe(1);
+      await expectFail(c, () => c.query(`update public.vehicles set distance_unit = 'nmi' where id = $1`, [aliceVehicle]), /check constraint/);
+    });
+  });
+
   it('他人のオイル交換に金額を付けられない', async () => {
     await asUser(alice, async (c) => {
       await expectFail(c, () => 

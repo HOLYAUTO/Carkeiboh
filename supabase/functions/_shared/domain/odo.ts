@@ -1,4 +1,5 @@
 import { diffDays, type IsoDate } from './dates.ts';
+import { formatDistance, type DistanceUnit } from './units.ts';
 
 export interface OdoReading {
   date: IsoDate;
@@ -57,6 +58,7 @@ export function checkOdoEntry(
   candidate: OdoReading,
   readings: OdoReading[],
   replacements: MeterReplacement[] = [],
+  unit: DistanceUnit = 'km',
 ): OdoWarning[] {
   const normalized = normalizeReadings(readings, replacements);
   const previous = normalized.filter((r) => r.date <= candidate.date).at(-1);
@@ -67,7 +69,7 @@ export function checkOdoEntry(
     return [
       {
         code: 'lower_than_previous',
-        message: `前回の記録（${previous.odoKm.toLocaleString('ja-JP')}km）より小さい値です。メーターを交換した場合は、設定から「メーター交換」を登録してください。`,
+        message: `前回の記録（${formatDistance(previous.odoKm, unit)}）より小さい値です。メーターを交換した場合は、設定から「メーター交換」を登録してください。`,
       },
     ];
   }
@@ -76,7 +78,7 @@ export function checkOdoEntry(
     return [
       {
         code: 'too_fast',
-        message: `前回の記録から1日あたり${MAX_KM_PER_DAY.toLocaleString('ja-JP')}kmを超えて増えています。入力に誤りがないか確認してください。`,
+        message: `前回の記録から1日あたり${formatDistance(MAX_KM_PER_DAY, unit)}を超えて増えています。入力に誤りがないか確認してください。`,
       },
     ];
   }

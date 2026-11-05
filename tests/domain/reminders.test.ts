@@ -66,6 +66,12 @@ describe('オイル交換の通知', () => {
     expect(n[0].body).toContain('あと23日');
   });
 
+  it('mile の車両は通知の距離を mile で書く', () => {
+    const near = { baselineId: 'oc1', forecast: forecast({ remainingKm: 483, dueDate: '2026-11-15', remainingDays: 23 }) };
+    const n = pendingNotifications(input({ oil: near, today: '2026-10-23', distanceUnit: 'mile' }));
+    expect(n[0].body).toContain('推定であと300mile');
+  });
+
   it('予測日が飛んで目安日を過ぎても、当日分を1回だけ送る', () => {
     const late = { baselineId: 'oc1', forecast: forecast({ dueDate: '2026-10-20', remainingKm: -100, remainingDays: -3 }) };
     const n = pendingNotifications(input({ oil: late, sentKeys: new Set(['oil:oc1:km500']) }));

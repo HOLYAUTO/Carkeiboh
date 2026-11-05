@@ -1,10 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, usePreventRemove } from 'expo-router';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@domain/costs.ts';
-import { checkOdoEntry } from '@domain/odo.ts';
 import {
+  calculateFuelCost,
+  fuelEconomySegments,
+  isValidFuelLiters,
+  isValidFuelUnitPrice,
+  type FuelPriceBasis,
+  type FuelType,
+} from '@domain/fuel.ts';
+import { checkOdoEntry } from '@domain/odo.ts';
+import { distanceUnitLabel, fromKm, toKm, type DistanceUnit } from '@domain/units.ts';
+import {
+  fuelFills,
   logInputSession,
   saveExpense,
   saveOdoReading,
@@ -18,9 +28,10 @@ import {
   type WearCheckRow,
   type WearKind,
 } from '../lib/data';
-import { parseInteger, parseMillimeters } from '../lib/format';
+import { parseDecimal, parseInteger, parseMillimeters } from '../lib/format';
 import type { RecordDraft } from '@shared/record-draft.ts';
 import { cardShadow, fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
+import { FuelBreakdown, FuelEconomyPreview, FuelFields } from './FuelFields';
 import { QuickInput } from './QuickInput';
 import { AppText, Button, Card, DateField, Field, Notice, ToggleRow } from './ui';
 
@@ -160,12 +171,37 @@ export function RecordForm({
         : target?.type === 'odometer'
           ? target.row.read_on
           : bundle.today;
+  // 走行距離は DB では km。入力欄は車両の単位（km / mile）で見せる
+  const unit: DistanceUnit = bundle.vehicle.distance_unit === 'mile' ? 'mile' : 'km';
   const initialOdo = target ? target.row.odo_km : null;
+  const initialOdoText = initialOdo != null ? String(fromKm(initialOdo, unit)) : '';
   const initialAmount = target?.type === 'oil' ? target.expense?.amount_yen : target?.type === 'expense' ? target.row.amount_yen : null;
 
+  // 給油：油種は前回の給油と同じものから始める。満タンは新しい記録ではオンから始める
+  const isFuel = kind === 'fuel';
+  const fuelRow = target?.type === 'expense' && target.row.category === 'fuel' ? target.row : null;
+  const initialLiters = fuelRow?.fuel_liters != null ? String(Number(fuelRow.fuel_liters)) : '';
+  const initialUnitPrice = fuelRow?.fuel_unit_price != null ? String(Number(fuelRow.fuel_unit_price)) : '';
+  const initialFuelType: FuelType = fuelRow?.fuel_type ?? bundle.expenses.find((e) => e.category === 'fuel' && e.fuel_type)?.fuel_type ?? 'regular';
+  const initialBasis: FuelPriceBasis = fuelRow?.fuel_price_basis ?? 'tax_included';
+  const initialFullTank = fuelRow ? fuelRow.fuel_full_tank === true : true;
+
   const [date, setDate] = useState<string>(initialDate);
-  const [odo, setOdo] = useState(initialOdo != null ? String(initialOdo) : '');
-  const [amount, setAmount] = useState(initialAmount != null ? String(initialAmount) : '');
+  const [odo, setOdo] = useState(initialOdoText);
+  const [amountInput, setAmount] = useState(initialAmount != null ? String(initialAmount) : '');
+  const [liters, setLiters] = useState(initialLiters);
+  const [unitPrice, setUnitPrice] = useState(initialUnitPrice);
+  const [fuelType, setFuelType] = useState<FuelType>(initialFuelType);
+  const [basis, setBasis] = useState<FuelPriceBasis>(initialBasis);
+  const [fullTank, setFullTank] = useState(initialFullTank);
+  // 金額を自分で入れた（またはレシートから読んだ）ら、給油量×単価の計算で上書きしない。空にすると自動に戻る
+  const [amountManual, setAmountManual] = useState(() => {
+    if (initialAmount == null) return false;
+    const l = parseDecimal(initialLiters, 2);
+    const pr = parseDecimal(initialUnitPrice, 1);
+    if (l == null || pr == null) return true;
+    return calculateFuelCost({ date: initialDate, fuelType: initialFuelType, liters: l, unitPriceYen: pr, basis: initialBasis }).totalYen !== initialAmount;
+  });
   const [filterChanged, setFilterChanged] = useState(target?.type === 'oil' ? target.row.filter_changed : false);
   const initialNote = target?.type === 'expense' || target?.type === 'wear' ? (target.row.note ?? '') : '';
   const initialReplaced = target?.type === 'wear' ? target.row.replaced : false;
@@ -180,8 +216,32 @@ export function RecordForm({
   const isOil = kind === 'oil_change';
   const isOdoOnly = kind === 'odometer';
   const wear = isWearKind(kind) ? kind : null;
-  const odoKm = parseInteger(odo);
+  const odoInput = parseInteger(odo);
+  const odoKm = odoInput == null ? null : toKm(odoInput, unit);
+  const litersN = parseDecimal(liters, 2);
+  const unitPriceN = parseDecimal(unitPrice, 1);
+  const litersValid = litersN == null || isValidFuelLiters(litersN);
+  const unitPriceValid = unitPriceN == null || isValidFuelUnitPrice(unitPriceN);
+  const fuelCost =
+    isFuel && litersN != null && unitPriceN != null && litersValid && unitPriceValid
+      ? calculateFuelCost({ date, fuelType, liters: litersN, unitPriceYen: unitPriceN, basis })
+      : null;
+  // 金額を自分で入れていなければ、給油量×単価で計算した合計を金額にする
+  const amount = !amountManual && fuelCost ? String(fuelCost.totalYen) : amountInput;
   const amountYen = parseInteger(amount);
+  const changeAmount = (v: string) => {
+    setAmount(v);
+    setAmountManual(v.trim() !== '');
+  };
+
+  // 満タンで走行距離と給油量があれば、前回の満タンからの燃費をその場で見せる
+  const economy = useMemo(() => {
+    if (!isFuel || !fullTank || odoKm == null || !Number.isFinite(odoKm) || litersN == null || !litersValid) return null;
+    const others = fuelFills(bundle.expenses.filter((e) => e.id !== fuelRow?.id));
+    const candidate = { id: '__editing__', date, odoKm, liters: litersN, fullTank: true, amountYen: 0 };
+    const replacements = bundle.meterReplacements.map((m) => ({ replacedOn: m.replaced_on, odoBeforeKm: m.odo_before_km, odoAfterKm: m.odo_after_km }));
+    return fuelEconomySegments([...others, candidate], replacements).find((seg) => seg.toId === '__editing__') ?? null;
+  }, [isFuel, fullTank, odoKm, litersN, litersValid, date, bundle.expenses, bundle.meterReplacements, fuelRow?.id]);
   const remainingMm = parseMillimeters(remaining);
   const odoRequired = isOil || isOdoOnly;
   // ponytail: タイヤ・ブレーキの費用は「整備」の支出で記録する（オイルのように記録へ紐づけない）。
@@ -191,10 +251,11 @@ export function RecordForm({
   const odoValid = odoKm == null ? !odoRequired : Number.isFinite(odoKm) && odoKm <= 2_000_000;
   const amountValid = amountYen == null ? !amountRequired : Number.isFinite(amountYen) && amountYen > 0 && amountYen < 100_000_000;
   const remainingValid = remainingMm == null || (Number.isFinite(remainingMm) && remainingMm <= 30);
-  const valid = !!date && odoValid && amountValid && remainingValid;
+  const fuelValid = !isFuel || (litersValid && unitPriceValid);
+  const valid = !!date && odoValid && amountValid && remainingValid && fuelValid;
 
   // 入力の計測（実証実験の KPI 用）。画面を開いてから保存・離脱までと、写真・音声で埋まった項目を覚える
-  const values = { date, odo, amount, note, remaining, filterChanged: String(filterChanged) };
+  const values = { date, odo, amount, note, remaining, filterChanged: String(filterChanged), liters, unitPrice };
   const latestValues = useRef(values);
   const metrics = useRef({
     openedAt: new Date(),
@@ -237,7 +298,12 @@ export function RecordForm({
   // 入力途中で戻ろうとしたら確かめる（保存後は確かめない）
   const dirty =
     date !== initialDate ||
-    odo !== (initialOdo != null ? String(initialOdo) : '') ||
+    odo !== initialOdoText ||
+    liters !== initialLiters ||
+    unitPrice !== initialUnitPrice ||
+    fuelType !== initialFuelType ||
+    basis !== initialBasis ||
+    fullTank !== initialFullTank ||
     amount !== (initialAmount != null ? String(initialAmount) : '') ||
     note !== initialNote ||
     replaced !== initialReplaced ||
@@ -276,15 +342,35 @@ export function RecordForm({
       m.draftValues.date = d.date;
       filled.push('日付');
     }
-    if (d.odoKm != null) {
-      setOdo(String(d.odoKm));
-      m.draftValues.odo = String(d.odoKm);
+    if (d.odo != null) {
+      setOdo(String(d.odo));
+      m.draftValues.odo = String(d.odo);
       filled.push('走行距離');
     }
     if (d.amountYen != null && !isOdoOnly && !wear) {
       setAmount(String(d.amountYen));
+      setAmountManual(true);
       m.draftValues.amount = String(d.amountYen);
       filled.push('金額');
+    }
+    if (isFuel) {
+      if (d.fuelLiters != null) {
+        setLiters(String(d.fuelLiters));
+        m.draftValues.liters = String(d.fuelLiters);
+        filled.push('給油量');
+      }
+      if (d.fuelUnitPrice != null) {
+        setUnitPrice(String(d.fuelUnitPrice));
+        // レシート・店頭の単価は税込。音声で「税抜」と言うことは考えない
+        setBasis('tax_included');
+        m.draftValues.unitPrice = String(d.fuelUnitPrice);
+        filled.push('単価');
+      }
+      if (d.fuelType) {
+        setFuelType(d.fuelType);
+        filled.push('油種');
+      }
+      if (d.fullTank != null) setFullTank(d.fullTank);
     }
     if (d.filterChanged != null && isOil) {
       setFilterChanged(d.filterChanged);
@@ -318,7 +404,7 @@ export function RecordForm({
         odoBeforeKm: m.odo_before_km,
         odoAfterKm: m.odo_after_km,
       }));
-      const warnings = checkOdoEntry({ date, odoKm }, others, replacements);
+      const warnings = checkOdoEntry({ date, odoKm }, others, replacements, unit);
       metrics.current.warningsShown += warnings.length;
       if (!(await confirmWarnings(warnings.map((w) => w.message)))) return;
     }
@@ -361,6 +447,7 @@ export function RecordForm({
           amountYen: amountYen!,
           odoKm,
           note: note.trim() || null,
+          fuel: isFuel ? { liters: litersN, unitPrice: unitPriceN, priceBasis: unitPriceN != null ? basis : null, fuelType, fullTank } : null,
         });
         recordRef = `expense:${saved.id}`;
       }
@@ -378,7 +465,7 @@ export function RecordForm({
 
   return (
     <View style={{ gap: spacing.md }}>
-      {!target && <QuickInput kind={isWearKind(kind) ? 'odometer' : kind} today={bundle.today} onDraft={applyDraft} />}
+      {!target && <QuickInput kind={isWearKind(kind) ? 'odometer' : kind} today={bundle.today} unit={unit} onDraft={applyDraft} />}
       {draftNotice && <Notice title="読み取った内容を確認してください">{draftNotice}</Notice>}
       <Card>
         <AppText variant="heading">{kindLabel(kind)}</AppText>
@@ -388,9 +475,31 @@ export function RecordForm({
           value={odo}
           onChangeText={setOdo}
           keyboardType="number-pad"
-          suffix="km"
-          hint={odoKm != null && !Number.isFinite(odoKm) ? '数字で入力してください' : undefined}
+          suffix={distanceUnitLabel(unit)}
+          hint={
+            odoKm != null && !Number.isFinite(odoKm)
+              ? '数字で入力してください'
+              : isFuel
+                ? '満タンの給油で入れると、燃費を計算します。'
+                : undefined
+          }
         />
+        {isFuel && (
+          <FuelFields
+            fuelType={fuelType}
+            onFuelType={setFuelType}
+            liters={liters}
+            onLiters={setLiters}
+            litersValid={litersValid}
+            unitPrice={unitPrice}
+            onUnitPrice={setUnitPrice}
+            unitPriceValid={unitPriceValid}
+            basis={basis}
+            onBasis={setBasis}
+            fullTank={fullTank}
+            onFullTank={setFullTank}
+          />
+        )}
         {wear && (
           <>
             <ToggleRow title={WEAR_FORM[wear].replaced} description="点検・確認だけなら、オフのまま記録します。" value={replaced} onChange={setReplaced} />
@@ -408,12 +517,24 @@ export function RecordForm({
           <Field
             label={isOil ? '金額（任意）' : '金額'}
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={changeAmount}
             keyboardType="number-pad"
             suffix="円"
-            hint={isOil ? '入力すると維持費に1件として数えます。' : undefined}
+            hint={isOil ? '入力すると維持費に1件として数えます。' : isFuel ? '給油量と単価を入れると、税込の合計を自動で入れます。' : undefined}
           />
         )}
+        {fuelCost && (
+          <FuelBreakdown
+            cost={fuelCost}
+            fuelType={fuelType}
+            amountYen={amountYen}
+            onUseTotal={() => {
+              setAmount(String(fuelCost.totalYen));
+              setAmountManual(false);
+            }}
+          />
+        )}
+        {economy && <FuelEconomyPreview kmPerLiter={economy.kmPerLiter} distanceKm={economy.distanceKm} liters={economy.liters} unit={unit} />}
         {isOil && (
           <ToggleRow
             title="フィルターも交換した"

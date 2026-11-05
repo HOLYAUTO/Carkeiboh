@@ -11,6 +11,7 @@ import {
   type DraftCategory,
   type RecordDraft,
 } from '@shared/record-draft.ts';
+import type { DistanceUnit } from '@domain/units.ts';
 import { recognizeTextOnDevice } from '../../modules/ijilog-ocr';
 import { invokeFunction } from '../lib/supabase';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
@@ -43,7 +44,18 @@ function askOpenSettings(title: string, message: string) {
  *   金額・日付（メーターなら走行距離）がそろわないときだけサーバー（AI）で読み直す（画像は保存しない）
  * - 音声：端末の音声認識で文字にし、端末内で日付・金額・走行距離を読み取る
  */
-export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; today: string; onDraft: (draft: RecordDraft, via: 'photo' | 'voice') => void }) {
+export function QuickInput({
+  kind,
+  today,
+  unit,
+  onDraft,
+}: {
+  kind: DraftCategory;
+  today: string;
+  /** メーターの単位。読み取った走行距離はこの単位の値として返す */
+  unit: DistanceUnit;
+  onDraft: (draft: RecordDraft, via: 'photo' | 'voice') => void;
+}) {
   const colors = useColors();
   const [reading, setReading] = useState(false);
   const [listening, setListening] = useState(false);
@@ -98,7 +110,9 @@ export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; toda
       // 足りなければサーバー（AI）で読み直す。サーバーで読めなくても、端末で読めた分は入れる
       if (!saved.base64) throw new Error('写真を読み込めませんでした。');
       try {
-        const onServer = await invokeFunction<RecordDraft>('read-record-photo', { image: saved.base64, kind });
+        const { odoKm, ...onServer } = await invokeFunction<RecordDraft & { odoKm?: number }>('read-record-photo', { image: saved.base64, kind, unit });
+        // 2026-11-05 より前のサーバーは走行距離を odoKm で返す
+        if (onServer.odo == null && odoKm != null) onServer.odo = odoKm;
         onDraft(mergeDrafts(onDevice, onServer), 'photo');
       } catch (e) {
         if (Object.keys(onDevice).length === 0) throw e;
@@ -112,11 +126,17 @@ export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; toda
   };
 
   const choosePhoto = () =>
-    Alert.alert('写真で入力', 'レシート・メーター・整備明細を写すと、日付・金額・走行距離を読み取ります。', [
-      { text: '撮影する', onPress: () => readPhoto('camera') },
-      { text: '写真を選ぶ', onPress: () => readPhoto('library') },
-      { text: 'キャンセル', style: 'cancel' },
-    ]);
+    Alert.alert(
+      '写真で入力',
+      kind === 'fuel'
+        ? 'レシートやメーターを写すと、日付・金額・給油量・単価・走行距離を読み取ります。'
+        : 'レシート・メーター・整備明細を写すと、日付・金額・走行距離を読み取ります。',
+      [
+        { text: '撮影する', onPress: () => readPhoto('camera') },
+        { text: '写真を選ぶ', onPress: () => readPhoto('library') },
+        { text: 'キャンセル', style: 'cancel' },
+      ],
+    );
 
   const startListening = async () => {
     const module = speech.current ?? (await loadSpeech());
@@ -159,7 +179,24 @@ export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; toda
       interimResults: true,
       continuous: false,
       addsPunctuation: false,
-      contextualStrings: ['ガソリン', '給油', 'オイル交換', 'フィルター', '走行距離', 'キロ', '円', '車検', '高速', '駐車場'],
+      contextualStrings: [
+        'ガソリン',
+        '給油',
+        'レギュラー',
+        'ハイオク',
+        '軽油',
+        '満タン',
+        'リットル',
+        '単価',
+        'オイル交換',
+        'フィルター',
+        '走行距離',
+        unit === 'mile' ? 'マイル' : 'キロ',
+        '円',
+        '車検',
+        '高速',
+        '駐車場',
+      ],
     });
   };
 
@@ -170,7 +207,12 @@ export function QuickInput({ kind, today, onDraft }: { kind: DraftCategory; toda
           <ActivityIndicator color={colors.accent} />
           <AppText variant="heading">聞き取り中…</AppText>
         </View>
-        <AppText style={{ minHeight: 44 }}>{transcript || '例：「昨日ガソリン満タンで4500円、走行距離41200キロ」'}</AppText>
+        <AppText style={{ minHeight: 44 }}>
+          {transcript ||
+            (kind === 'fuel'
+              ? `例：「レギュラー満タン 32リットル 単価172円、走行距離41200${unit === 'mile' ? 'マイル' : 'キロ'}」`
+              : `例：「昨日ガソリン満タンで4500円、走行距離41200${unit === 'mile' ? 'マイル' : 'キロ'}」`)}
+        </AppText>
         <Button title="話し終わった" variant="secondary" icon="stop-circle-outline" onPress={() => speech.current?.stop()} />
       </Card>
     );

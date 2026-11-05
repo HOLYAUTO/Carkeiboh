@@ -3,6 +3,7 @@
  */
 import type { VehicleData } from './domain/vehicle.ts';
 import type { DeadlineKind, ReminderKind } from './domain/reminders.ts';
+import { isDistanceUnit, type DistanceUnit } from './domain/units.ts';
 
 export interface VehicleRow {
   id: string;
@@ -23,6 +24,8 @@ export interface VehicleRow {
   /** 愛車の写真（Storage の vehicle-photos の中のパス）。未設定は null */
   photo_path: string | null;
   photo_updated_at: string | null;
+  /** メーターの単位。DB の距離はすべて km で持ち、画面と通知の文だけこの単位にする */
+  distance_unit: DistanceUnit;
 }
 
 export interface OilChangeRow {
@@ -105,5 +108,6 @@ export function toVehicleData(
     deadlines: rows.deadlines
       .filter((d) => d.status === 'active')
       .map((d) => ({ id: d.id, kind: d.kind, dueOn: d.due_on })),
+    distanceUnit: isDistanceUnit(v.distance_unit) ? v.distance_unit : 'km',
   };
 }
