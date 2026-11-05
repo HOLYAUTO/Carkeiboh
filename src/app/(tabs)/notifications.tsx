@@ -7,7 +7,7 @@ import { ANNOUNCEMENT_LABELS } from '@domain/announcements.ts';
 import { REMINDER_LABELS, type ReminderKind } from '@domain/reminders.ts';
 import { AppText, Badge, Button, Card, Divider, ErrorView, IconButton, ListRow, Notice, Screen, ScreenHeader, SectionTitle, Skeleton, ToggleRow } from '../../components/ui';
 import { setShopNewsOptIn, useAnnouncements } from '../../lib/announcements';
-import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
+import { updateVehicle, useInvalidate, useVehicleBundle, vehicleUnit, type VehicleRow } from '../../lib/data';
 import { daysLeft, fullDate, jstDateTime, km } from '../../lib/format';
 import { getPushStatus, registerForPush, type PushStatus } from '../../lib/push';
 import { fonts, MIN_TAP, spacing, useColors } from '../../theme';
@@ -185,13 +185,13 @@ export default function Notifications() {
       <Card style={{ paddingVertical: 4 }}>
         <ListRow
           title="オイル"
-          detail={[vehicle.oil_interval_km && km(vehicle.oil_interval_km), vehicle.oil_interval_months && `${vehicle.oil_interval_months}か月`].filter(Boolean).join('・')}
+          detail={[vehicle.oil_interval_km && km(vehicle.oil_interval_km, vehicleUnit(vehicle)), vehicle.oil_interval_months && `${vehicle.oil_interval_months}か月`].filter(Boolean).join('・')}
           onPress={() => router.push('/settings/vehicle')}
         />
         <Divider />
         <ListRow
           title="オイルフィルター"
-          detail={[vehicle.filter_interval_km && km(vehicle.filter_interval_km), vehicle.filter_interval_months && `${vehicle.filter_interval_months}か月`].filter(Boolean).join('・')}
+          detail={[vehicle.filter_interval_km && km(vehicle.filter_interval_km, vehicleUnit(vehicle)), vehicle.filter_interval_months && `${vehicle.filter_interval_months}か月`].filter(Boolean).join('・')}
           onPress={() => router.push('/settings/vehicle')}
         />
       </Card>

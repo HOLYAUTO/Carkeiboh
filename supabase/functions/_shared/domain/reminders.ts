@@ -1,5 +1,6 @@
 import { addDays, addMonths, diffDays, formatMonthDay, type IsoDate } from './dates.ts';
 import type { ServiceForecast } from './service.ts';
+import { formatDistance, type DistanceUnit } from './units.ts';
 
 export type ReminderKind = 'oil' | 'filter' | 'shaken' | 'inspection' | 'insurance' | 'car_tax';
 
@@ -97,6 +98,8 @@ export interface ReminderInput {
   filter: ServiceReminderInput | null;
   deadlines: Deadline[];
   sentKeys: ReadonlySet<string>;
+  /** 通知の文の距離の単位（既定は km） */
+  distanceUnit?: DistanceUnit;
 }
 
 function remainingDaysText(days: number): string {
@@ -110,6 +113,7 @@ function serviceNotification(
   input: ServiceReminderInput,
   today: IsoDate,
   sentKeys: ReadonlySet<string>,
+  unit: DistanceUnit,
 ): PendingNotification | null {
   const { forecast, baselineId } = input;
   const keys: string[] = [];
@@ -133,8 +137,8 @@ function serviceNotification(
   if (forecast.remainingKm != null) {
     parts.push(
       forecast.remainingKm > 0
-        ? `推定であと${forecast.remainingKm.toLocaleString('ja-JP')}km`
-        : `推定で${(-forecast.remainingKm).toLocaleString('ja-JP')}km超過`,
+        ? `推定であと${formatDistance(forecast.remainingKm, unit)}`
+        : `推定で${formatDistance(-forecast.remainingKm, unit)}超過`,
     );
   }
   if (forecast.dueDate && forecast.remainingDays != null) {
@@ -180,11 +184,11 @@ export function pendingNotifications(input: ReminderInput): PendingNotification[
   const result: PendingNotification[] = [];
 
   if (settings.oil && input.oil) {
-    const n = serviceNotification('oil', input.oil, today, sentKeys);
+    const n = serviceNotification('oil', input.oil, today, sentKeys, input.distanceUnit ?? 'km');
     if (n) result.push(n);
   }
   if (settings.filter && input.filter) {
-    const n = serviceNotification('filter', input.filter, today, sentKeys);
+    const n = serviceNotification('filter', input.filter, today, sentKeys, input.distanceUnit ?? 'km');
     if (n) result.push(n);
   }
   for (const d of input.deadlines) {

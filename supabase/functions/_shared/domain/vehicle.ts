@@ -11,6 +11,7 @@ import {
   type UpcomingItem,
 } from './reminders.ts';
 import { forecastService, latestService, type ServiceInterval } from './service.ts';
+import type { DistanceUnit } from './units.ts';
 
 /**
  * アプリとサーバー（通知の定期実行）で同じ計算をするための、車両1台分の入力。
@@ -27,6 +28,8 @@ export interface VehicleData {
   otherReadings: OdoReading[];
   meterReplacements: MeterReplacement[];
   deadlines: Deadline[];
+  /** メーターの単位。計算は km のまま、通知の文だけこの単位で書く（既定は km） */
+  distanceUnit?: DistanceUnit;
 }
 
 export interface VehicleState {
@@ -85,5 +88,6 @@ export function vehicleNotifications(
     filter: state.filter,
     deadlines: data.deadlines,
     sentKeys,
+    distanceUnit: data.distanceUnit,
   });
 }

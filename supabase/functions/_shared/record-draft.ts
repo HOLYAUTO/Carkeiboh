@@ -4,14 +4,23 @@
  */
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from './domain/costs.ts';
 import { addDays, diffDays, isIsoDate, type IsoDate } from './domain/dates.ts';
+import { isFuelType, isValidFuelLiters, isValidFuelUnitPrice, type FuelType } from './domain/fuel.ts';
 
 export type DraftCategory = ExpenseCategory | 'odometer';
 
 export interface RecordDraft {
   date?: IsoDate;
   amountYen?: number;
-  odoKm?: number;
+  /** メーターに出ている総走行距離の数（車両の単位のまま。mile の車両なら mile） */
+  odo?: number;
   filterChanged?: boolean;
+  /** 給油量（L） */
+  fuelLiters?: number;
+  /** 1Lあたりの単価（円）。レシート・店頭の単価なので税込として扱う */
+  fuelUnitPrice?: number;
+  fuelType?: FuelType;
+  /** 満タンにしたか */
+  fullTank?: boolean;
   note?: string;
   /** 内容から推定した項目。選んでいる項目と違えば利用者に知らせる */
   category?: DraftCategory;
@@ -35,6 +44,12 @@ function validInt(value: unknown, min: number, max: number): number | undefined 
   return n >= min && n <= max ? n : undefined;
 }
 
+function roundTo(value: unknown, digits: number): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  const f = 10 ** digits;
+  return Math.round(value * f) / f;
+}
+
 /** 外から来た値（写真の読み取り結果など）を、フォームに入れてよい値だけに絞る */
 export function sanitizeDraft(input: Record<string, unknown>, today: IsoDate): RecordDraft {
   const draft: RecordDraft = {};
@@ -42,9 +57,15 @@ export function sanitizeDraft(input: Record<string, unknown>, today: IsoDate): R
   if (date) draft.date = date;
   const amount = validInt(input.amountYen, 1, MAX_AMOUNT_YEN);
   if (amount != null) draft.amountYen = amount;
-  const odo = validInt(input.odoKm, 0, MAX_ODO_KM);
-  if (odo != null) draft.odoKm = odo;
+  const odo = validInt(input.odo, 0, MAX_ODO_KM);
+  if (odo != null) draft.odo = odo;
   if (typeof input.filterChanged === 'boolean') draft.filterChanged = input.filterChanged;
+  const liters = roundTo(input.fuelLiters, 2);
+  if (liters != null && isValidFuelLiters(liters)) draft.fuelLiters = liters;
+  const price = roundTo(input.fuelUnitPrice, 1);
+  if (price != null && isValidFuelUnitPrice(price)) draft.fuelUnitPrice = price;
+  if (isFuelType(input.fuelType)) draft.fuelType = input.fuelType;
+  if (typeof input.fullTank === 'boolean') draft.fullTank = input.fullTank;
   if (typeof input.note === 'string' && input.note.trim()) draft.note = input.note.trim().slice(0, 200);
   if (typeof input.category === 'string' && DRAFT_CATEGORIES.includes(input.category)) draft.category = input.category as DraftCategory;
   return draft;
@@ -60,6 +81,12 @@ const NUM = '[0-9.〇零一二三四五六七八九十百千万]+';
 
 /** 「4500」「4千500」「1万2000」「1.2万」「三千五百」のような数を読む。読めなければ null */
 export function parseJapaneseNumber(token: string): number | null {
+  const n = parseJapaneseDecimal(token);
+  return n == null ? null : Math.round(n);
+}
+
+/** parseJapaneseNumber と同じだが、小数を残す（「30.5リットル」「172.5円」） */
+export function parseJapaneseDecimal(token: string): number | null {
   let total = 0;
   let section = 0;
   let digits = '';
@@ -77,13 +104,14 @@ export function parseJapaneseNumber(token: string): number | null {
     } else return null;
   }
   const result = total + section + (digits ? Number(digits) : 0);
-  return Number.isFinite(result) ? Math.round(result) : null;
+  return Number.isFinite(result) ? result : null;
 }
 
 function normalize(text: string): string {
   return text
     .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
     .replace(/[ｋＫ][ｍＭ]/g, 'km')
+    .replace(/[Ｌℓ]/g, 'L')
     .replace(/(\d)[,，](?=\d)/g, '$1')
     .replace(/[．]/g, '.')
     .replace(/　/g, ' ');
@@ -91,7 +119,7 @@ function normalize(text: string): string {
 
 const CATEGORY_KEYWORDS: [DraftCategory, RegExp][] = [
   ['oil_change', /オイル/],
-  ['fuel', /ガソリン|給油|ハイオク|レギュラー|軽油|満タン/],
+  ['fuel', /ガソリン|給油|ハイオク|レギュラー|軽油|ディーゼル|満タン|リットル|リッター/],
   ['shaken', /車検/],
   ['insurance', /保険/],
   ['car_tax', /自動車税|税金/],
@@ -101,7 +129,22 @@ const CATEGORY_KEYWORDS: [DraftCategory, RegExp][] = [
 ];
 
 /** メモに残しても意味のない言葉（項目名と同じことしか言っていない） */
-const FILLER = /^(ガソリン|給油|ハイオク|レギュラー|軽油|満タン|オイル|交換|走行距離|メーター|で|を|は|が|の|と|に|した|です|入れた|払った|\s)*$/;
+const FILLER = /^(ガソリン|給油|ハイオク|レギュラー|軽油|ディーゼル|満タン|単価|オイル|交換|走行距離|メーター|で|を|は|が|の|と|に|した|です|入れた|払った|\s)*$/;
+
+/** 油種の言い方。ハイオクを先に見る（「レギュラーじゃなくハイオク」のような言い方は考えない） */
+const FUEL_TYPE_KEYWORDS: [FuelType, RegExp][] = [
+  ['premium', /ハイオク|プレミアム/],
+  ['regular', /レギュラー/],
+  ['diesel', /軽油|ディーゼル/],
+];
+
+function fuelTypeIn(text: string): FuelType | undefined {
+  return FUEL_TYPE_KEYWORDS.find(([, re]) => re.test(text))?.[0];
+}
+
+/** 単価として受け付ける範囲（円/L）。これより外の値は単価とみなさない */
+const MIN_UNIT_PRICE = 50;
+const MAX_UNIT_PRICE = 500;
 
 /**
  * 音声で話した内容から下書きを作る。例：「昨日ガソリン満タンで4500円、走行距離41200キロ」
@@ -116,18 +159,40 @@ export function parseSpokenRecord(text: string, today: IsoDate): RecordDraft {
     return m;
   };
 
+  // 単価（「単価172円」「リッター172円」「1リットルあたり172.5円」「172円/L」）は合計の金額より先に取る
+  const unitPrice =
+    // 「30リットル 172円」の「リットル」は量の単位なので、数の直後のリットルは単価の目印にしない
+    take(
+      new RegExp(
+        `(?:単価|1\\s*(?:リッター|リットル|L)\\s*(?:あたり|当たり)|(?<!${NUM}\\s*)(?:リッター|リットル)\\s*(?:あたり|当たり)?)\\s*(?:は|が)?\\s*(${NUM})\\s*(?:円|えん)`,
+      ),
+    ) ??
+    take(new RegExp(`(${NUM})\\s*(?:円|えん)\\s*(?:/|／|毎|パー)\\s*(?:リッター|リットル|L)`));
+  if (unitPrice) {
+    const n = parseJapaneseDecimal(unitPrice[1]);
+    if (n != null && isValidFuelUnitPrice(Math.round(n * 10) / 10)) draft.fuelUnitPrice = Math.round(n * 10) / 10;
+  }
+  const liters = take(new RegExp(`(${NUM})\\s*(?:リットル|リッター|L)(?![a-zA-Z])`));
+  if (liters) {
+    const n = parseJapaneseDecimal(liters[1]);
+    if (n != null && isValidFuelLiters(Math.round(n * 100) / 100)) draft.fuelLiters = Math.round(n * 100) / 100;
+  }
+
   const yen = take(new RegExp(`(${NUM})\\s*(?:円|えん)`)) ?? take(new RegExp(`[¥￥]\\s*(${NUM})`));
   if (yen) {
     const n = parseJapaneseNumber(yen[1]);
-    if (n != null && n > 0 && n <= MAX_AMOUNT_YEN) draft.amountYen = n;
+    // 「30リットル 172円」のように量と一緒に言った小さな金額は、合計ではなく単価とみなす
+    if (n != null && draft.fuelLiters != null && draft.fuelUnitPrice == null && n >= MIN_UNIT_PRICE && n <= MAX_UNIT_PRICE) {
+      draft.fuelUnitPrice = n;
+    } else if (n != null && n > 0 && n <= MAX_AMOUNT_YEN) draft.amountYen = n;
   }
 
   const odo =
-    take(new RegExp(`(${NUM})\\s*(?:km|キロメートル|キロ)`, 'i')) ??
+    take(new RegExp(`(${NUM})\\s*(?:km|キロメートル|キロ|マイル|miles?|mi)(?![a-z])`, 'i')) ??
     take(new RegExp(`(?:走行距離|メーター|ODO|オドメーター)\\s*(?:は|が)?\\s*(${NUM})`, 'i'));
   if (odo) {
     const n = parseJapaneseNumber(odo[1]);
-    if (n != null && n >= 0 && n <= MAX_ODO_KM) draft.odoKm = n;
+    if (n != null && n >= 0 && n <= MAX_ODO_KM) draft.odo = n;
   }
 
   const relative: [RegExp, number][] = [
@@ -161,6 +226,10 @@ export function parseSpokenRecord(text: string, today: IsoDate): RecordDraft {
     }
   }
 
+  const fuelType = fuelTypeIn(rest);
+  if (fuelType) draft.fuelType = fuelType;
+  if (/満タン/.test(rest)) draft.fullTank = true;
+
   const filterNo = /(?:フィルター|エレメント)\s*(?:は|も)?\s*(?:交換\s*)?(?:なし|して(?:い)?ない|しなかった|そのまま)/;
   if (filterNo.test(rest)) draft.filterChanged = false;
   else if (/フィルター|エレメント/.test(rest)) draft.filterChanged = true;
@@ -171,7 +240,8 @@ export function parseSpokenRecord(text: string, today: IsoDate): RecordDraft {
       break;
     }
   }
-  if (!draft.category && draft.odoKm != null && draft.amountYen == null) draft.category = 'odometer';
+  if (!draft.category && (draft.fuelLiters != null || draft.fuelUnitPrice != null)) draft.category = 'fuel';
+  if (!draft.category && draft.odo != null && draft.amountYen == null) draft.category = 'odometer';
 
   const note = rest.replace(/[、。,.!?！？「」]/g, ' ').replace(/\s+/g, ' ').trim();
   if (note && !FILLER.test(note)) draft.note = note.slice(0, 200);
@@ -184,7 +254,7 @@ export function parseSpokenRecord(text: string, today: IsoDate): RecordDraft {
 
 /** 支払った合計が書かれた行の目印。小計・税・お預り・お釣りの行は使わない */
 const TOTAL_LINE = /合計|お?買上|領収金額|お支払|ご?請求|総額|現計|税込/;
-const NOT_TOTAL_LINE = /小計|内税|消費税|税額|対象|ポイント|お?預り|お?預かり|釣|割引|値引/;
+const NOT_TOTAL_LINE = /小計|内税|消費税|税額|対象|ポイント|お?預り|お?預かり|釣|割引|値引|単価|数量|給油量/;
 const AMOUNT = /[¥￥]?\s*(\d{1,3}(?:,\d{3})+|\d+)\s*円?/g;
 
 function amountsIn(line: string): number[] {
@@ -239,6 +309,26 @@ function receiptOdo(lines: string[], kind: DraftCategory): number | undefined {
   return undefined;
 }
 
+/** レシートの給油量（「数量 30.12L」「30.12 ℓ」）と単価（「単価 172」「@172.5」「172円/L」） */
+function receiptFuel(lines: string[]): Pick<RecordDraft, 'fuelLiters' | 'fuelUnitPrice'> {
+  const result: Pick<RecordDraft, 'fuelLiters' | 'fuelUnitPrice'> = {};
+  for (const line of lines) {
+    if (result.fuelLiters == null) {
+      const m = /(?:数量|給油量)\s*[:：]?\s*(\d{1,4}(?:\.\d{1,2})?)/.exec(line) ?? /(\d{1,4}\.\d{1,2})\s*(?:L|リットル)(?![a-zA-Z])/.exec(line);
+      if (m && isValidFuelLiters(Number(m[1]))) result.fuelLiters = Number(m[1]);
+    }
+    if (result.fuelUnitPrice == null) {
+      const m =
+        /単価\s*[:：]?\s*[¥￥]?\s*(\d{2,4}(?:\.\d)?)/.exec(line) ??
+        /@\s*[¥￥]?\s*(\d{2,4}(?:\.\d)?)/.exec(line) ??
+        /(\d{2,4}(?:\.\d)?)\s*円?\s*\/\s*L(?![a-zA-Z])/.exec(line);
+      const n = m ? Number(m[1]) : NaN;
+      if (n >= MIN_UNIT_PRICE && n <= MAX_UNIT_PRICE) result.fuelUnitPrice = n;
+    }
+  }
+  return result;
+}
+
 /**
  * 端末の OCR が返した行から下書きを作る。
  * 決まった書き方（「合計」「2026/10/24」「走行距離」「km」）だけを拾い、迷うものは入れない（足りなければサーバーで読み直す）
@@ -261,9 +351,14 @@ export function parseReceiptText(rawLines: string[], kind: DraftCategory, today:
   if (date) draft.date = date;
 
   const odo = receiptOdo(lines, kind);
-  if (odo != null && odo <= MAX_ODO_KM) draft.odoKm = odo;
+  if (odo != null && odo <= MAX_ODO_KM) draft.odo = odo;
 
   if (/エレメント|フィルター|フィルタ/.test(text)) draft.filterChanged = true;
+  if (kind === 'fuel') {
+    Object.assign(draft, receiptFuel(lines));
+    const fuelType = fuelTypeIn(text);
+    if (fuelType) draft.fuelType = fuelType;
+  }
   for (const [category, re] of CATEGORY_KEYWORDS) {
     if (re.test(text)) {
       draft.category = category;
@@ -275,7 +370,9 @@ export function parseReceiptText(rawLines: string[], kind: DraftCategory, today:
 
 /** 端末の読み取りだけで足りるか。足りなければサーバー（AI）で読み直す */
 export function isDraftSufficient(kind: DraftCategory, draft: RecordDraft): boolean {
-  if (kind === 'odometer' || kind === 'oil_change') return draft.odoKm != null;
+  if (kind === 'odometer' || kind === 'oil_change') return draft.odo != null;
+  // 給油は燃費の計算に給油量も要る
+  if (kind === 'fuel') return draft.amountYen != null && draft.date != null && draft.fuelLiters != null;
   return draft.amountYen != null && draft.date != null;
 }
 

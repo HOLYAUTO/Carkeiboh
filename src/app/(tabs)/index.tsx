@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { summarizeCosts } from '@domain/costs.ts';
 import { SERVICE_REMAINING_KM_ALERT, type UpcomingItem } from '@domain/reminders.ts';
 import type { ServiceForecast } from '@domain/service.ts';
+import { distanceUnitLabel, fromKm, type DistanceUnit } from '@domain/units.ts';
 import {
   AppText,
   Badge,
@@ -25,7 +26,7 @@ import {
 import { HomeNotices } from '../../components/HomeNotices';
 import { SponsorSlot } from '../../components/SponsorSlot';
 import { VehiclePhoto } from '../../components/VehiclePhoto';
-import { useVehicleBundle, type VehicleBundle } from '../../lib/data';
+import { useVehicleBundle, vehicleUnit, type VehicleBundle } from '../../lib/data';
 import { daysLeft, fullDate, km, longDate, monthDay, weekday, yen } from '../../lib/format';
 import { cardShadow, fonts, radius, spacing, themedStyles, useColors } from '../../theme';
 
@@ -52,6 +53,7 @@ function nearDue(f: ServiceForecast): boolean {
 
 /** いま一番やるべきことを1つだけ選ぶ（車検切れ → オイル未記録 → オイル交換が近い の順） */
 function NextAction({ data }: { data: VehicleBundle }) {
+  const unit = vehicleUnit(data.vehicle);
   const { state } = data;
   const overdueShaken = state.upcoming.find((u) => u.kind === 'shaken' && u.level === 'overdue');
   if (overdueShaken) {
@@ -79,7 +81,7 @@ function NextAction({ data }: { data: VehicleBundle }) {
   if (nearDue(oil)) {
     const overdue = (oil.remainingKm != null && oil.remainingKm <= 0) || (oil.remainingDays != null && oil.remainingDays < 0);
     const parts = [
-      oil.remainingKm != null && (oil.remainingKm > 0 ? `推定であと${km(oil.remainingKm)}` : `推定で${km(-oil.remainingKm)}超過`),
+      oil.remainingKm != null && (oil.remainingKm > 0 ? `推定であと${km(oil.remainingKm, unit)}` : `推定で${km(-oil.remainingKm, unit)}超過`),
       oil.remainingDays != null &&
         (oil.remainingDays >= 0 ? `目安日まで${daysLeft(oil.remainingDays)}` : `目安日を${-oil.remainingDays}日過ぎています`),
     ].filter(Boolean);
@@ -131,8 +133,8 @@ function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; ref
           <ListRow title="近くの整備工場を探す" detail="ルート検索や電話での予約ができます" onPress={() => router.push('/shops')} />
         </Card>
       )}
-      {state.oil && <OilCard forecast={state.oil.forecast} />}
-      {state.filter && <FilterRow forecast={state.filter.forecast} />}
+      {state.oil && <OilCard forecast={state.oil.forecast} unit={vehicleUnit(data.vehicle)} />}
+      {state.filter && <FilterRow forecast={state.filter.forecast} unit={vehicleUnit(data.vehicle)} />}
 
       <Pressable accessibilityRole="button" accessibilityLabel="維持費を見る" onPress={() => router.push('/costs')}>
         <Card style={{ flexDirection: 'row', gap: spacing.lg }}>
@@ -167,7 +169,7 @@ function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; ref
   );
 }
 
-function OilCard({ forecast }: { forecast: ServiceForecast }) {
+function OilCard({ forecast, unit }: { forecast: ServiceForecast; unit: DistanceUnit }) {
   const colors = useColors();
   const styles = useStyles();
   const remaining = forecast.remainingKm;
@@ -185,11 +187,15 @@ function OilCard({ forecast }: { forecast: ServiceForecast }) {
               <Num
                 size={48}
                 style={{ color: near ? colors.caution : colors.text, lineHeight: 56 }}
-                accessibilityLabel={remaining > 0 ? `推定であと${remaining}キロ` : `推定で${-remaining}キロ超過`}
+                accessibilityLabel={
+                  remaining > 0
+                    ? `推定であと${fromKm(remaining, unit)}${unit === 'mile' ? 'マイル' : 'キロ'}`
+                    : `推定で${fromKm(-remaining, unit)}${unit === 'mile' ? 'マイル' : 'キロ'}超過`
+                }
               >
-                {Math.abs(remaining).toLocaleString('ja-JP')}
+                {fromKm(Math.abs(remaining), unit).toLocaleString('ja-JP')}
               </Num>
-              <Num size={18} style={{ color: colors.textSecondary, flexShrink: 0 }}>km</Num>
+              <Num size={18} style={{ color: colors.textSecondary, flexShrink: 0 }}>{distanceUnitLabel(unit)}</Num>
             </View>
             <AppText variant="caption" style={near ? { color: colors.caution } : undefined}>
               {remaining > 0 ? '次の交換まで' : '目安を超過'}
@@ -201,8 +207,8 @@ function OilCard({ forecast }: { forecast: ServiceForecast }) {
       </Tachometer>
 
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        <Stat label={`前回 ${monthDay(forecast.baseline.date)}`} value={km(forecast.baseline.odoKm)} />
-        <Stat label="予定距離" value={forecast.dueOdoKm != null ? km(forecast.dueOdoKm) : '—'} />
+        <Stat label={`前回 ${monthDay(forecast.baseline.date)}`} value={km(forecast.baseline.odoKm, unit)} />
+        <Stat label="予定距離" value={forecast.dueOdoKm != null ? km(forecast.dueOdoKm, unit) : '—'} />
         <Stat
           label="目安日"
           value={forecast.dueDate ? monthDay(forecast.dueDate) : '—'}
@@ -218,7 +224,7 @@ function OilCard({ forecast }: { forecast: ServiceForecast }) {
         {forecast.dateByTime && `期間の目安 ${monthDay(forecast.dateByTime)}`}
         {'\n'}早い方を目安日にしています。
         {forecast.paceBasis === 'actual'
-          ? `走行ペースは記録から推定（1日約${Math.round(forecast.kmPerDay)}km）。`
+          ? `走行ペースは記録から推定（1日約${km(forecast.kmPerDay, unit)}）。`
           : '走行距離の記録が2件以上たまるまで、年間走行距離の目安で推定しています。'}
       </AppText>
     </Card>
@@ -238,7 +244,7 @@ function Stat({ label, value, sub, caution }: { label: string; value: string; su
   );
 }
 
-function FilterRow({ forecast }: { forecast: ServiceForecast }) {
+function FilterRow({ forecast, unit }: { forecast: ServiceForecast; unit: DistanceUnit }) {
   const colors = useColors();
   const styles = useStyles();
   const remaining = forecast.remainingKm;
@@ -252,7 +258,7 @@ function FilterRow({ forecast }: { forecast: ServiceForecast }) {
           <Badge label="推定" tone="neutral" />
         </View>
         <Num size={16} style={near ? { color: colors.caution } : undefined}>
-          {remaining != null ? (remaining > 0 ? `あと ${km(remaining)}` : `${km(-remaining)} 超過`) : '—'}
+          {remaining != null ? (remaining > 0 ? `あと ${km(remaining, unit)}` : `${km(-remaining, unit)} 超過`) : '—'}
         </Num>
       </View>
       {forecast.dueDate && forecast.remainingDays != null && (

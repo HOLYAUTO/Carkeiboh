@@ -11,6 +11,7 @@ import {
   saveOilChangeAmount,
   useInvalidate,
   useVehicleBundle,
+  vehicleUnit,
   type OilChangeRow,
   type VehicleBundle,
   type ExpenseRow,
@@ -61,7 +62,7 @@ export default function EditRecord() {
   if (target.type === 'oil' && target.row.source === 'ledra') {
     return <LedraRecord bundle={data} row={target.row} expense={target.expense} />;
   }
-  if (target.type === 'wear' && target.row.source === 'ledra') return <LedraWearRecord row={target.row} />;
+  if (target.type === 'wear' && target.row.source === 'ledra') return <LedraWearRecord bundle={data} row={target.row} />;
 
   const remove = () =>
     Alert.alert('この記録を削除しますか', '削除すると元に戻せません。', [
@@ -122,7 +123,7 @@ function LedraRecord({ bundle, row, expense }: { bundle: VehicleBundle; row: Oil
         </View>
         <AppText variant="caption">整備工場の記録（Ledra）から取り込んだ記録です。内容は変更できません。</AppText>
         <Info label="作業日" value={fullDate(row.performed_on)} />
-        <Info label="走行距離（ODO）" value={km(row.odo_km)} />
+        <Info label="走行距離（ODO）" value={km(row.odo_km, vehicleUnit(bundle.vehicle))} />
         <Info label="オイル交換" value={row.oil_changed ? 'あり' : 'なし'} />
         <Info label="オイルフィルター交換" value={row.filter_changed ? 'あり' : 'なし'} />
         {!!row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
@@ -136,7 +137,7 @@ function LedraRecord({ bundle, row, expense }: { bundle: VehicleBundle; row: Oil
 }
 
 /** Ledra から来たタイヤ・ブレーキの記録：編集できない（費用は「整備」から記録する） */
-function LedraWearRecord({ row }: { row: WearCheckRow }) {
+function LedraWearRecord({ bundle, row }: { bundle: VehicleBundle; row: WearCheckRow }) {
   return (
     <Screen>
       <Card>
@@ -146,7 +147,7 @@ function LedraWearRecord({ row }: { row: WearCheckRow }) {
         </View>
         <AppText variant="caption">整備工場の記録（Ledra）から取り込んだ記録です。内容は変更できません。</AppText>
         <Info label="作業日" value={fullDate(row.performed_on)} />
-        {row.odo_km != null && <Info label="走行距離（ODO）" value={km(row.odo_km)} />}
+        {row.odo_km != null && <Info label="走行距離（ODO）" value={km(row.odo_km, vehicleUnit(bundle.vehicle))} />}
         <Info label={row.kind === 'tire' ? '溝の深さ' : 'パッドの厚さ'} value={row.remaining_mm != null ? `${Number(row.remaining_mm)}mm` : '—'} />
         {!!row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
       </Card>

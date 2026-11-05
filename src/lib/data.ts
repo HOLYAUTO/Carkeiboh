@@ -7,6 +7,8 @@ import Constants from 'expo-constants';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { toJstDate, type IsoDate } from '@domain/dates.ts';
 import type { ExpenseCategory } from '@domain/costs.ts';
+import type { FuelFill, FuelPriceBasis, FuelType } from '@domain/fuel.ts';
+import type { DistanceUnit } from '@domain/units.ts';
 import type { DeadlineKind } from '@domain/reminders.ts';
 import { buildVehicleState, type VehicleState } from '@domain/vehicle.ts';
 import {
@@ -31,6 +33,12 @@ export interface ExpenseRow {
   odo_km: number | null;
   oil_change_id: string | null;
   note: string | null;
+  /** 給油の詳細（給油のときだけ）。Postgres の numeric は文字列で届く */
+  fuel_liters: string | number | null;
+  fuel_unit_price: string | number | null;
+  fuel_type: FuelType | null;
+  fuel_price_basis: FuelPriceBasis | null;
+  fuel_full_tank: boolean | null;
   created_at: string;
 }
 
@@ -90,6 +98,11 @@ export interface VehicleBundle {
   notifications: NotificationLogRow[];
   state: VehicleState;
   today: IsoDate;
+}
+
+/** 車両のメーターの単位。DB の距離は km なので、画面の入力・表示だけこの単位にする */
+export function vehicleUnit(v: Pick<VehicleRow, 'distance_unit'>): DistanceUnit {
+  return v.distance_unit === 'mile' ? 'mile' : 'km';
 }
 
 export function todayJst(): IsoDate {
@@ -246,6 +259,7 @@ export function useInvalidate() {
 
 export interface OnboardingInput {
   name: string;
+  distanceUnit: DistanceUnit;
   plateNumber: string | null;
   odoKm: number;
   annualKmEstimate: number;
@@ -263,6 +277,7 @@ export async function createVehicle(input: OnboardingInput) {
       .from('vehicles')
       .insert({
         name: input.name,
+        distance_unit: input.distanceUnit,
         plate_number: input.plateNumber,
         annual_km_estimate: input.annualKmEstimate,
         oil_interval_km: input.oilIntervalKm,
@@ -425,6 +440,32 @@ export interface ExpenseInput {
   amountYen: number;
   odoKm: number | null;
   note: string | null;
+  /** 給油のときだけ。給油以外は null を入れる */
+  fuel: FuelDetails | null;
+}
+
+export interface FuelDetails {
+  liters: number | null;
+  unitPrice: number | null;
+  /** 単価を入れたときだけ（DB の check で単価と組にしている） */
+  priceBasis: FuelPriceBasis | null;
+  fuelType: FuelType | null;
+  fullTank: boolean;
+}
+
+/** 給油の記録を燃費の計算の形にする（日付の古い順。同じ日は記録した順） */
+export function fuelFills(expenses: ExpenseRow[]): FuelFill[] {
+  return expenses
+    .filter((e) => e.category === 'fuel')
+    .sort((a, b) => (a.spent_on === b.spent_on ? a.created_at.localeCompare(b.created_at) : a.spent_on < b.spent_on ? -1 : 1))
+    .map((e) => ({
+      id: e.id,
+      date: e.spent_on,
+      odoKm: e.odo_km,
+      liters: e.fuel_liters != null ? Number(e.fuel_liters) : null,
+      fullTank: e.fuel_full_tank === true,
+      amountYen: e.amount_yen,
+    }));
 }
 
 /** 保存した記録の ID を返す（保存直後に「内容を直す」から編集画面を開くため） */
@@ -436,6 +477,11 @@ export async function saveExpense(input: ExpenseInput): Promise<{ id: string }> 
     amount_yen: input.amountYen,
     odo_km: input.odoKm,
     note: input.note,
+    fuel_liters: input.fuel?.liters ?? null,
+    fuel_unit_price: input.fuel?.unitPrice ?? null,
+    fuel_price_basis: input.fuel?.unitPrice != null ? input.fuel.priceBasis : null,
+    fuel_type: input.fuel?.fuelType ?? null,
+    fuel_full_tank: input.fuel ? input.fuel.fullTank : null,
   };
   return unwrap(
     input.id

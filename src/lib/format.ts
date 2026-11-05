@@ -1,11 +1,24 @@
 import { formatMonthDay, type IsoDate } from '@domain/dates.ts';
+import { formatDistance, type DistanceUnit } from '@domain/units.ts';
 
 export function yen(n: number): string {
   return `¥${Math.round(n).toLocaleString('ja-JP')}`;
 }
 
-export function km(n: number): string {
-  return `${Math.round(n).toLocaleString('ja-JP')}km`;
+/** km の値を、車両の単位（km / mile）で書く。単位を渡さなければ km */
+export function km(n: number, unit: DistanceUnit = 'km'): string {
+  return formatDistance(n, unit);
+}
+
+/** 小数を含む数（給油量・単価）。「32.15」「172.5」。全角・カンマは受ける。空なら null、読めなければ NaN */
+export function parseDecimal(text: string, maxDigits: number): number | null {
+  const normalized = text
+    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/[．]/g, '.')
+    .replace(/[,，\s]/g, '');
+  if (normalized === '') return null;
+  if (!new RegExp(`^(\\d+(\\.\\d{0,${maxDigits}})?|\\.\\d{1,${maxDigits}})$`).test(normalized)) return NaN;
+  return Number(normalized);
 }
 
 export function number(n: number): string {
