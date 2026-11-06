@@ -10,10 +10,11 @@ export const config = {
   /**
    * 紹介用QRコードのリンク。iPhone は新しいアプリID（app.ijilog）の TestFlight の公開リンク（2026-11-02）。
    * App Store で公開したら、ストアのページに差し替える。
-   * 【要確認】Android はストアのページ（アプリID から決まる）。公開するまでは開けないため、内部テストの参加リンクに差し替える
+   * Android は Google Play 内部テストの参加リンク（2026-11-06）。参加できるのはテスターに登録した Google アカウントだけ。
+   * 一般公開したら、ストアのページ（https://play.google.com/store/apps/details?id=app.ijilog）に差し替える
    */
   iosInstallUrl: process.env.EXPO_PUBLIC_IOS_INSTALL_URL || 'https://testflight.apple.com/join/j6YE2zFp',
-  androidInstallUrl: process.env.EXPO_PUBLIC_ANDROID_INSTALL_URL || 'https://play.google.com/store/apps/details?id=app.ijilog',
+  androidInstallUrl: process.env.EXPO_PUBLIC_ANDROID_INSTALL_URL || 'https://play.google.com/apps/internaltest/4701635609069796605',
 };
 
 /** 画面に出すアプリ名。「カーケイボー」は他社の商標登録があるため使わない（2026-10-31 変更） */
