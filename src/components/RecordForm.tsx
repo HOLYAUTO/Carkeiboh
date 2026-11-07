@@ -30,7 +30,7 @@ import {
 } from '../lib/data';
 import { parseDecimal, parseInteger, parseMillimeters } from '../lib/format';
 import type { RecordDraft } from '@shared/record-draft.ts';
-import { cardShadow, fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
+import { cardShadow, fonts, radius, spacing, useColors } from '../theme';
 import { FuelBreakdown, FuelEconomyPreview, FuelFields } from './FuelFields';
 import { QuickInput } from './QuickInput';
 import { AppText, Button, Card, DateField, Field, Notice, ToggleRow } from './ui';
@@ -99,23 +99,6 @@ export function KindPicker({ onSelect }: { onSelect: (k: RecordKind) => void }) 
         </Pressable>
       ))}
     </View>
-  );
-}
-
-/** 見出しの左上の「戻る」。標準の戻るボタンと同じく、山かっこと文字で出す */
-function HeaderBackButton({ onPress }: { onPress: () => void }) {
-  const colors = useColors();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="戻る"
-      onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: MIN_TAP, paddingRight: spacing.xs, opacity: pressed ? 0.6 : 1 })}
-    >
-      <Ionicons name="chevron-back" size={24} color={colors.accentText} />
-      <Text style={{ fontFamily: fonts.regular, fontSize: 17, color: colors.accentText }}>戻る</Text>
-    </Pressable>
   );
 }
 
@@ -309,27 +292,27 @@ export function RecordForm({
     replaced !== initialReplaced ||
     remaining !== initialRemaining ||
     filterChanged !== (target?.type === 'oil' ? target.row.filter_changed : false);
-  usePreventRemove(dirty, ({ data }) => {
+  // 止めた移動をやり直すときは、必ず `repeat()` を使う（止めるのを解いてから移動する）。
+  // `navigation.dispatch(data.action)` でやり直すと、まだ止めているためまた止められ、この関数が呼ばれ続けて
+  // アプリが固まる（2026-11-07 報告：保存して「OK」を押すと画面が変わらず、ボタンが何も効かなくなった）
+  usePreventRemove(dirty, ({ repeat }) => {
     if (allowLeave.current) {
-      navigation.dispatch(data.action);
+      repeat();
       return;
     }
     Alert.alert('入力中の内容を破棄しますか', '戻ると、この画面で入力した内容は保存されません。', [
       { text: '入力を続ける', style: 'cancel' },
-      { text: '破棄して戻る', style: 'destructive', onPress: () => navigation.dispatch(data.action) },
+      { text: '破棄して戻る', style: 'destructive', onPress: repeat },
     ]);
   });
   useEffect(() => {
     latestValues.current = values;
     if (dirty) metrics.current.touched = true;
   });
-  // iOS の見出しの標準の「戻る」は、上の確認で離脱を止めている間、押しても何も起きないことがある（2026-10-31 報告）。
-  // 「戻る」を JS で戻すボタンに替えて必ず確認が出るようにし、入力中は横スワイプで戻る操作も止める
+  // 左上の「戻る」は、iOS でも JS で戻すボタンにしてあり（src/app/_layout.tsx）、押すと上の確認が必ず出る。
+  // 横スワイプで戻る操作は確認を出せないことがあるため、入力中は止める（入力していなければスワイプで戻れる）
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => <HeaderBackButton onPress={() => navigation.goBack()} />,
-      gestureEnabled: !dirty,
-    });
+    navigation.setOptions({ gestureEnabled: !dirty });
   }, [navigation, dirty]);
 
   /** 写真・音声で読み取った値を入れる。読み取れなかった項目は今の入力を残す */

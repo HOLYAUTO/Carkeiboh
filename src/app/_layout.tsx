@@ -87,7 +87,7 @@ function RootNavigator() {
 
   return (
     <Stack
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerTintColor: colors.accentText,
         headerTitleStyle: { fontFamily: fonts.semibold, color: colors.text },
         // 入力ミスに気づいたらすぐ1つ前に戻れるよう、左上に「戻る」を文字付きで出し、
@@ -98,7 +98,27 @@ function RootNavigator() {
         headerShadowVisible: false,
         headerStyle: { backgroundColor: colors.background },
         contentStyle: { backgroundColor: colors.background },
-      }}
+        // iOS 26 では、見出しを出さない画面（タブ）の上に重ねた画面で、標準の「戻る」を押しても
+        // 何も起きないことがある（2026-11-07 報告。設定・お知らせ・記録などすべての画面）。
+        // 標準の「戻る」を使わず、見出しのボタンから JS で1つ前に戻す。入力途中の確認（usePreventRemove）もこれで必ず出る
+        ...(Platform.OS === 'ios'
+          ? {
+              unstable_headerLeftItems: ({ canGoBack }: { canGoBack?: boolean }) =>
+                canGoBack
+                  ? [
+                      {
+                        type: 'button' as const,
+                        label: '‹ 戻る',
+                        accessibilityLabel: '戻る',
+                        labelStyle: { fontFamily: fonts.regular, fontSize: 17 },
+                        tintColor: colors.accentText,
+                        onPress: () => navigation.goBack(),
+                      },
+                    ]
+                  : [],
+            }
+          : {}),
+      })}
     >
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -130,7 +150,8 @@ function RootNavigator() {
         <Stack.Screen name="vehicles/release" options={{ title: 'クルマを手放す' }} />
         <Stack.Screen name="share" options={{ title: 'アプリを紹介する' }} />
         <Stack.Screen name="shops/[id]" options={{ title: '整備工場' }} />
-        <Stack.Screen name="ledra/scan" options={{ title: 'QRコードを読み取る', presentation: 'modal' }} />
+        {/* 下から出す画面は「キャンセル」で閉じるので、左上に「戻る」を出さない */}
+        <Stack.Screen name="ledra/scan" options={{ title: 'QRコードを読み取る', presentation: 'modal', unstable_headerLeftItems: () => [] }} />
         <Stack.Screen name="ledra/consent" options={{ title: '整備工場との連携' }} />
       </Stack.Protected>
       {/* 残すクルマを選ぶ画面からも開けるよう、別にしておく（最初に開く画面にならないよう最後に置く） */}
