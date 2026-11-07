@@ -86,6 +86,8 @@ export default function Settings() {
         <ListRow title="走行距離とメーター交換" onPress={() => router.push('/settings/odometer')} />
         <Divider />
         <ListRow title="記録の一覧" onPress={() => router.push('/records')} />
+        <Divider />
+        <ListRow title="確定申告用のまとめ" detail="1年分の経費と明細の表（CSV）" onPress={() => router.push('/settings/tax-report')} />
       </Card>
 
       <SectionTitle>表示</SectionTitle>

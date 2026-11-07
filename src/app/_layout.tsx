@@ -139,6 +139,7 @@ function RootNavigator() {
         <Stack.Screen name="settings/deadlines" options={{ title: '車検・点検・保険' }} />
         <Stack.Screen name="settings/odometer" options={{ title: '走行距離とメーター交換' }} />
         <Stack.Screen name="settings/appearance" options={{ title: '画面の色' }} />
+        <Stack.Screen name="settings/tax-report" options={{ title: '確定申告用のまとめ' }} />
         <Stack.Screen name="announcements/index" options={{ title: 'お知らせ' }} />
         <Stack.Screen name="announcements/[id]" options={{ title: 'お知らせ' }} />
         <Stack.Screen name="admin/announcements/index" options={{ title: 'お知らせの管理' }} />

@@ -9,6 +9,7 @@ import { toJstDate, type IsoDate } from '@domain/dates.ts';
 import type { ExpenseCategory } from '@domain/costs.ts';
 import type { FuelFill, FuelPriceBasis, FuelType } from '@domain/fuel.ts';
 import type { DistanceUnit } from '@domain/units.ts';
+import type { BookkeepingExpense } from '@domain/bookkeeping.ts';
 import type { DeadlineKind } from '@domain/reminders.ts';
 import { buildVehicleState, type VehicleState } from '@domain/vehicle.ts';
 import {
@@ -39,6 +40,11 @@ export interface ExpenseRow {
   fuel_type: FuelType | null;
   fuel_price_basis: FuelPriceBasis | null;
   fuel_full_tank: boolean | null;
+  /** かけ（後払い）か。かけのときは税抜の金額（entered_amount_yen）から税込（amount_yen）を出す */
+  on_account: boolean;
+  entered_amount_yen: number | null;
+  /** 消費税のかからない分（車検の法定費用など） */
+  exempt_yen: number | null;
   created_at: string;
 }
 
@@ -387,6 +393,7 @@ export interface OilChangeInput {
   oilChanged: boolean;
   filterChanged: boolean;
   amountYen: number | null;
+  payment?: PaymentDetails;
 }
 
 /** 自分で入力したオイル交換を保存する。金額はその記録に紐づく支出1件として持つ（二重計上しない） */
@@ -403,12 +410,18 @@ export async function saveOilChange(input: OilChangeInput) {
       ? await supabase.from('oil_changes').update(row).eq('id', input.id).select('id').single()
       : await supabase.from('oil_changes').insert(row).select('id').single(),
   ) as { id: string };
-  await saveOilChangeAmount(input.vehicleId, saved.id, input.date, input.amountYen);
+  await saveOilChangeAmount(input.vehicleId, saved.id, input.date, input.amountYen, input.payment);
   return saved;
 }
 
 /** Ledra から来た記録にも、金額だけは後から追記できる */
-export async function saveOilChangeAmount(vehicleId: string, oilChangeId: string, date: IsoDate, amountYen: number | null) {
+export async function saveOilChangeAmount(
+  vehicleId: string,
+  oilChangeId: string,
+  date: IsoDate,
+  amountYen: number | null,
+  payment: PaymentDetails = PAID_NOW,
+) {
   if (amountYen == null || amountYen <= 0) {
     unwrap(await supabase.from('expenses').delete().eq('oil_change_id', oilChangeId));
     return;
@@ -421,6 +434,9 @@ export async function saveOilChangeAmount(vehicleId: string, oilChangeId: string
         category: 'oil_change',
         spent_on: date,
         amount_yen: amountYen,
+        on_account: payment.onAccount,
+        entered_amount_yen: payment.onAccount ? payment.enteredAmountYen : null,
+        exempt_yen: payment.exemptYen,
       },
       { onConflict: 'oil_change_id' },
     ),
@@ -442,7 +458,19 @@ export interface ExpenseInput {
   note: string | null;
   /** 給油のときだけ。給油以外は null を入れる */
   fuel: FuelDetails | null;
+  payment: PaymentDetails;
 }
+
+/** 支払い方法と税の区分（確定申告のまとめに使う） */
+export interface PaymentDetails {
+  onAccount: boolean;
+  /** かけのとき入れた税抜の金額（給油以外） */
+  enteredAmountYen: number | null;
+  /** 消費税のかからない分（車検の法定費用など） */
+  exemptYen: number | null;
+}
+
+export const PAID_NOW: PaymentDetails = { onAccount: false, enteredAmountYen: null, exemptYen: null };
 
 export interface FuelDetails {
   liters: number | null;
@@ -468,6 +496,28 @@ export function fuelFills(expenses: ExpenseRow[]): FuelFill[] {
     }));
 }
 
+/** 支出の行を確定申告のまとめの形にする */
+export function bookkeepingExpenses(expenses: ExpenseRow[]): BookkeepingExpense[] {
+  return expenses.map((e) => ({
+    date: e.spent_on,
+    category: e.category,
+    amountYen: e.amount_yen,
+    onAccount: e.on_account === true,
+    enteredAmountYen: e.entered_amount_yen,
+    exemptYen: e.exempt_yen,
+    fuel:
+      e.category === 'fuel'
+        ? {
+            fuelType: e.fuel_type,
+            liters: e.fuel_liters != null ? Number(e.fuel_liters) : null,
+            unitPrice: e.fuel_unit_price != null ? Number(e.fuel_unit_price) : null,
+            basis: e.fuel_price_basis,
+          }
+        : null,
+    note: e.note,
+  }));
+}
+
 /** 保存した記録の ID を返す（保存直後に「内容を直す」から編集画面を開くため） */
 export async function saveExpense(input: ExpenseInput): Promise<{ id: string }> {
   const row = {
@@ -482,6 +532,9 @@ export async function saveExpense(input: ExpenseInput): Promise<{ id: string }> 
     fuel_price_basis: input.fuel?.unitPrice != null ? input.fuel.priceBasis : null,
     fuel_type: input.fuel?.fuelType ?? null,
     fuel_full_tank: input.fuel ? input.fuel.fullTank : null,
+    on_account: input.payment.onAccount,
+    entered_amount_yen: input.payment.onAccount && input.category !== 'fuel' ? input.payment.enteredAmountYen : null,
+    exempt_yen: input.payment.exemptYen,
   };
   return unwrap(
     input.id

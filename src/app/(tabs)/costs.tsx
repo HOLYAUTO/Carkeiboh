@@ -7,7 +7,7 @@ import { formatKmPerLiter, summarizeFuel } from '@domain/fuel.ts';
 import { distanceUnitLabel, KM_PER_MILE } from '@domain/units.ts';
 import { MonthlyBarChart } from '../../components/BarChart';
 import { SponsorSlot } from '../../components/SponsorSlot';
-import { AppText, Card, Divider, ErrorView, IconButton, Num, Screen, ScreenHeader, Segmented, Skeleton } from '../../components/ui';
+import { AppText, Button, Card, Divider, ErrorView, IconButton, Num, Screen, ScreenHeader, Segmented, Skeleton } from '../../components/ui';
 import { fuelFills, useVehicleBundle, vehicleUnit } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
 import { spacing, useColors } from '../../theme';
@@ -137,6 +137,8 @@ export default function Costs() {
       <AppText variant="caption" style={{ marginHorizontal: spacing.xs }}>
         オイル交換の金額は、オイル交換の記録に入力した分だけを数えます（整備・修理と二重に数えません）。
       </AppText>
+
+      <Button title="確定申告用のまとめ" variant="secondary" onPress={() => router.push('/settings/tax-report')} />
 
       <SponsorSlot placement="costs" />
     </Screen>

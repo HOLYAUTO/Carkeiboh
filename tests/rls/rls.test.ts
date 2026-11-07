@@ -172,6 +172,56 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
+  it('かけ（後払い）の税抜の金額と、消費税のかからない分を DB でも確かめる', async () => {
+    await asUser(alice, async (c) => {
+      const ok = await c.query(
+        `insert into public.expenses (vehicle_id, spent_on, category, amount_yen, on_account, entered_amount_yen, exempt_yen)
+         values ($1, '2026-11-01', 'shaken', 85000, true, 80000, 30000) returning on_account`,
+        [aliceVehicle],
+      );
+      expect(ok.rows[0].on_account).toBe(true);
+      const def = await c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen) values ($1, '2026-11-01', 'other', 100) returning on_account`, [aliceVehicle]);
+      expect(def.rows[0].on_account).toBe(false);
+      // 税抜の金額は、かけのときだけ・税込より大きくできない・給油には使わない
+      await expectFail(
+        c,
+        () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, entered_amount_yen) values ($1, '2026-11-01', 'other', 1100, 1000)`, [aliceVehicle]),
+        /expenses_entered_amount_on_account/,
+      );
+      await expectFail(
+        c,
+        () =>
+          c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, on_account, entered_amount_yen) values ($1, '2026-11-01', 'other', 1000, true, 1100)`, [
+            aliceVehicle,
+          ]),
+        /expenses_entered_amount_on_account/,
+      );
+      await expectFail(
+        c,
+        () =>
+          c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, on_account, entered_amount_yen) values ($1, '2026-11-01', 'fuel', 1100, true, 1000)`, [
+            aliceVehicle,
+          ]),
+        /expenses_entered_amount_on_account/,
+      );
+      await expectFail(
+        c,
+        () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, exempt_yen) values ($1, '2026-11-01', 'shaken', 1000, 1001)`, [aliceVehicle]),
+        /expenses_exempt_within_amount/,
+      );
+      // 仕事で使う割合は 0〜100%
+      const u = await c.query(`update public.vehicles set business_use_percent = 60 where id = $1`, [aliceVehicle]);
+      expect(u.rowCount).toBe(1);
+      await expectFail(c, () => c.query(`update public.vehicles set business_use_percent = 101 where id = $1`, [aliceVehicle]), /check constraint/);
+      await c.query(`update public.vehicles set business_use_percent = null where id = $1`, [aliceVehicle]);
+    });
+    // 他人の車両の割合は変えられない
+    await asUser(alice, async (c) => {
+      const u = await c.query(`update public.vehicles set business_use_percent = 10 where id = $1`, [bobVehicle]);
+      expect(u.rowCount).toBe(0);
+    });
+  });
+
   it('メーターの単位は km か mile だけで、既定は km', async () => {
     const r = await asAdmin(`select distance_unit from public.vehicles where id = $1`, [aliceVehicle]);
     expect(r.rows[0].distance_unit).toBe('km');

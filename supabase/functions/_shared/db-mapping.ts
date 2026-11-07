@@ -26,6 +26,8 @@ export interface VehicleRow {
   photo_updated_at: string | null;
   /** メーターの単位。DB の距離はすべて km で持ち、画面と通知の文だけこの単位にする */
   distance_unit: DistanceUnit;
+  /** 仕事で使う割合（%、確定申告のまとめに使う）。未設定は null */
+  business_use_percent?: number | null;
 }
 
 export interface OilChangeRow {

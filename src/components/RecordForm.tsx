@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, usePreventRemove } from 'expo-router';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
+import { businessAmount, canBeOnAccount, withConsumptionTax } from '@domain/bookkeeping.ts';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@domain/costs.ts';
 import {
   calculateFuelCost,
@@ -28,12 +29,18 @@ import {
   type WearCheckRow,
   type WearKind,
 } from '../lib/data';
-import { parseDecimal, parseInteger, parseMillimeters } from '../lib/format';
+import { parseDecimal, parseInteger, parseMillimeters, yen } from '../lib/format';
 import type { RecordDraft } from '@shared/record-draft.ts';
 import { cardShadow, fonts, radius, spacing, useColors } from '../theme';
-import { FuelBreakdown, FuelEconomyPreview, FuelFields } from './FuelFields';
+import { ComputedAmount } from './ComputedAmount';
+import { FuelEconomyPreview, FuelFields } from './FuelFields';
 import { QuickInput } from './QuickInput';
-import { AppText, Button, Card, DateField, Field, Notice, ToggleRow } from './ui';
+import { AppText, Button, Card, DateField, Field, Notice, Segmented, ToggleRow } from './ui';
+
+const PAYMENT_OPTIONS: { value: 'now' | 'on_account'; label: string }[] = [
+  { value: 'now', label: 'その場で払った' },
+  { value: 'on_account', label: 'かけ（あとで請求）' },
+];
 
 /** 「記録する」で選ぶ項目。オイル交換・支出の各項目に加え、タイヤ・ブレーキの点検と走行距離だけの記録もできる */
 export type RecordKind = ExpenseCategory | WearKind | 'odometer';
@@ -122,6 +129,10 @@ const WEAR_FORM: Record<WearKind, { replaced: string; remaining: string; hint: s
   },
 };
 
+function litersText(n: number | null): string {
+  return n == null ? '' : n.toLocaleString('ja-JP', { maximumFractionDigits: 2 });
+}
+
 function confirmWarnings(messages: string[]): Promise<boolean> {
   if (messages.length === 0) return Promise.resolve(true);
   return new Promise((resolve) =>
@@ -158,7 +169,19 @@ export function RecordForm({
   const unit: DistanceUnit = bundle.vehicle.distance_unit === 'mile' ? 'mile' : 'km';
   const initialOdo = target ? target.row.odo_km : null;
   const initialOdoText = initialOdo != null ? String(fromKm(initialOdo, unit)) : '';
-  const initialAmount = target?.type === 'oil' ? target.expense?.amount_yen : target?.type === 'expense' ? target.row.amount_yen : null;
+  const expenseRow = target?.type === 'oil' ? target.expense : target?.type === 'expense' ? target.row : null;
+  // 支払い方法：かけ（後払い）は税抜の金額・単価を入れてもらい、消費税をアプリで足す。
+  // 新しい記録は、同じ項目の前回の記録と同じ支払い方法から始める（かけで給油する人が毎回選び直さなくてよいように）
+  const canPayOnAccount = kind !== 'odometer' && !isWearKind(kind) && canBeOnAccount(kind);
+  const lastSameKind = bundle.expenses.find((e) => e.category === kind);
+  const initialOnAccount =
+    canPayOnAccount &&
+    (expenseRow
+      ? expenseRow.on_account === true || expenseRow.fuel_price_basis === 'tax_excluded'
+      : !target && (lastSameKind?.on_account === true || lastSameKind?.fuel_price_basis === 'tax_excluded'));
+  const initialAmount =
+    expenseRow == null ? null : expenseRow.on_account && expenseRow.entered_amount_yen != null ? expenseRow.entered_amount_yen : expenseRow.amount_yen;
+  const initialExempt = expenseRow?.exempt_yen != null ? String(expenseRow.exempt_yen) : '';
 
   // 給油：油種は前回の給油と同じものから始める。満タンは新しい記録ではオンから始める
   const isFuel = kind === 'fuel';
@@ -166,7 +189,7 @@ export function RecordForm({
   const initialLiters = fuelRow?.fuel_liters != null ? String(Number(fuelRow.fuel_liters)) : '';
   const initialUnitPrice = fuelRow?.fuel_unit_price != null ? String(Number(fuelRow.fuel_unit_price)) : '';
   const initialFuelType: FuelType = fuelRow?.fuel_type ?? bundle.expenses.find((e) => e.category === 'fuel' && e.fuel_type)?.fuel_type ?? 'regular';
-  const initialBasis: FuelPriceBasis = fuelRow?.fuel_price_basis ?? 'tax_included';
+  const initialBasis: FuelPriceBasis = initialOnAccount ? 'tax_excluded' : 'tax_included';
   const initialFullTank = fuelRow ? fuelRow.fuel_full_tank === true : true;
 
   const [date, setDate] = useState<string>(initialDate);
@@ -175,7 +198,9 @@ export function RecordForm({
   const [liters, setLiters] = useState(initialLiters);
   const [unitPrice, setUnitPrice] = useState(initialUnitPrice);
   const [fuelType, setFuelType] = useState<FuelType>(initialFuelType);
-  const [basis, setBasis] = useState<FuelPriceBasis>(initialBasis);
+  const [onAccount, setOnAccount] = useState(initialOnAccount);
+  const [exempt, setExempt] = useState(initialExempt);
+  const basis: FuelPriceBasis = onAccount ? 'tax_excluded' : 'tax_included';
   const [fullTank, setFullTank] = useState(initialFullTank);
   // 金額を自分で入れた（またはレシートから読んだ）ら、給油量×単価の計算で上書きしない。空にすると自動に戻る
   const [amountManual, setAmountManual] = useState(() => {
@@ -209,22 +234,47 @@ export function RecordForm({
     isFuel && litersN != null && unitPriceN != null && litersValid && unitPriceValid
       ? calculateFuelCost({ date, fuelType, liters: litersN, unitPriceYen: unitPriceN, basis })
       : null;
+  // 入力した数字（給油量×単価）。計算後の金額と並べて見せる
+  const fuelInputLabel = fuelCost ? `${litersText(litersN)}L × ${litersText(unitPriceN)}円/L（${onAccount ? '税抜' : '税込'}）` : '';
   // 金額を自分で入れていなければ、給油量×単価で計算した合計を金額にする
   const amount = !amountManual && fuelCost ? String(fuelCost.totalYen) : amountInput;
-  const amountYen = parseInteger(amount);
+  const fieldYen = parseInteger(amount);
+  // かけ（給油以外）は、入れた税抜の金額に消費税を足して税込にする。車検は法定費用（消費税のかからない分）を除いて足す
+  const isShaken = kind === 'shaken';
+  const exemptN = isShaken ? parseInteger(exempt) : null;
+  const taxExcludedEntry = onAccount && canPayOnAccount && !isFuel;
+  const fieldOk = fieldYen != null && Number.isFinite(fieldYen) && fieldYen > 0;
+  const exemptOk = exemptN == null || (Number.isFinite(exemptN) && exemptN >= 0 && (!fieldOk || exemptN <= fieldYen!));
+  const onAccountTotal = taxExcludedEntry && fieldOk && exemptOk ? withConsumptionTax(fieldYen!, date, exemptN ?? 0) : null;
+  const amountYen = onAccountTotal ? onAccountTotal.totalYen : fieldYen;
+  // 仕事で使う割合を設定していれば、経費にする額も見せる
+  const businessPercent = bundle.vehicle.business_use_percent ?? null;
+  const businessOf = (totalYen: number | undefined) =>
+    businessPercent != null && totalYen != null ? { percent: businessPercent, yen: businessAmount(totalYen, businessPercent) } : null;
+  const fuelBusiness = businessOf(fuelCost?.totalYen);
+  const onAccountBusiness = businessOf(onAccountTotal?.totalYen);
+  // 自分で入れた金額（レシートなど）が給油量×単価の計算と違えば知らせる
+  const fuelMismatchYen = fuelCost && fieldOk && fieldYen !== fuelCost.totalYen ? fieldYen : null;
+  const applyFuelTotal = () => {
+    if (!fuelCost) return;
+    setAmount(String(fuelCost.totalYen));
+    setAmountManual(false);
+  };
+  const onAccountInputLabel = onAccountTotal ? `税抜 ${yen(fieldYen!)}${exemptN ? `（うち法定費用 ${yen(exemptN)}）` : ''}` : '';
   const changeAmount = (v: string) => {
     setAmount(v);
     setAmountManual(v.trim() !== '');
   };
 
   // 満タンで走行距離と給油量があれば、前回の満タンからの燃費をその場で見せる
-  const economy = useMemo(() => {
+  // 給油の記録は多くても数百件なので、毎回計算する（useMemo にすると、計算後の金額の表示と組み合わせたとき React Compiler の lint が通らない）
+  const economy = (() => {
     if (!isFuel || !fullTank || odoKm == null || !Number.isFinite(odoKm) || litersN == null || !litersValid) return null;
     const others = fuelFills(bundle.expenses.filter((e) => e.id !== fuelRow?.id));
     const candidate = { id: '__editing__', date, odoKm, liters: litersN, fullTank: true, amountYen: 0 };
     const replacements = bundle.meterReplacements.map((m) => ({ replacedOn: m.replaced_on, odoBeforeKm: m.odo_before_km, odoAfterKm: m.odo_after_km }));
     return fuelEconomySegments([...others, candidate], replacements).find((seg) => seg.toId === '__editing__') ?? null;
-  }, [isFuel, fullTank, odoKm, litersN, litersValid, date, bundle.expenses, bundle.meterReplacements, fuelRow?.id]);
+  })();
   const remainingMm = parseMillimeters(remaining);
   const odoRequired = isOil || isOdoOnly;
   // ponytail: タイヤ・ブレーキの費用は「整備」の支出で記録する（オイルのように記録へ紐づけない）。
@@ -235,10 +285,10 @@ export function RecordForm({
   const amountValid = amountYen == null ? !amountRequired : Number.isFinite(amountYen) && amountYen > 0 && amountYen < 100_000_000;
   const remainingValid = remainingMm == null || (Number.isFinite(remainingMm) && remainingMm <= 30);
   const fuelValid = !isFuel || (litersValid && unitPriceValid);
-  const valid = !!date && odoValid && amountValid && remainingValid && fuelValid;
+  const valid = !!date && odoValid && amountValid && remainingValid && fuelValid && exemptOk;
 
   // 入力の計測（実証実験の KPI 用）。画面を開いてから保存・離脱までと、写真・音声で埋まった項目を覚える
-  const values = { date, odo, amount, note, remaining, filterChanged: String(filterChanged), liters, unitPrice };
+  const values = { date, odo, amount, note, remaining, filterChanged: String(filterChanged), liters, unitPrice, exempt };
   const latestValues = useRef(values);
   const metrics = useRef({
     openedAt: new Date(),
@@ -285,7 +335,8 @@ export function RecordForm({
     liters !== initialLiters ||
     unitPrice !== initialUnitPrice ||
     fuelType !== initialFuelType ||
-    basis !== initialBasis ||
+    onAccount !== initialOnAccount ||
+    exempt !== initialExempt ||
     fullTank !== initialFullTank ||
     amount !== (initialAmount != null ? String(initialAmount) : '') ||
     note !== initialNote ||
@@ -333,6 +384,8 @@ export function RecordForm({
     if (d.amountYen != null && !isOdoOnly && !wear) {
       setAmount(String(d.amountYen));
       setAmountManual(true);
+      // レシート・音声の金額は、その場で払った税込の金額
+      setOnAccount(false);
       m.draftValues.amount = String(d.amountYen);
       filled.push('金額');
     }
@@ -344,8 +397,8 @@ export function RecordForm({
       }
       if (d.fuelUnitPrice != null) {
         setUnitPrice(String(d.fuelUnitPrice));
-        // レシート・店頭の単価は税込。音声で「税抜」と言うことは考えない
-        setBasis('tax_included');
+        // レシート・店頭の単価は税込（その場で払った）。音声で「税抜」と言うことは考えない
+        setOnAccount(false);
         m.draftValues.unitPrice = String(d.fuelUnitPrice);
         filled.push('単価');
       }
@@ -394,6 +447,11 @@ export function RecordForm({
     setBusy(true);
     try {
       const vehicleId = bundle.vehicle.id;
+      const payment = {
+        onAccount: canPayOnAccount && onAccount,
+        enteredAmountYen: taxExcludedEntry ? fieldYen : null,
+        exemptYen: isShaken ? exemptN : null,
+      };
       let recordRef: string;
       if (isOil) {
         const saved = await saveOilChange({
@@ -404,6 +462,7 @@ export function RecordForm({
           oilChanged: true,
           filterChanged,
           amountYen,
+          payment,
         });
         recordRef = `oil:${saved.id}`;
       } else if (isWearKind(kind)) {
@@ -431,6 +490,7 @@ export function RecordForm({
           odoKm,
           note: note.trim() || null,
           fuel: isFuel ? { liters: litersN, unitPrice: unitPriceN, priceBasis: unitPriceN != null ? basis : null, fuelType, fullTank } : null,
+          payment,
         });
         recordRef = `expense:${saved.id}`;
       }
@@ -467,6 +527,13 @@ export function RecordForm({
                 : undefined
           }
         />
+        {canPayOnAccount && (
+          <>
+            <AppText variant="label">支払い</AppText>
+            <Segmented options={PAYMENT_OPTIONS} value={onAccount ? 'on_account' : 'now'} onChange={(v) => setOnAccount(v === 'on_account')} />
+            {onAccount && <AppText variant="caption">請求書の税抜の金額を入れてください。消費税はアプリで足します。</AppText>}
+          </>
+        )}
         {isFuel && (
           <FuelFields
             fuelType={fuelType}
@@ -477,8 +544,7 @@ export function RecordForm({
             unitPrice={unitPrice}
             onUnitPrice={setUnitPrice}
             unitPriceValid={unitPriceValid}
-            basis={basis}
-            onBasis={setBasis}
+            onAccount={onAccount}
             fullTank={fullTank}
             onFullTank={setFullTank}
           />
@@ -498,23 +564,43 @@ export function RecordForm({
         )}
         {!isOdoOnly && !wear && (
           <Field
-            label={isOil ? '金額（任意）' : '金額'}
+            label={`${taxExcludedEntry ? '金額（税抜）' : '金額'}${isOil ? '（任意）' : ''}`}
             value={amount}
             onChangeText={changeAmount}
             keyboardType="number-pad"
             suffix="円"
-            hint={isOil ? '入力すると維持費に1件として数えます。' : isFuel ? '給油量と単価を入れると、税込の合計を自動で入れます。' : undefined}
+            hint={
+              isFuel
+                ? '給油量と単価を入れると、金額を自動で入れます。'
+                : isOil
+                  ? '入力すると維持費に1件として数えます。'
+                  : undefined
+            }
+          />
+        )}
+        {isShaken && (
+          <Field
+            label="うち法定費用（任意）"
+            value={exempt}
+            onChangeText={setExempt}
+            keyboardType="number-pad"
+            suffix="円"
+            hint={exemptOk ? '重量税・自賠責保険料・印紙代の合計です。請求書に書いてあれば入れてください。' : '金額より小さい数字を入れてください'}
           />
         )}
         {fuelCost && (
-          <FuelBreakdown
-            cost={fuelCost}
-            fuelType={fuelType}
-            amountYen={amountYen}
-            onUseTotal={() => {
-              setAmount(String(fuelCost.totalYen));
-              setAmountManual(false);
-            }}
+          <ComputedAmount
+            input={fuelInputLabel}
+            totalYen={fuelCost.totalYen}
+            business={fuelBusiness}
+            mismatch={fuelMismatchYen != null ? { enteredYen: fuelMismatchYen, onUseComputed: applyFuelTotal } : null}
+          />
+        )}
+        {!fuelCost && onAccountTotal && (
+          <ComputedAmount
+            input={onAccountInputLabel}
+            totalYen={onAccountTotal.totalYen}
+            business={onAccountBusiness}
           />
         )}
         {economy && <FuelEconomyPreview kmPerLiter={economy.kmPerLiter} distanceKm={economy.distanceKm} liters={economy.liters} unit={unit} />}
