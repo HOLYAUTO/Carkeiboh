@@ -11,7 +11,7 @@ function isKind(v: unknown): v is RecordKind {
 
 /**
  * 記録の入力。「記録する」タブで選んだ項目をスタックの画面として開くので、
- * 左上の「戻る」・横スワイプ・Android の戻る操作で、項目選びにすぐ戻れる。
+ * 左上の「戻る」・横スワイプ・Android の戻る操作で、項目選びにすぐ戻れる。保存しても元の画面に戻る。
  */
 export default function NewRecord() {
   const { kind } = useLocalSearchParams<{ kind?: string }>();
@@ -21,18 +21,21 @@ export default function NewRecord() {
   if (bundle.isPending) return <Loading />;
   if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
 
-  // 保存した直後に入力ミスに気づいたら、その場で編集画面へ進める
+  // 保存したら、開く前の画面（「記録する」タブかホーム）にすぐ戻り、そこで「記録しました」と知らせる。
+  // 入力ミスに気づいたら、知らせの「内容を直す」から編集画面へ進める（直して保存すると、また元の画面に戻る）
   const onSaved = (recordRef: string) => {
-    const fix = { text: '内容を直す', onPress: () => router.replace({ pathname: '/records/[id]', params: { id: recordRef } }) };
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+    const fix = { text: '内容を直す', onPress: () => router.push({ pathname: '/records/[id]', params: { id: recordRef } }) };
     if (kind === 'shaken') {
       Alert.alert('記録しました', '車検の満了日も更新しますか。新しい満了日を登録すると、前の満了日の通知と警告が止まります。', [
         fix,
-        { text: 'あとで', style: 'cancel', onPress: () => router.back() },
-        { text: '満了日を登録する', onPress: () => router.replace('/settings/deadlines') },
+        { text: 'あとで', style: 'cancel' },
+        { text: '満了日を登録する', onPress: () => router.push('/settings/deadlines') },
       ]);
       return;
     }
-    Alert.alert('記録しました', `${kindLabel(kind)}を記録しました。`, [fix, { text: 'OK', style: 'cancel', onPress: () => router.back() }]);
+    Alert.alert('記録しました', `${kindLabel(kind)}を記録しました。`, [fix, { text: 'OK', style: 'cancel' }]);
   };
 
   return (
