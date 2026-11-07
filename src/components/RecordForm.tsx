@@ -292,14 +292,17 @@ export function RecordForm({
     replaced !== initialReplaced ||
     remaining !== initialRemaining ||
     filterChanged !== (target?.type === 'oil' ? target.row.filter_changed : false);
-  usePreventRemove(dirty, ({ data }) => {
+  // 止めた移動をやり直すときは、必ず `repeat()` を使う（止めるのを解いてから移動する）。
+  // `navigation.dispatch(data.action)` でやり直すと、まだ止めているためまた止められ、この関数が呼ばれ続けて
+  // アプリが固まる（2026-11-07 報告：保存して「OK」を押すと画面が変わらず、ボタンが何も効かなくなった）
+  usePreventRemove(dirty, ({ repeat }) => {
     if (allowLeave.current) {
-      navigation.dispatch(data.action);
+      repeat();
       return;
     }
     Alert.alert('入力中の内容を破棄しますか', '戻ると、この画面で入力した内容は保存されません。', [
       { text: '入力を続ける', style: 'cancel' },
-      { text: '破棄して戻る', style: 'destructive', onPress: () => navigation.dispatch(data.action) },
+      { text: '破棄して戻る', style: 'destructive', onPress: repeat },
     ]);
   });
   useEffect(() => {
