@@ -4,6 +4,7 @@
 import type { VehicleData } from './domain/vehicle.ts';
 import type { DeadlineKind, ReminderKind } from './domain/reminders.ts';
 import { isDistanceUnit, type DistanceUnit } from './domain/units.ts';
+import type { Powertrain, VehicleClass, VehicleTaxSpec } from './domain/vehicle-tax.ts';
 
 export interface VehicleRow {
   id: string;
@@ -28,6 +29,23 @@ export interface VehicleRow {
   distance_unit: DistanceUnit;
   /** 仕事で使う割合（%、確定申告のまとめに使う）。未設定は null */
   business_use_percent?: number | null;
+  /** 自動車税・重量税の計算に使う車検証の項目（任意） */
+  vehicle_class?: VehicleClass | null;
+  displacement_cc?: number | null;
+  first_registered_on?: string | null;
+  powertrain?: Powertrain | null;
+  vehicle_weight_kg?: number | null;
+}
+
+/** 車両の行を、自動車税・重量税の計算の形にする */
+export function vehicleTaxSpec(v: VehicleRow): VehicleTaxSpec {
+  return {
+    vehicleClass: v.vehicle_class ?? null,
+    displacementCc: v.displacement_cc ?? null,
+    firstRegisteredOn: v.first_registered_on ?? null,
+    powertrain: v.powertrain ?? null,
+    vehicleWeightKg: v.vehicle_weight_kg ?? null,
+  };
 }
 
 export interface OilChangeRow {

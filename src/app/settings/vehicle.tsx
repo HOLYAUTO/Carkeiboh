@@ -3,10 +3,32 @@ import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { DEFAULT_FILTER_INTERVAL, OIL_INTERVAL_KM_CHOICES, OIL_INTERVAL_MONTH_CHOICES } from '@domain/service.ts';
 import { distanceUnitLabel, fromKm, toKm, type DistanceUnit } from '@domain/units.ts';
+import {
+  automobileTaxFor,
+  fiscalYearOf,
+  parseYearMonth,
+  POWERTRAIN_LABELS,
+  POWERTRAINS,
+  VEHICLE_CLASS_LABELS,
+  VEHICLE_CLASSES,
+  type Powertrain,
+  type VehicleClass,
+  type VehicleTaxSpec,
+} from '@domain/vehicle-tax.ts';
 import { AppText, Button, Card, ErrorView, Field, Loading, Screen, SectionTitle, Segmented } from '../../components/ui';
-import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
-import { km, parseInteger } from '../../lib/format';
+import { todayJst, updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
+import { km, parseInteger, yen } from '../../lib/format';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
+
+type Unset = 'unset';
+// 選ぶまでは 'unset'（どれも選ばれていない）。画面が狭いので「未設定」の選択肢は出さない
+const CLASS_OPTIONS: { value: VehicleClass | Unset; label: string }[] = VEHICLE_CLASSES.map((c) => ({ value: c, label: VEHICLE_CLASS_LABELS[c] }));
+const POWERTRAIN_OPTIONS: { value: Powertrain | Unset; label: string }[] = POWERTRAINS.map((p) => ({ value: p, label: POWERTRAIN_LABELS[p] }));
+
+/** 'YYYY-MM-01' を入力欄に「2020/6」で見せる */
+function yearMonthText(d: string | null | undefined): string {
+  return d ? `${Number(d.slice(0, 4))}/${Number(d.slice(5, 7))}` : '';
+}
 
 const UNIT_OPTIONS: { value: DistanceUnit; label: string }[] = [
   { value: 'km', label: 'km' },
@@ -57,6 +79,12 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
   const [oilMonths, setOilMonths] = useState<number | null>(vehicle.oil_interval_months);
   const [filterKm, setFilterKm] = useState(shown(vehicle.filter_interval_km));
   const [filterMonths, setFilterMonths] = useState(vehicle.filter_interval_months != null ? String(vehicle.filter_interval_months) : '');
+  // 自動車税・重量税の自動計算に使う車検証の項目（任意）
+  const [vehicleClass, setVehicleClass] = useState<VehicleClass | Unset>(vehicle.vehicle_class ?? 'unset');
+  const [powertrain, setPowertrain] = useState<Powertrain | Unset>(vehicle.powertrain ?? 'unset');
+  const [displacement, setDisplacement] = useState(vehicle.displacement_cc != null ? String(vehicle.displacement_cc) : '');
+  const [registered, setRegistered] = useState(yearMonthText(vehicle.first_registered_on));
+  const [weight, setWeight] = useState(vehicle.vehicle_weight_kg != null ? String(vehicle.vehicle_weight_kg) : '');
   const [busy, setBusy] = useState(false);
 
   const inKm = (text: string) => {
@@ -86,6 +114,21 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
     inRange(oilKmN, 500, 50000) && (oilKmN != null || oilMonths != null) &&
     inRange(filterKmN, 500, 100000) && inRange(filterMonthsN, 1, 60) && (filterKmN != null || filterMonthsN != null);
 
+  const displacementN = parseInteger(displacement);
+  const weightN = parseInteger(weight);
+  const registeredOn = registered.trim() ? parseYearMonth(registered) : null;
+  const registeredValid = !registered.trim() || registeredOn != null;
+  const taxSpecValid = inRange(displacementN, 1, 20000) && inRange(weightN, 1, 30000) && registeredValid;
+  const isKei = vehicleClass === 'kei';
+  const taxSpec: VehicleTaxSpec = {
+    vehicleClass: vehicleClass === 'unset' ? null : vehicleClass,
+    displacementCc: isKei ? null : displacementN,
+    firstRegisteredOn: registeredOn,
+    powertrain: powertrain === 'unset' ? null : powertrain,
+    vehicleWeightKg: isKei ? null : weightN,
+  };
+  const carTaxPreview = taxSpecValid ? automobileTaxFor(taxSpec, fiscalYearOf(todayJst())) : null;
+
   const save = async () => {
     setBusy(true);
     try {
@@ -98,6 +141,11 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
         oil_interval_months: oilMonths,
         filter_interval_km: filterKmN,
         filter_interval_months: filterMonthsN,
+        vehicle_class: taxSpec.vehicleClass,
+        displacement_cc: taxSpec.displacementCc,
+        first_registered_on: taxSpec.firstRegisteredOn,
+        powertrain: taxSpec.powertrain,
+        vehicle_weight_kg: taxSpec.vehicleWeightKg,
       });
       await invalidate();
       router.back();
@@ -141,7 +189,32 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
         <Field label="期間（任意）" value={filterMonths} onChangeText={setFilterMonths} keyboardType="number-pad" suffix="か月" />
       </Card>
 
-      <Button title="保存する" disabled={!valid} loading={busy} onPress={save} />
+      <SectionTitle>税金の自動計算（任意）</SectionTitle>
+      <Card>
+        <AppText variant="caption">車検証を見て入れると、自動車税と車検の重量税を自動で計算します。</AppText>
+        <AppText variant="label">種別</AppText>
+        <Segmented options={CLASS_OPTIONS} value={vehicleClass} onChange={setVehicleClass} />
+        <AppText variant="label">燃料</AppText>
+        <Segmented options={POWERTRAIN_OPTIONS} value={powertrain} onChange={setPowertrain} />
+        <Field
+          label={isKei ? '初度検査年月' : '初度登録年月'}
+          value={registered}
+          onChangeText={setRegistered}
+          placeholder="例：令和2年6月"
+          hint={registeredValid ? '車検証のとおり（和暦のままで大丈夫です）。' : '「令和2年6月」「2020/6」のように入れてください'}
+        />
+        {!isKei && (
+          <>
+            <Field label="総排気量" value={displacement} onChangeText={setDisplacement} keyboardType="number-pad" suffix="cc" placeholder="例：1496" hint={powertrain === 'electric' ? '電気自動車は空欄で大丈夫です。' : undefined} />
+            <Field label="車両重量" value={weight} onChangeText={setWeight} keyboardType="number-pad" suffix="kg" placeholder="例：1180" />
+          </>
+        )}
+        {carTaxPreview && (
+          <AppText variant="caption">{`今年度の${isKei ? '軽自動車税' : '自動車税'}：${yen(carTaxPreview.amountYen)}`}</AppText>
+        )}
+      </Card>
+
+      <Button title="保存する" disabled={!valid || !taxSpecValid} loading={busy} onPress={save} />
       <Button title="このクルマを手放す（乗り換え・廃車）" variant="destructive" disabled={busy} onPress={() => router.push('/vehicles/release')} />
     </Screen>
   );

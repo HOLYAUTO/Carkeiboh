@@ -222,6 +222,26 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
+  it('車検証の項目（種別・排気量・初度登録・燃料・車両重量）は本人だけが入れられ、値を DB でも確かめる', async () => {
+    await asUser(alice, async (c) => {
+      const ok = await c.query(
+        `update public.vehicles set vehicle_class = 'standard', displacement_cc = 1496, first_registered_on = '2020-06-01', powertrain = 'hybrid', vehicle_weight_kg = 1180 where id = $1`,
+        [aliceVehicle],
+      );
+      expect(ok.rowCount).toBe(1);
+      await expectFail(c, () => c.query(`update public.vehicles set vehicle_class = 'truck' where id = $1`, [aliceVehicle]), /check constraint/);
+      await expectFail(c, () => c.query(`update public.vehicles set powertrain = 'steam' where id = $1`, [aliceVehicle]), /check constraint/);
+      await expectFail(c, () => c.query(`update public.vehicles set first_registered_on = '2020-06-15' where id = $1`, [aliceVehicle]), /check constraint/);
+      await expectFail(c, () => c.query(`update public.vehicles set displacement_cc = 0 where id = $1`, [aliceVehicle]), /check constraint/);
+      const other = await c.query(`update public.vehicles set displacement_cc = 660 where id = $1`, [bobVehicle]);
+      expect(other.rowCount).toBe(0);
+      await c.query(
+        `update public.vehicles set vehicle_class = null, displacement_cc = null, first_registered_on = null, powertrain = null, vehicle_weight_kg = null where id = $1`,
+        [aliceVehicle],
+      );
+    });
+  });
+
   it('メーターの単位は km か mile だけで、既定は km', async () => {
     const r = await asAdmin(`select distance_unit from public.vehicles where id = $1`, [aliceVehicle]);
     expect(r.rows[0].distance_unit).toBe('km');

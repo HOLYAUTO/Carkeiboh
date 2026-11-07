@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, usePreventRemove } from 'expo-router';
+import { router, useNavigation, usePreventRemove } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { businessAmount, canBeOnAccount, withConsumptionTax } from '@domain/bookkeeping.ts';
@@ -31,6 +31,8 @@ import {
 } from '../lib/data';
 import { parseDecimal, parseInteger, parseMillimeters, yen } from '../lib/format';
 import type { RecordDraft } from '@shared/record-draft.ts';
+import { vehicleTaxSpec } from '@shared/db-mapping.ts';
+import { automobileTaxFor, fiscalYearOf, vehicleTaxSpecLabel, weightTaxFor } from '@domain/vehicle-tax.ts';
 import { cardShadow, fonts, radius, spacing, useColors } from '../theme';
 import { ComputedAmount } from './ComputedAmount';
 import { FuelEconomyPreview, FuelFields } from './FuelFields';
@@ -200,6 +202,8 @@ export function RecordForm({
   const [fuelType, setFuelType] = useState<FuelType>(initialFuelType);
   const [onAccount, setOnAccount] = useState(initialOnAccount);
   const [exempt, setExempt] = useState(initialExempt);
+  // 車検の「うち法定費用」は、自分で入れるまで計算した重量税を入れておく（編集で既に値があれば上書きしない）
+  const [exemptManual, setExemptManual] = useState(initialExempt !== '' || !!target);
   const basis: FuelPriceBasis = onAccount ? 'tax_excluded' : 'tax_included';
   const [fullTank, setFullTank] = useState(initialFullTank);
   // 金額を自分で入れた（またはレシートから読んだ）ら、給油量×単価の計算で上書きしない。空にすると自動に戻る
@@ -234,14 +238,22 @@ export function RecordForm({
     isFuel && litersN != null && unitPriceN != null && litersValid && unitPriceValid
       ? calculateFuelCost({ date, fuelType, liters: litersN, unitPriceYen: unitPriceN, basis })
       : null;
+  // 自動車税・車検の重量税は、車検証の項目（車両情報と周期）から計算する
+  const taxSpec = vehicleTaxSpec(bundle.vehicle);
+  const carTax = kind === 'car_tax' ? automobileTaxFor(taxSpec, fiscalYearOf(date)) : null;
+  const weightTax = kind === 'shaken' ? weightTaxFor(taxSpec, date) : null;
+  const carTaxInputLabel = carTax ? `${vehicleTaxSpecLabel(taxSpec)}（${fiscalYearOf(date)}年度）` : '';
+  const needsTaxSpec = (kind === 'car_tax' && !carTax) || (kind === 'shaken' && !weightTax);
   // 入力した数字（給油量×単価）。計算後の金額と並べて見せる
   const fuelInputLabel = fuelCost ? `${litersText(litersN)}L × ${litersText(unitPriceN)}円/L（${onAccount ? '税抜' : '税込'}）` : '';
   // 金額を自分で入れていなければ、給油量×単価で計算した合計を金額にする
-  const amount = !amountManual && fuelCost ? String(fuelCost.totalYen) : amountInput;
+  const autoAmountYen = fuelCost?.totalYen ?? carTax?.amountYen ?? null;
+  const amount = !amountManual && autoAmountYen != null ? String(autoAmountYen) : amountInput;
   const fieldYen = parseInteger(amount);
   // かけ（給油以外）は、入れた税抜の金額に消費税を足して税込にする。車検は法定費用（消費税のかからない分）を除いて足す
   const isShaken = kind === 'shaken';
-  const exemptN = isShaken ? parseInteger(exempt) : null;
+  const exemptText = !exemptManual && weightTax ? String(weightTax.amountYen) : exempt;
+  const exemptN = isShaken ? parseInteger(exemptText) : null;
   const taxExcludedEntry = onAccount && canPayOnAccount && !isFuel;
   const fieldOk = fieldYen != null && Number.isFinite(fieldYen) && fieldYen > 0;
   const exemptOk = exemptN == null || (Number.isFinite(exemptN) && exemptN >= 0 && (!fieldOk || exemptN <= fieldYen!));
@@ -253,12 +265,22 @@ export function RecordForm({
     businessPercent != null && totalYen != null ? { percent: businessPercent, yen: businessAmount(totalYen, businessPercent) } : null;
   const fuelBusiness = businessOf(fuelCost?.totalYen);
   const onAccountBusiness = businessOf(onAccountTotal?.totalYen);
+  const carTaxBusiness = businessOf(carTax?.amountYen);
   // 自分で入れた金額（レシートなど）が給油量×単価の計算と違えば知らせる
   const fuelMismatchYen = fuelCost && fieldOk && fieldYen !== fuelCost.totalYen ? fieldYen : null;
   const applyFuelTotal = () => {
     if (!fuelCost) return;
     setAmount(String(fuelCost.totalYen));
     setAmountManual(false);
+  };
+  const carTaxMismatchYen = carTax && fieldOk && fieldYen !== carTax.amountYen ? fieldYen : null;
+  const applyCarTax = () => {
+    setAmount('');
+    setAmountManual(false);
+  };
+  const changeExempt = (v: string) => {
+    setExempt(v);
+    setExemptManual(v.trim() !== '');
   };
   const onAccountInputLabel = onAccountTotal ? `税抜 ${yen(fieldYen!)}${exemptN ? `（うち法定費用 ${yen(exemptN)}）` : ''}` : '';
   const changeAmount = (v: string) => {
@@ -288,7 +310,7 @@ export function RecordForm({
   const valid = !!date && odoValid && amountValid && remainingValid && fuelValid && exemptOk;
 
   // 入力の計測（実証実験の KPI 用）。画面を開いてから保存・離脱までと、写真・音声で埋まった項目を覚える
-  const values = { date, odo, amount, note, remaining, filterChanged: String(filterChanged), liters, unitPrice, exempt };
+  const values = { date, odo, amount, note, remaining, filterChanged: String(filterChanged), liters, unitPrice, exempt: exemptText };
   const latestValues = useRef(values);
   const metrics = useRef({
     openedAt: new Date(),
@@ -338,7 +360,8 @@ export function RecordForm({
     onAccount !== initialOnAccount ||
     exempt !== initialExempt ||
     fullTank !== initialFullTank ||
-    amount !== (initialAmount != null ? String(initialAmount) : '') ||
+    // 自動で入れた金額（自動車税など）だけでは入力中にしない
+    amountInput !== (initialAmount != null ? String(initialAmount) : '') ||
     note !== initialNote ||
     replaced !== initialReplaced ||
     remaining !== initialRemaining ||
@@ -581,11 +604,17 @@ export function RecordForm({
         {isShaken && (
           <Field
             label="うち法定費用（任意）"
-            value={exempt}
-            onChangeText={setExempt}
+            value={exemptText}
+            onChangeText={changeExempt}
             keyboardType="number-pad"
             suffix="円"
-            hint={exemptOk ? '重量税・自賠責保険料・印紙代の合計です。請求書に書いてあれば入れてください。' : '金額より小さい数字を入れてください'}
+            hint={
+              !exemptOk
+                ? '金額より小さい数字を入れてください'
+                : !exemptManual && weightTax
+                  ? '重量税を自動で入れました。自賠責保険料・印紙代があれば足してください。'
+                  : '重量税・自賠責保険料・印紙代の合計です。請求書に書いてあれば入れてください。'
+            }
           />
         )}
         {fuelCost && (
@@ -595,6 +624,20 @@ export function RecordForm({
             business={fuelBusiness}
             mismatch={fuelMismatchYen != null ? { enteredYen: fuelMismatchYen, onUseComputed: applyFuelTotal } : null}
           />
+        )}
+        {carTax && (
+          <ComputedAmount
+            input={carTaxInputLabel}
+            totalYen={carTax.amountYen}
+            business={carTaxBusiness}
+            mismatch={carTaxMismatchYen != null ? { enteredYen: carTaxMismatchYen, onUseComputed: applyCarTax } : null}
+          />
+        )}
+        {needsTaxSpec && (
+          <>
+            <AppText variant="caption">{kind === 'car_tax' ? '車検証の内容を入れると、自動車税を自動で計算します。' : '車検証の内容を入れると、重量税を自動で計算します。'}</AppText>
+            <Button title="車検証の内容を入れる" variant="secondary" onPress={() => router.push('/settings/vehicle')} />
+          </>
         )}
         {!fuelCost && onAccountTotal && (
           <ComputedAmount
