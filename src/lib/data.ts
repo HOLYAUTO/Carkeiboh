@@ -3,6 +3,7 @@
  * RLS により、ここで読めるのは本人のデータだけ。
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback } from 'react';
 import Constants from 'expo-constants';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { toJstDate, type IsoDate } from '@domain/dates.ts';
@@ -204,44 +205,57 @@ export async function restoreSuspendedVehicles(): Promise<number> {
   return unwrap(await supabase.rpc('restore_suspended_vehicles')) as number;
 }
 
+/** 車両ごとの記録。車両の行そのものは含めず、表示のたびに最新の車両と組み合わせる */
+type VehicleRecords = Omit<VehicleBundle, 'vehicle' | 'state'>;
+
 export function useVehicleBundle() {
   const vehicle = useVehicle();
-  const vehicleId = vehicle.data?.id;
   const v = vehicle.data;
+  const vehicleId = v?.id;
+  // 記録の取得と、最新の車両との組み合わせを分ける。取得の中で車両を使うと、
+  // 車両と記録を同時に読み直したとき（写真の追加・車両の設定の保存のあと）に、
+  // 読み直す前の古い車両が残り、写真や設定の変更が画面に出なくなるため
+  const select = useCallback(
+    (records: VehicleRecords): VehicleBundle => {
+      // 記録は車両 ID ごとに覚えているので、ここに来るときは必ず同じ車両が読み込まれている
+      const current = v!;
+      return {
+        ...records,
+        vehicle: current,
+        state: buildVehicleState(toVehicleData(current, records), records.today),
+      };
+    },
+    [v],
+  );
   const bundle = useQuery({
     queryKey: ['bundle', v?.user_id, vehicleId],
     enabled: !!vehicleId,
-    queryFn: async (): Promise<VehicleBundle> => {
-      if (!v) throw new Error('vehicle_not_loaded');
+    select,
+    queryFn: async (): Promise<VehicleRecords> => {
+      if (!vehicleId) throw new Error('vehicle_not_loaded');
       const [oil, expenses, wear, readings, points, meters, deadlines, links, logs] = await Promise.all([
-        supabase.from('oil_changes').select('*').eq('vehicle_id', v.id).order('performed_on', { ascending: false }),
-        supabase.from('expenses').select('*').eq('vehicle_id', v.id).order('spent_on', { ascending: false }),
-        supabase.from('wear_checks').select('*').eq('vehicle_id', v.id).order('performed_on', { ascending: false }),
-        supabase.from('odometer_readings').select('*').eq('vehicle_id', v.id).order('read_on', { ascending: false }),
-        supabase.from('odometer_points').select('vehicle_id, date, odo_km, source').eq('vehicle_id', v.id),
-        supabase.from('meter_replacements').select('*').eq('vehicle_id', v.id).order('replaced_on'),
-        supabase.from('deadlines').select('*').eq('vehicle_id', v.id).eq('status', 'active'),
-        supabase.from('ledra_links').select('*').eq('vehicle_id', v.id).order('created_at', { ascending: false }).limit(1),
-        supabase.from('notification_log').select('id, title, body, sent_at').eq('vehicle_id', v.id).order('sent_at', { ascending: false }).limit(20),
+        supabase.from('oil_changes').select('*').eq('vehicle_id', vehicleId).order('performed_on', { ascending: false }),
+        supabase.from('expenses').select('*').eq('vehicle_id', vehicleId).order('spent_on', { ascending: false }),
+        supabase.from('wear_checks').select('*').eq('vehicle_id', vehicleId).order('performed_on', { ascending: false }),
+        supabase.from('odometer_readings').select('*').eq('vehicle_id', vehicleId).order('read_on', { ascending: false }),
+        supabase.from('odometer_points').select('vehicle_id, date, odo_km, source').eq('vehicle_id', vehicleId),
+        supabase.from('meter_replacements').select('*').eq('vehicle_id', vehicleId).order('replaced_on'),
+        supabase.from('deadlines').select('*').eq('vehicle_id', vehicleId).eq('status', 'active'),
+        supabase.from('ledra_links').select('*').eq('vehicle_id', vehicleId).order('created_at', { ascending: false }).limit(1),
+        supabase.from('notification_log').select('id, title, body, sent_at').eq('vehicle_id', vehicleId).order('sent_at', { ascending: false }).limit(20),
       ]);
-      const today = todayJst();
-      const rows = {
+      const linkRows = unwrap(links) as LedraLinkRow[];
+      return {
         oilChanges: unwrap(oil) as OilChangeRow[],
         points: unwrap(points) as OdometerPointRow[],
         meterReplacements: unwrap(meters) as MeterReplacementRow[],
         deadlines: unwrap(deadlines) as DeadlineRow[],
-      };
-      const linkRows = unwrap(links) as LedraLinkRow[];
-      return {
-        vehicle: v,
-        ...rows,
         expenses: unwrap(expenses) as ExpenseRow[],
         wearChecks: unwrap(wear) as WearCheckRow[],
         readings: unwrap(readings) as OdometerReadingRow[],
         ledraLink: linkRows[0] ?? null,
         notifications: unwrap(logs) as NotificationLogRow[],
-        state: buildVehicleState(toVehicleData(v, rows), today),
-        today,
+        today: todayJst(),
       };
     },
   });
