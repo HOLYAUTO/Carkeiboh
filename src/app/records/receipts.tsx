@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@domain/costs.ts';
 import { FUEL_TYPE_LABELS } from '@domain/fuel.ts';
@@ -46,9 +46,12 @@ function Receipts({ bundle }: { bundle: VehicleBundle }) {
   const [progress, setProgress] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const unit = vehicleUnit(bundle.vehicle);
+  // ホーム画面のアイコンの長押し（レシートを撮る）から開いたときは、すぐカメラを開く
+  const { camera } = useLocalSearchParams<{ camera?: string }>();
+  const openedCamera = useRef(false);
 
-  const read = async () => {
-    const photos = await pickPhotos('library', { maxSide: PHOTO_MAX_SIDE, multiple: true, limit: MAX_PHOTOS });
+  const read = async (source: 'camera' | 'library') => {
+    const photos = await pickPhotos(source, { maxSide: PHOTO_MAX_SIDE, multiple: true, limit: MAX_PHOTOS });
     if (photos.length === 0) return;
     const added: Item[] = [];
     for (const [i, photo] of photos.entries()) {
@@ -67,6 +70,14 @@ function Receipts({ bundle }: { bundle: VehicleBundle }) {
     setProgress(null);
     setItems((prev) => [...prev, ...added]);
   };
+
+  useEffect(() => {
+    if (camera === '1' && !openedCamera.current) {
+      openedCamera.current = true;
+      read('camera');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera]);
 
   const toggle = (key: string) => setItems((prev) => prev.map((it) => (it.key === key && it.status === 'ready' && !it.done ? { ...it, selected: !it.selected } : it)));
   const selected = items.filter((it) => it.selected && !it.done);
@@ -119,8 +130,9 @@ function Receipts({ bundle }: { bundle: VehicleBundle }) {
 
   return (
     <Screen>
-      <AppText>ためておいたレシートの写真を、まとめて読み取って登録します（一度に{MAX_PHOTOS}枚まで）。</AppText>
-      <Button title={items.length > 0 ? 'さらに写真を選ぶ' : 'アルバムから写真を選ぶ'} variant={items.length > 0 ? 'secondary' : 'primary'} loading={!!progress} onPress={read} />
+      <AppText>レシートを撮るか、ためておいたレシートの写真を選ぶと、読み取って登録します（アルバムからは一度に{MAX_PHOTOS}枚まで）。</AppText>
+      <Button title="レシートを撮る" variant={items.length > 0 ? 'secondary' : 'primary'} loading={!!progress} onPress={() => read('camera')} />
+      <Button title={items.length > 0 ? 'さらにアルバムから選ぶ' : 'アルバムから選ぶ（何枚でも）'} variant="secondary" disabled={!!progress} onPress={() => read('library')} />
       {progress && <AppText variant="caption">{progress}</AppText>}
       {items.length > 0 && <Notice title="読み取った内容を確認してください">写真と見比べてから登録してください。足りないものは「開いて入力」から1枚ずつ入れられます。</Notice>}
       {items.length > 0 && (

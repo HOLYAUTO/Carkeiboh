@@ -227,5 +227,14 @@ export const CONSENT_ITEMS = [
   '整備・車検の内容と金額',
 ] as const;
 
+/**
+ * 受け付ける同意の版と、その版で同意した項目。新しい版を出したあとも、更新前のアプリから届く1つ前の版は受け付ける
+ * （その連携には、その版の項目だけを渡す。2026-10-31.1 の連携には整備・車検の金額は渡らない）
+ */
+export const ACCEPTED_CONSENTS: Readonly<Record<string, readonly string[]>> = {
+  [CONSENT_VERSION]: CONSENT_ITEMS,
+  '2026-10-31.1': CONSENT_ITEMS.filter((i) => i !== '整備・車検の内容と金額'),
+};
+
 export const TOKEN_INVALID_MESSAGE =
   'QRコードの有効期限（15分）が切れたか、すでに使われています。店舗で新しいQRコードを表示してもらってください。';

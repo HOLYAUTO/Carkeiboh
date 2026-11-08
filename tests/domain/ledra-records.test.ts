@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractLinkToken, toOilChangeInsert, toServiceExpenseInsert, toServiceRecord, toWearCheckInsert, voidedRecordId } from '../../supabase/functions/_shared/ledra-records.ts';
+import { ACCEPTED_CONSENTS, CONSENT_VERSION, extractLinkToken, toOilChangeInsert, toServiceExpenseInsert, toServiceRecord, toWearCheckInsert, voidedRecordId } from '../../supabase/functions/_shared/ledra-records.ts';
 
 const link = { id: 'link-1', vehicle_id: 'veh-1', user_id: 'user-1' };
 
@@ -138,5 +138,14 @@ describe('toServiceRecord / toServiceExpenseInsert（整備・車検の金額）
     const rec = toServiceRecord({ record_id: 'c1', kind: 'oil_change', work_date: '2026-10-01', total_yen: 5500, title: 'オイル交換', shop_name: '本店' })!;
     expect(toServiceExpenseInsert(rec, link, null)).toBeNull();
     expect(toServiceExpenseInsert(rec, link, 'oil-1')).toMatchObject({ category: 'oil_change', oil_change_id: 'oil-1', note: 'オイル交換・本店', source: 'ledra', ledra_record_id: 'c1' });
+  });
+});
+
+describe('ACCEPTED_CONSENTS（同意の版）', () => {
+  it('今の版と、更新前のアプリから届く1つ前の版を受け付け、前の版には整備・車検を含めない', () => {
+    expect(ACCEPTED_CONSENTS[CONSENT_VERSION]).toContain('整備・車検の内容と金額');
+    expect(ACCEPTED_CONSENTS['2026-10-31.1']).not.toContain('整備・車検の内容と金額');
+    expect(ACCEPTED_CONSENTS['2026-10-31.1']).toContain('タイヤの溝の深さ');
+    expect(ACCEPTED_CONSENTS['2026-10-23.1']).toBeUndefined();
   });
 });

@@ -12,6 +12,7 @@ import { ErrorView, Loading } from '../components/ui';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { useBillingListener } from '../lib/billing';
 import { usePlan, useVehicle } from '../lib/data';
+import { useQuickActions } from '../lib/quick-actions';
 import { fonts, ThemeProvider, useColors, useTheme } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -69,6 +70,7 @@ function RootNavigator() {
   // 複数台プランの期限が切れて上限を超えているときは、残すクルマを選ぶまでほかの画面に進めない
   const mustChooseVehicle = signedIn && hasVehicle && plan.data?.mustChooseVehicle === true;
   useBillingListener();
+  useQuickActions();
 
   useEffect(() => {
     if (!loading && !checkingVehicle) SplashScreen.hideAsync().catch(() => {});

@@ -80,7 +80,8 @@
       ],
       "expo-image",
       "./modules/ijilog-ocr/app.plugin.js",
-      "expo-iap"
+      "expo-iap",
+      "expo-quick-actions"
     ],
     "experiments": {
       "typedRoutes": true
