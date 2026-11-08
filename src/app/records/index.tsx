@@ -66,7 +66,7 @@ export default function Records() {
           title: EXPENSE_CATEGORY_LABELS[e.category],
           detail: [...fuelDetail(e), e.odo_km != null ? dist(e.odo_km) : null, e.note].filter(Boolean).join('・'),
           amount: e.amount_yen,
-          verified: false,
+          verified: e.source === 'ledra',
           sortKey: e.created_at,
         })),
       ...readings.map((r) => ({

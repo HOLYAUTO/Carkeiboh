@@ -1,5 +1,5 @@
 import { LedraLinkInactiveError, LedraNotConsentedError, type LedraClient, type RecordsPage } from './ledra-client.ts';
-import { toOilChangeInsert, toWearCheckInsert, voidedRecordId } from './ledra-records.ts';
+import { toOilChangeInsert, toServiceExpenseInsert, toServiceRecord, toWearCheckInsert, voidedRecordId } from './ledra-records.ts';
 import type { SupabaseClient } from './supabase.ts';
 
 export interface LedraLinkRow {
@@ -10,11 +10,12 @@ export interface LedraLinkRow {
   status: 'active' | 'revoked_by_user' | 'revoked_by_provider';
   sync_cursor: string | null;
   wear_sync_cursor: string | null;
+  service_sync_cursor?: string | null;
   last_error: string | null;
 }
 
 /** 取り込む列（定期取得・連携の確定で同じものを読む） */
-export const LEDRA_LINK_COLUMNS = 'id, vehicle_id, user_id, ledra_link_id, status, sync_cursor, wear_sync_cursor, last_error';
+export const LEDRA_LINK_COLUMNS = 'id, vehicle_id, user_id, ledra_link_id, status, sync_cursor, wear_sync_cursor, service_sync_cursor, last_error';
 
 /** 1回の取得で読むページ数の上限（暴走防止。残りは次の回に取得する） */
 const MAX_PAGES = 20;
@@ -76,7 +77,65 @@ async function pull(admin: SupabaseClient, link: LedraLinkRow, stream: Stream, c
   }
 }
 
-/** 前回取得以降の差分を取り込む（オイル交換 → タイヤ・ブレーキの順） */
+/**
+ * 整備・車検・オイル交換の金額（6章）。支出として入れる。オイル交換は同じ記録IDのオイル交換に紐づける
+ * （オイル交換の記録がまだ無ければ、その記録は飛ばして次の回に取り込む：位置を進めないよう、そのページで止める）
+ */
+async function pullServices(admin: SupabaseClient, ledra: LedraClient, link: LedraLinkRow, counts: Counts) {
+  let cursor = link.service_sync_cursor ?? null;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { records, nextCursor, hasMore } = await ledra.fetchServiceRecords(link.ledra_link_id, cursor);
+    const voided = records.map(voidedRecordId).filter((id): id is string => id !== null);
+    if (voided.length > 0) {
+      const { data: gone, error } = await admin
+        .from('expenses')
+        .delete()
+        .eq('vehicle_id', link.vehicle_id)
+        .eq('source', 'ledra')
+        .in('ledra_record_id', voided)
+        .select('id');
+      if (error) throw new Error(`取り消された記録の削除に失敗しました: ${error.message}`);
+      counts.removed += gone?.length ?? 0;
+    }
+    const live = records.filter((r) => voidedRecordId(r) === null).map(toServiceRecord);
+    counts.skipped += live.filter((r) => r === null).length;
+    const recs = live.filter((r): r is NonNullable<typeof r> => r !== null);
+    const oilIds = recs.filter((r) => r.kind === 'oil_change').map((r) => r.recordId);
+    const oilByRecord = new Map<string, string>();
+    if (oilIds.length > 0) {
+      const { data, error } = await admin
+        .from('oil_changes')
+        .select('id, ledra_record_id')
+        .eq('vehicle_id', link.vehicle_id)
+        .eq('source', 'ledra')
+        .in('ledra_record_id', oilIds);
+      if (error) throw new Error(`オイル交換の記録の読み込みに失敗しました: ${error.message}`);
+      for (const o of data ?? []) oilByRecord.set(o.ledra_record_id as string, o.id as string);
+    }
+    const rows = recs.map((r) => toServiceExpenseInsert(r, link, oilByRecord.get(r.recordId) ?? null));
+    const waiting = rows.some((r) => r === null);
+    const ready = rows.filter((r): r is NonNullable<typeof r> => r !== null);
+    const others = ready.filter((r) => r.category !== 'oil_change');
+    const oils = ready.filter((r) => r.category === 'oil_change');
+    if (others.length > 0) {
+      const { error } = await admin.from('expenses').upsert(others, { onConflict: 'vehicle_id,ledra_record_id' });
+      if (error) throw new Error(`整備・車検の金額の保存に失敗しました: ${error.message}`);
+    }
+    if (oils.length > 0) {
+      // オイル交換の金額は、そのオイル交換に紐づく支出1件として持つ（利用者が入れていた金額は整備工場の金額で上書き）
+      const { error } = await admin.from('expenses').upsert(oils, { onConflict: 'oil_change_id' });
+      if (error) throw new Error(`オイル交換の金額の保存に失敗しました: ${error.message}`);
+    }
+    counts.imported += others.length + oils.length;
+    // オイル交換の記録がまだ無い金額があれば、位置を進めずに次の回にもう一度読む
+    if (waiting) break;
+    cursor = nextCursor;
+    await admin.from('ledra_links').update({ service_sync_cursor: cursor, last_synced_at: new Date().toISOString(), last_error: null }).eq('id', link.id);
+    if (!hasMore) break;
+  }
+}
+
+/** 前回取得以降の差分を取り込む（オイル交換 → タイヤ・ブレーキ → 整備・車検の金額の順） */
 export async function syncLink(admin: SupabaseClient, ledra: LedraClient, link: LedraLinkRow): Promise<SyncResult> {
   const counts: Counts = { imported: 0, skipped: 0, removed: 0 };
   try {
@@ -101,6 +160,12 @@ export async function syncLink(admin: SupabaseClient, ledra: LedraClient, link: 
       // 連携は止めずにタイヤ・ブレーキだけ飛ばす。鍵の設定漏れに気づけるようログには残す
       if (!(e instanceof LedraNotConsentedError)) throw e;
       console.warn(`ledra link ${link.id}: タイヤ・ブレーキの記録は 403（同意の範囲外か、鍵に passport:wear_records が無い）`);
+    }
+    try {
+      await pullServices(admin, ledra, link, counts);
+    } catch (e) {
+      // 整備・車検に同意していない連携（2026-11-08 より前の同意）、鍵に passport:service_records が無い、または Ledra 側が未実装
+      if (!(e instanceof LedraNotConsentedError)) throw e;
     }
     if (counts.skipped > 0) console.warn(`ledra link ${link.id}: 不正な記録 ${counts.skipped} 件を取り込みませんでした`);
     return { status: 'ok', ...counts };

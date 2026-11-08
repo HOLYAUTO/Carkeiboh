@@ -349,6 +349,39 @@ describe.skipIf(!pool)('RLS', () => {
     }
   });
 
+  it('整備工場（Ledra）から来た支出は、本人も作れず・変えられず・消せない（読むだけ）', async () => {
+    const ins = await asAdmin(
+      `insert into public.expenses (vehicle_id, user_id, spent_on, category, amount_yen, exempt_yen, source, ledra_record_id) values ($1, $2, '2026-11-20', 'shaken', 98450, 32650, 'ledra', 's1') returning id`,
+      [aliceVehicle, alice],
+    );
+    const id = ins.rows[0].id;
+    try {
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select amount_yen, source from public.expenses where id = $1`, [id]);
+        expect(r.rows[0]).toEqual({ amount_yen: 98450, source: 'ledra' });
+        expect((await c.query(`update public.expenses set amount_yen = 1 where id = $1`, [id])).rowCount).toBe(0);
+        expect((await c.query(`delete from public.expenses where id = $1`, [id])).rowCount).toBe(0);
+        await expectFail(
+          c,
+          () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, source, ledra_record_id) values ($1, '2026-11-20', 'shaken', 1, 'ledra', 'x')`, [aliceVehicle]),
+          /row-level security/,
+        );
+        // 自分の支出を Ledra のものに書き換えることもできない
+        const own = await c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen) values ($1, '2026-11-20', 'other', 100) returning id`, [aliceVehicle]);
+        await expectFail(c, () => c.query(`update public.expenses set source = 'ledra', ledra_record_id = 'y' where id = $1`, [own.rows[0].id]), /row-level security/);
+      });
+      // 同じ車両で同じ記録は1件だけ
+      await expect(
+        asAdmin(
+          `insert into public.expenses (vehicle_id, user_id, spent_on, category, amount_yen, source, ledra_record_id) values ($1, $2, '2026-11-20', 'shaken', 1, 'ledra', 's1')`,
+          [aliceVehicle, alice],
+        ),
+      ).rejects.toThrow(/expenses_ledra_record_unique/);
+    } finally {
+      await asAdmin(`delete from public.expenses where id = $1`, [id]);
+    }
+  });
+
   it('メーターの単位は km か mile だけで、既定は km', async () => {
     const r = await asAdmin(`select distance_unit from public.vehicles where id = $1`, [aliceVehicle]);
     expect(r.rows[0].distance_unit).toBe('km');

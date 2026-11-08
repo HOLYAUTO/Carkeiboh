@@ -46,6 +46,8 @@ export interface ExpenseRow {
   entered_amount_yen: number | null;
   /** 消費税のかからない分（車検の法定費用など） */
   exempt_yen: number | null;
+  /** ledra：整備工場（Ledra）から取り込んだ金額。利用者は変えられない */
+  source?: 'manual' | 'ledra';
   created_at: string;
 }
 

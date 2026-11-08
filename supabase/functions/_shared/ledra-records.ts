@@ -113,6 +113,85 @@ export function toWearCheckInsert(
   };
 }
 
+/** 整備・車検・オイル交換の金額（docs/ledra-api-contract.md 6章） */
+export interface ServiceRecord {
+  recordId: string;
+  kind: 'shaken' | 'maintenance' | 'oil_change';
+  workDate: string;
+  odoKm: number | null;
+  title: string | null;
+  totalYen: number;
+  statutoryFeesYen: number | null;
+  shopName: string | null;
+}
+
+/** 想定外の項目は取り込まない。不正な記録・取り消された記録・金額の無い記録は null */
+export function toServiceRecord(raw: unknown): ServiceRecord | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  if (r.voided === true) return null;
+  const recordId = typeof r.record_id === 'string' ? r.record_id.trim().slice(0, 200) : '';
+  const kind = r.kind === 'shaken' || r.kind === 'maintenance' || r.kind === 'oil_change' ? r.kind : null;
+  const workDate = typeof r.work_date === 'string' ? r.work_date.slice(0, 10) : '';
+  const total = typeof r.total_yen === 'number' && Number.isInteger(r.total_yen) ? r.total_yen : NaN;
+  if (!recordId || !kind || !isIsoDate(workDate) || !(total >= 1 && total <= 99_999_999)) return null;
+  const odo = typeof r.odo_km === 'number' && Number.isFinite(r.odo_km) ? Math.round(r.odo_km) : null;
+  const fees = kind === 'shaken' && typeof r.statutory_fees_yen === 'number' && Number.isInteger(r.statutory_fees_yen) ? r.statutory_fees_yen : null;
+  const text = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
+  return {
+    recordId,
+    kind,
+    workDate,
+    odoKm: odo != null && odo >= 0 && odo <= 2_000_000 ? odo : null,
+    title: text(r.title, 60),
+    totalYen: total,
+    statutoryFeesYen: fees != null && fees >= 0 && fees <= total ? fees : null,
+    shopName: text(r.shop_name, 100),
+  };
+}
+
+export interface ServiceExpenseInsert {
+  vehicle_id: string;
+  user_id: string;
+  category: 'shaken' | 'maintenance' | 'oil_change';
+  spent_on: string;
+  amount_yen: number;
+  odo_km: number | null;
+  note: string | null;
+  exempt_yen: number | null;
+  oil_change_id: string | null;
+  source: 'ledra';
+  ledra_link_id: string;
+  ledra_record_id: string;
+}
+
+/**
+ * 支出の行にする。オイル交換はそのオイル交換の記録（oilChangeId）に紐づける。
+ * オイル交換の記録がまだ無ければ null（次の回に取り込む）
+ */
+export function toServiceExpenseInsert(
+  rec: ServiceRecord,
+  link: { id: string; vehicle_id: string; user_id: string },
+  oilChangeId: string | null,
+): ServiceExpenseInsert | null {
+  if (rec.kind === 'oil_change' && !oilChangeId) return null;
+  const note = [rec.title, rec.shopName].filter(Boolean).join('・').slice(0, 200) || null;
+  return {
+    vehicle_id: link.vehicle_id,
+    user_id: link.user_id,
+    category: rec.kind,
+    spent_on: rec.workDate,
+    amount_yen: rec.totalYen,
+    odo_km: rec.kind === 'oil_change' ? null : rec.odoKm,
+    note,
+    exempt_yen: rec.statutoryFeesYen,
+    oil_change_id: rec.kind === 'oil_change' ? oilChangeId : null,
+    source: 'ledra',
+    ledra_link_id: link.id,
+    ledra_record_id: rec.recordId,
+  };
+}
+
 /**
  * QR の中身から連携用トークンを取り出す。
  * QR はトークンだけ／?token= 付きの URL のどちらでもよい（docs/ledra-api-contract.md）。
@@ -132,7 +211,7 @@ export function extractLinkToken(qrData: string): string | null {
 }
 
 /** 同意画面に出す内容。同意の記録として控えを残す（文面を変えたら版を上げる） */
-export const CONSENT_VERSION = '2026-10-31.1';
+export const CONSENT_VERSION = '2026-11-08.1';
 export const CONSENT_RECIPIENT = '株式会社たにぐち自動車';
 /** 末尾の3つは、Ledra がタイヤ・ブレーキの記録を渡す条件（Ledra 側の WEAR_CONSENT_ITEMS と同じ文字列）。変えるときは両方を変える */
 export const CONSENT_ITEMS = [
@@ -144,6 +223,8 @@ export const CONSENT_ITEMS = [
   'タイヤの溝の深さ',
   'ブレーキパッドの厚さ',
   'タイヤ・ブレーキパッドの交換の有無',
+  // 2026-11-08 追加。Ledra が整備・車検の内容と金額（6章）を渡す条件。Ledra 側と同じ文字列にする
+  '整備・車検の内容と金額',
 ] as const;
 
 export const TOKEN_INVALID_MESSAGE =

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractLinkToken, toOilChangeInsert, toWearCheckInsert, voidedRecordId } from '../../supabase/functions/_shared/ledra-records.ts';
+import { extractLinkToken, toOilChangeInsert, toServiceExpenseInsert, toServiceRecord, toWearCheckInsert, voidedRecordId } from '../../supabase/functions/_shared/ledra-records.ts';
 
 const link = { id: 'link-1', vehicle_id: 'veh-1', user_id: 'user-1' };
 
@@ -107,5 +107,36 @@ describe('タイヤ・ブレーキの記録の取り込み', () => {
     expect(toWearCheckInsert({ record_id: 'i1', kind: 'tire', work_date: 'x' }, link)).toBeNull();
     expect(toWearCheckInsert({ record_id: '', kind: 'tire', work_date: '2026-10-31' }, link)).toBeNull();
     expect(toWearCheckInsert({ record_id: 'i1', kind: 'tire', work_date: '2026-10-31', voided: true }, link)).toBeNull();
+  });
+});
+
+describe('toServiceRecord / toServiceExpenseInsert（整備・車検の金額）', () => {
+  const link = { id: 'link-1', vehicle_id: 'veh-1', user_id: 'user-1' };
+  it('受け取る項目だけを読み、法定費用は車検だけ・合計以下だけ', () => {
+    const rec = toServiceRecord({
+      record_id: 's1',
+      kind: 'shaken',
+      work_date: '2026-11-20T10:00:00+09:00',
+      odo_km: 52300.4,
+      title: '車検',
+      total_yen: 98450,
+      statutory_fees_yen: 32650,
+      shop_name: '本店',
+      owner_name: '受け取らない',
+      voided: false,
+    });
+    expect(rec).toEqual({ recordId: 's1', kind: 'shaken', workDate: '2026-11-20', odoKm: 52300, title: '車検', totalYen: 98450, statutoryFeesYen: 32650, shopName: '本店' });
+    expect(toServiceRecord({ record_id: 'm1', kind: 'maintenance', work_date: '2026-11-20', total_yen: 5000, statutory_fees_yen: 3000 })?.statutoryFeesYen).toBeNull();
+    expect(toServiceRecord({ record_id: 's2', kind: 'shaken', work_date: '2026-11-20', total_yen: 5000, statutory_fees_yen: 9000 })?.statutoryFeesYen).toBeNull();
+  });
+  it('金額の無い記録・知らない種類・取り消しは取り込まない', () => {
+    expect(toServiceRecord({ record_id: 'x', kind: 'shaken', work_date: '2026-11-20', total_yen: 0 })).toBeNull();
+    expect(toServiceRecord({ record_id: 'x', kind: 'car_wash', work_date: '2026-11-20', total_yen: 1000 })).toBeNull();
+    expect(toServiceRecord({ record_id: 'x', kind: 'shaken', work_date: '2026-11-20', total_yen: 1000, voided: true })).toBeNull();
+  });
+  it('オイル交換は、そのオイル交換の記録が無ければまだ入れない', () => {
+    const rec = toServiceRecord({ record_id: 'c1', kind: 'oil_change', work_date: '2026-10-01', total_yen: 5500, title: 'オイル交換', shop_name: '本店' })!;
+    expect(toServiceExpenseInsert(rec, link, null)).toBeNull();
+    expect(toServiceExpenseInsert(rec, link, 'oil-1')).toMatchObject({ category: 'oil_change', oil_change_id: 'oil-1', note: 'オイル交換・本店', source: 'ledra', ledra_record_id: 'c1' });
   });
 });

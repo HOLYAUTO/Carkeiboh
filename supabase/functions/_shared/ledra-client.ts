@@ -41,6 +41,7 @@ export interface LedraClient {
   confirmLink(token: string, consent: LedraConsent): Promise<{ linkId: string; shopName: string | null }>;
   fetchOilRecords(linkId: string, cursor: string | null): Promise<RecordsPage>;
   fetchWearRecords(linkId: string, cursor: string | null): Promise<RecordsPage>;
+  fetchServiceRecords(linkId: string, cursor: string | null): Promise<RecordsPage>;
   revokeLink(linkId: string): Promise<void>;
   /** 廃車にしたことを伝える（以後 Ledra 側でも、その車両の連携・記録を受け付けない）。解除済みの連携でも送れる */
   reportScrapped(linkId: string, scrappedOn: string): Promise<void>;
@@ -120,6 +121,15 @@ export function ledraClientFromEnv(): LedraClient {
       // 404 も止めない：Ledra 側にこの API がまだ出ていないときも 404 になる（連携が無いことは、先に読むオイル交換の 404 で分かる）
       if (res.status === 403 || res.status === 404) throw new LedraNotConsentedError(`HTTP ${res.status}`);
       if (!res.ok) throw await fail(res, 'タイヤ・ブレーキの記録の取得');
+      return toPage(await res.json(), cursor);
+    },
+
+    async fetchServiceRecords(linkId, cursor) {
+      const res = await call(`/v1/consumer-links/${encodeURIComponent(linkId)}/service-records${since(cursor)}`);
+      if (res.status === 410) throw new LedraLinkInactiveError(`HTTP ${res.status}`);
+      // 403：整備・車検に同意していない連携（2026-11-08 より前の同意）。404：Ledra 側にこの API がまだ無い。どちらも連携は止めない
+      if (res.status === 403 || res.status === 404) throw new LedraNotConsentedError(`HTTP ${res.status}`);
+      if (!res.ok) throw await fail(res, '整備・車検の記録の取得');
       return toPage(await res.json(), cursor);
     },
 
