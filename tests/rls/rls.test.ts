@@ -292,6 +292,63 @@ describe.skipIf(!pool)('RLS', () => {
     }
   });
 
+  it('決まった支出：本人だけが登録・記録でき、同じ回は二度記録できない', async () => {
+    await asUser(alice, async (c) => {
+      const r = await c.query(
+        `insert into public.recurring_expenses (vehicle_id, category, amount_yen, frequency, day_of_month, starts_on) values ($1, 'parking_toll', 15000, 'monthly', 27, '2026-08-01') returning id`,
+        [aliceVehicle],
+      );
+      const id = r.rows[0].id;
+      const rec = await c.query(`select public.handle_recurring_expense($1, '2026-10-27', true) as expense_id`, [id]);
+      const expense = await c.query(`select amount_yen, category, spent_on::text from public.expenses where id = $1`, [rec.rows[0].expense_id]);
+      expect(expense.rows[0]).toEqual({ amount_yen: 15000, category: 'parking_toll', spent_on: '2026-10-27' });
+      // 同じ回はもう記録できない（支出も作られない）
+      await expectFail(c, () => c.query(`select public.handle_recurring_expense($1, '2026-10-27', true)`, [id]), /duplicate key/);
+      const skip = await c.query(`select public.handle_recurring_expense($1, '2026-09-27', false) as expense_id`, [id]);
+      expect(skip.rows[0].expense_id).toBeNull();
+      const occ = await c.query(`select due_on::text, status from public.recurring_expense_occurrences where recurring_id = $1 order by due_on`, [id]);
+      expect(occ.rows).toEqual([
+        { due_on: '2026-09-27', status: 'skipped' },
+        { due_on: '2026-10-27', status: 'recorded' },
+      ]);
+      // 金額なしは自動車税だけ。毎年なら月が要る
+      await expectFail(
+        c,
+        () => c.query(`insert into public.recurring_expenses (vehicle_id, category, frequency, day_of_month) values ($1, 'insurance', 'monthly', 1)`, [aliceVehicle]),
+        /check constraint/,
+      );
+      await expectFail(
+        c,
+        () => c.query(`insert into public.recurring_expenses (vehicle_id, category, amount_yen, frequency, day_of_month) values ($1, 'insurance', 1, 'yearly', 1)`, [aliceVehicle]),
+        /check constraint/,
+      );
+      const tax = await c.query(
+        `insert into public.recurring_expenses (vehicle_id, category, frequency, month_of_year, day_of_month) values ($1, 'car_tax', 'yearly', 5, 31) returning amount_yen`,
+        [aliceVehicle],
+      );
+      expect(tax.rows[0].amount_yen).toBeNull();
+      // 他人の車両には作れない
+      await expectFail(
+        c,
+        () => c.query(`insert into public.recurring_expenses (vehicle_id, category, amount_yen, frequency, day_of_month) values ($1, 'other', 1, 'monthly', 1)`, [bobVehicle]),
+        /violates|policy|foreign key/,
+      );
+    });
+    // 他人の登録は見えず、記録もできない
+    const rule = await asAdmin(
+      `insert into public.recurring_expenses (vehicle_id, user_id, category, amount_yen, frequency, day_of_month) values ($1, $2, 'other', 1000, 'monthly', 1) returning id`,
+      [aliceVehicle, alice],
+    );
+    try {
+      await asUser(bob, async (c) => {
+        expect((await c.query(`select * from public.recurring_expenses`)).rows).toHaveLength(0);
+        await expectFail(c, () => c.query(`select public.handle_recurring_expense($1, '2026-10-01', true)`, [rule.rows[0].id]), /recurring_not_found/);
+      });
+    } finally {
+      await asAdmin(`delete from public.recurring_expenses where id = $1`, [rule.rows[0].id]);
+    }
+  });
+
   it('メーターの単位は km か mile だけで、既定は km', async () => {
     const r = await asAdmin(`select distance_unit from public.vehicles where id = $1`, [aliceVehicle]);
     expect(r.rows[0].distance_unit).toBe('km');

@@ -97,6 +97,8 @@ export default function Settings() {
         <Divider />
         <ListRow title="記録の一覧" onPress={() => router.push('/records')} />
         <Divider />
+        <ListRow title="決まった支出" detail="保険・ローン・駐車場・自動車税など（毎月・毎年）" onPress={() => router.push('/settings/recurring')} />
+        <Divider />
         <ListRow title="確定申告用のまとめ" detail="1年分の経費と明細の表（CSV）" onPress={() => router.push('/settings/tax-report')} />
       </Card>
 

@@ -142,6 +142,7 @@ function RootNavigator() {
         <Stack.Screen name="settings/tax-report" options={{ title: '確定申告用のまとめ' }} />
         <Stack.Screen name="settings/certificate" options={{ title: '車検証' }} />
         <Stack.Screen name="fuel-detect" options={{ title: '給油の記録のしかた' }} />
+        <Stack.Screen name="settings/recurring" options={{ title: '決まった支出' }} />
         <Stack.Screen name="announcements/index" options={{ title: 'お知らせ' }} />
         <Stack.Screen name="announcements/[id]" options={{ title: 'お知らせ' }} />
         <Stack.Screen name="admin/announcements/index" options={{ title: 'お知らせの管理' }} />

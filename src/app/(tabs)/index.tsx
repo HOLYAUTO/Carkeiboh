@@ -24,6 +24,7 @@ import {
   Tachometer,
 } from '../../components/ui';
 import { FuelStationPrompt } from '../../components/FuelStationPrompt';
+import { RecurringPrompt } from '../../components/RecurringPrompt';
 import { HomeNotices } from '../../components/HomeNotices';
 import { SponsorSlot } from '../../components/SponsorSlot';
 import { VehiclePhoto } from '../../components/VehiclePhoto';
@@ -126,6 +127,7 @@ function HomeContent({ data, refreshing, onRefresh }: { data: VehicleBundle; ref
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />}
     >
       <FuelStationPrompt data={data} />
+      <RecurringPrompt data={data} />
       <HomeNotices />
       <VehiclePhoto vehicle={vehicle} />
       <NextAction data={data} />
