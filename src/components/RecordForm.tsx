@@ -152,10 +152,13 @@ export function RecordForm({
   kind,
   target,
   onSaved,
+  prefill,
 }: {
   bundle: VehicleBundle;
   kind: RecordKind;
   target?: EditTarget;
+  /** 新しい記録に最初から入れておく値（スタンドに来たときの給油など） */
+  prefill?: { note?: string };
   /** 保存した記録を `/records/[id]` で開くための ID（例：`expense:…`）を渡す */
   onSaved: (recordRef: string) => void;
 }) {
@@ -218,7 +221,7 @@ export function RecordForm({
     return calculateFuelCost({ date: initialDate, fuelType: initialFuelType, liters: l, unitPriceYen: pr, basis: initialBasis }).totalYen !== initialAmount;
   });
   const [filterChanged, setFilterChanged] = useState(target?.type === 'oil' ? target.row.filter_changed : false);
-  const initialNote = target?.type === 'expense' || target?.type === 'wear' ? (target.row.note ?? '') : '';
+  const initialNote = target?.type === 'expense' || target?.type === 'wear' ? (target.row.note ?? '') : !target ? (prefill?.note ?? '') : '';
   const initialReplaced = target?.type === 'wear' ? target.row.replaced : false;
   const initialRemaining = target?.type === 'wear' && target.row.remaining_mm != null ? String(Number(target.row.remaining_mm)) : '';
   const [note, setNote] = useState(initialNote);

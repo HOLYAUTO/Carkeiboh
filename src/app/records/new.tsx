@@ -14,7 +14,8 @@ function isKind(v: unknown): v is RecordKind {
  * 左上の「戻る」・横スワイプ・Android の戻る操作で、項目選びにすぐ戻れる。保存しても元の画面に戻る。
  */
 export default function NewRecord() {
-  const { kind } = useLocalSearchParams<{ kind?: string }>();
+  // station：ホームの「給油を記録する」・スタンドを出たときの通知から開いたときのスタンド名（メモに入れる）
+  const { kind, station } = useLocalSearchParams<{ kind?: string; station?: string }>();
   const { bundle } = useVehicleBundle();
 
   if (!isKind(kind)) return <ErrorView message="記録する項目が見つかりません。" onRetry={() => router.back()} />;
@@ -41,7 +42,7 @@ export default function NewRecord() {
   return (
     <Screen>
       <Stack.Screen options={{ title: kindLabel(kind) }} />
-      <RecordForm bundle={bundle.data} kind={kind} onSaved={onSaved} />
+      <RecordForm bundle={bundle.data} kind={kind} onSaved={onSaved} prefill={station ? { note: station.slice(0, 60) } : undefined} />
     </Screen>
   );
 }

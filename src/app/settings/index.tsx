@@ -11,12 +11,20 @@ import { invokeFunction } from '../../lib/supabase';
 import { ACCENTS, BASES } from '../../palettes';
 import { spacing, useTheme } from '../../theme';
 import { toJstDate } from '@domain/dates.ts';
+import { useFuelDetectMode, type FuelDetectMode } from '../../lib/fuel-detect';
+
+const FUEL_DETECT_LABELS: Record<FuelDetectMode, string> = {
+  on_open: 'スタンドでアプリを開いたときに知らせる',
+  after_visit: 'スタンドを出たら通知する',
+  off: '使わない',
+};
 
 export default function Settings() {
   const { bundle } = useVehicleBundle();
   const invalidate = useInvalidate();
   const staff = useStaff();
   const { choice } = useTheme();
+  const fuelMode = useFuelDetectMode();
   const [busy, setBusy] = useState(false);
 
   if (bundle.isPending) return <Loading />;
@@ -94,6 +102,8 @@ export default function Settings() {
 
       <SectionTitle>表示</SectionTitle>
       <Card style={{ gap: 0, paddingVertical: 4 }}>
+        <ListRow title="給油の記録のしかた" detail={FUEL_DETECT_LABELS[fuelMode.data ?? 'off']} onPress={() => router.push('/fuel-detect')} />
+        <Divider />
         <ListRow title="画面の色" detail={`${BASES[choice.base].label}・${ACCENTS[choice.accent].label}`} onPress={() => router.push('/settings/appearance')} />
         <Divider />
         <ListRow title="お知らせ" detail="アップデート・修正、たにぐち自動車の最新情報" onPress={() => router.push('/announcements')} />

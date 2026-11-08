@@ -277,6 +277,21 @@ describe.skipIf(!pool)('RLS', () => {
     }
   });
 
+  it('ガソリンスタンドの場所の控えは、利用者からは読み書きできない（サーバーだけが使う）', async () => {
+    await asAdmin(`insert into public.fuel_station_tiles (tile, stations) values ('694_2709', '[]') on conflict do nothing`);
+    try {
+      for (const who of [alice, null]) {
+        await asUser(who, async (c) => {
+          await expectFail(c, () => c.query(`select * from public.fuel_station_tiles`), /permission denied/);
+          await expectFail(c, () => c.query(`insert into public.fuel_station_tiles (tile) values ('1_1')`), /permission denied/);
+        });
+      }
+      await expect(asAdmin(`insert into public.fuel_station_tiles (tile) values ('bad tile')`)).rejects.toThrow(/check constraint/);
+    } finally {
+      await asAdmin(`delete from public.fuel_station_tiles where tile = '694_2709'`);
+    }
+  });
+
   it('メーターの単位は km か mile だけで、既定は km', async () => {
     const r = await asAdmin(`select distance_unit from public.vehicles where id = $1`, [aliceVehicle]);
     expect(r.rows[0].distance_unit).toBe('km');
