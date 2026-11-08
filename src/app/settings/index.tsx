@@ -81,6 +81,8 @@ export default function Settings() {
         <Divider />
         <ListRow title="車両情報と周期" detail={`${vehicle.name}・オイル／フィルターの周期`} onPress={() => router.push('/settings/vehicle')} />
         <Divider />
+        <ListRow title="車検証" detail="記載内容（個人情報は伏せて表示）・税金の自動計算" onPress={() => router.push('/settings/certificate')} />
+        <Divider />
         <ListRow title="車検・点検・保険の期限" onPress={() => router.push('/settings/deadlines')} />
         <Divider />
         <ListRow title="走行距離とメーター交換" onPress={() => router.push('/settings/odometer')} />

@@ -22,6 +22,7 @@ import {
   saveOilChange,
   saveWearCheck,
   useInvalidate,
+  useVehicleCertificate,
   type ExpenseRow,
   type OdometerReadingRow,
   type OilChangeRow,
@@ -33,6 +34,7 @@ import { parseDecimal, parseInteger, parseMillimeters, yen } from '../lib/format
 import type { RecordDraft } from '@shared/record-draft.ts';
 import { vehicleTaxSpec } from '@shared/db-mapping.ts';
 import { automobileTaxFor, fiscalYearOf, vehicleTaxSpecLabel, weightTaxFor } from '@domain/vehicle-tax.ts';
+import { taxPrefecture } from '@domain/vehicle-certificate.ts';
 import { cardShadow, fonts, radius, spacing, useColors } from '../theme';
 import { ComputedAmount } from './ComputedAmount';
 import { FuelEconomyPreview, FuelFields } from './FuelFields';
@@ -159,6 +161,7 @@ export function RecordForm({
 }) {
   const invalidate = useInvalidate();
   const navigation = useNavigation();
+  const certificate = useVehicleCertificate(bundle.vehicle);
   const initialDate =
     target?.type === 'oil' || target?.type === 'wear'
       ? target.row.performed_on
@@ -239,9 +242,13 @@ export function RecordForm({
       ? calculateFuelCost({ date, fuelType, liters: litersN, unitPriceYen: unitPriceN, basis })
       : null;
   // 自動車税・車検の重量税は、車検証の項目（車両情報と周期）から計算する
-  const taxSpec = vehicleTaxSpec(bundle.vehicle);
+  // 県ごとの税率は、車検証の使用の本拠の位置の都道府県で決める
+  const prefecture = certificate.data ? taxPrefecture(certificate.data) : null;
+  const taxSpec = { ...vehicleTaxSpec(bundle.vehicle), prefecture };
+  const taxSpecComplete = !!(taxSpec.vehicleClass && taxSpec.firstRegisteredOn && taxSpec.powertrain);
   const carTax = kind === 'car_tax' ? automobileTaxFor(taxSpec, fiscalYearOf(date)) : null;
   const weightTax = kind === 'shaken' ? weightTaxFor(taxSpec, date) : null;
+  const taxSpecLabel = vehicleTaxSpecLabel(taxSpec);
   const carTaxInputLabel = carTax ? `${vehicleTaxSpecLabel(taxSpec)}（${fiscalYearOf(date)}年度）` : '';
   const needsTaxSpec = (kind === 'car_tax' && !carTax) || (kind === 'shaken' && !weightTax);
   // 入力した数字（給油量×単価）。計算後の金額と並べて見せる
@@ -635,8 +642,14 @@ export function RecordForm({
         )}
         {needsTaxSpec && (
           <>
-            <AppText variant="caption">{kind === 'car_tax' ? '車検証の内容を入れると、自動車税を自動で計算します。' : '車検証の内容を入れると、重量税を自動で計算します。'}</AppText>
-            <Button title="車検証の内容を入れる" variant="secondary" onPress={() => router.push('/settings/vehicle')} />
+            <AppText variant="caption">
+              {taxSpecComplete
+                ? `このクルマ（${taxSpecLabel}）の${kind === 'car_tax' ? '自動車税' : '重量税'}は自動で計算できません。${kind === 'car_tax' ? '納付書' : '請求書'}の金額を入れてください。`
+                : kind === 'car_tax'
+                  ? '車検証の内容を入れると、自動車税を自動で計算します。'
+                  : '車検証の内容を入れると、重量税を自動で計算します。'}
+            </AppText>
+            {!taxSpecComplete && <Button title="車検証の内容を入れる" variant="secondary" onPress={() => router.push('/settings/certificate')} />}
           </>
         )}
         {!fuelCost && onAccountTotal && (

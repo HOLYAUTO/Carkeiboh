@@ -5,6 +5,7 @@ import type { VehicleData } from './domain/vehicle.ts';
 import type { DeadlineKind, ReminderKind } from './domain/reminders.ts';
 import { isDistanceUnit, type DistanceUnit } from './domain/units.ts';
 import type { Powertrain, VehicleClass, VehicleTaxSpec } from './domain/vehicle-tax.ts';
+import type { BusinessClass, VehicleUsage } from './domain/vehicle-certificate.ts';
 
 export interface VehicleRow {
   id: string;
@@ -35,6 +36,12 @@ export interface VehicleRow {
   first_registered_on?: string | null;
   powertrain?: Powertrain | null;
   vehicle_weight_kg?: number | null;
+  /** 車検証の用途・自家用/事業用・乗車定員・最大積載量・車両総重量（任意） */
+  usage?: VehicleUsage | null;
+  business_class?: BusinessClass | null;
+  seating_capacity?: number | null;
+  max_load_kg?: number | null;
+  gross_weight_kg?: number | null;
 }
 
 /** 車両の行を、自動車税・重量税の計算の形にする */
@@ -45,6 +52,11 @@ export function vehicleTaxSpec(v: VehicleRow): VehicleTaxSpec {
     firstRegisteredOn: v.first_registered_on ?? null,
     powertrain: v.powertrain ?? null,
     vehicleWeightKg: v.vehicle_weight_kg ?? null,
+    usage: v.usage ?? null,
+    businessClass: v.business_class ?? null,
+    seatingCapacity: v.seating_capacity ?? null,
+    maxLoadKg: v.max_load_kg ?? null,
+    grossWeightKg: v.gross_weight_kg ?? null,
   };
 }
 

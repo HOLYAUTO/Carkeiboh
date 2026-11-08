@@ -242,6 +242,41 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
+  it('車検証の記載内容（所有者・使用者を含む）は本人だけが読み書きでき、他人のものは見えない', async () => {
+    // 本人は作れる。値の範囲を DB でも確かめる（このブロックの変更は最後に戻る）
+    await asUser(alice, async (c) => {
+      const ins = await c.query(
+        `insert into public.vehicle_certificates (vehicle_id, registration_number, owner_name, expires_on) values ($1, '品川 300 あ 12-34', '山田太郎', '2027-06-30') returning user_id`,
+        [aliceVehicle],
+      );
+      expect(ins.rows[0].user_id).toBe(alice);
+      const u = await c.query(`update public.vehicles set usage = 'passenger', business_class = 'private', seating_capacity = 5, gross_weight_kg = 1455 where id = $1`, [aliceVehicle]);
+      expect(u.rowCount).toBe(1);
+      await expectFail(c, () => c.query(`update public.vehicles set usage = 'truck' where id = $1`, [aliceVehicle]), /check constraint/);
+      await expectFail(c, () => c.query(`update public.vehicles set business_class = 'rental' where id = $1`, [aliceVehicle]), /check constraint/);
+      // 他人の車両には作れない
+      await expectFail(c, () => c.query(`insert into public.vehicle_certificates (vehicle_id, owner_name) values ($1, 'x')`, [bobVehicle]), /violates|policy|foreign key/);
+    });
+    // 本人の車検証を他人は読めず、変えられない
+    await asAdmin(
+      `insert into public.vehicle_certificates (vehicle_id, user_id, owner_name, owner_address) values ($1, $2, '山田太郎', '東京都千代田区1-1')`,
+      [aliceVehicle, alice],
+    );
+    try {
+      await asUser(bob, async (c) => {
+        expect((await c.query(`select * from public.vehicle_certificates`)).rows).toHaveLength(0);
+        expect((await c.query(`update public.vehicle_certificates set owner_name = 'x' where vehicle_id = $1`, [aliceVehicle])).rowCount).toBe(0);
+        expect((await c.query(`delete from public.vehicle_certificates where vehicle_id = $1`, [aliceVehicle])).rowCount).toBe(0);
+      });
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select owner_name from public.vehicle_certificates where vehicle_id = $1`, [aliceVehicle]);
+        expect(r.rows[0].owner_name).toBe('山田太郎');
+      });
+    } finally {
+      await asAdmin(`delete from public.vehicle_certificates where vehicle_id = $1`, [aliceVehicle]);
+    }
+  });
+
   it('メーターの単位は km か mile だけで、既定は km', async () => {
     const r = await asAdmin(`select distance_unit from public.vehicles where id = $1`, [aliceVehicle]);
     expect(r.rows[0].distance_unit).toBe('km');
