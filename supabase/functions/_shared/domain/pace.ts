@@ -38,3 +38,19 @@ export function estimateOdoOn(readings: OdoReading[], pace: Pace, date: IsoDate)
   const days = Math.max(0, diffDays(last.date, date));
   return Math.round(last.odoKm + pace.kmPerDay * days);
 }
+
+/**
+ * その日のメーターの表示の見込み（km）。記録の入力欄に最初から入れておく値。
+ * readings は実走行距離（normalizeReadings 済み）なので、その日までのメーター交換の分を引いて表示の値に戻す
+ */
+export function estimatedMeterReading(
+  readings: OdoReading[],
+  replacements: { replacedOn: IsoDate; odoBeforeKm: number; odoAfterKm: number }[],
+  pace: Pace,
+  date: IsoDate,
+): number | null {
+  const estimate = estimateOdoOn(readings, pace, date);
+  if (estimate == null) return null;
+  const offset = replacements.filter((r) => r.replacedOn <= date).reduce((sum, r) => sum + r.odoBeforeKm - r.odoAfterKm, 0);
+  return Math.max(0, estimate - offset);
+}

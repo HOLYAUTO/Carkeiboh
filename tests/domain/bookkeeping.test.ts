@@ -41,11 +41,11 @@ describe('withConsumptionTax（かけの税抜から税込へ）', () => {
 });
 
 describe('canBeOnAccount', () => {
-  it('消費税のかからない保険・自動車税はかけにしない', () => {
-    expect(canBeOnAccount('insurance')).toBe(false);
-    expect(canBeOnAccount('car_tax')).toBe(false);
+  it('かけは掛けカードでの給油だけ', () => {
     expect(canBeOnAccount('fuel')).toBe(true);
-    expect(canBeOnAccount('maintenance')).toBe(true);
+    expect(canBeOnAccount('maintenance')).toBe(false);
+    expect(canBeOnAccount('shaken')).toBe(false);
+    expect(canBeOnAccount('insurance')).toBe(false);
   });
 });
 

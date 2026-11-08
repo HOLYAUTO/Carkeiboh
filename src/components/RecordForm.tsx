@@ -13,6 +13,7 @@ import {
   type FuelType,
 } from '@domain/fuel.ts';
 import { checkOdoEntry } from '@domain/odo.ts';
+import { dailyPace, estimatedMeterReading } from '@domain/pace.ts';
 import { distanceUnitLabel, fromKm, toKm, type DistanceUnit } from '@domain/units.ts';
 import {
   fuelFills,
@@ -43,7 +44,7 @@ import { AppText, Button, Card, DateField, Field, Notice, Segmented, ToggleRow }
 
 const PAYMENT_OPTIONS: { value: 'now' | 'on_account'; label: string }[] = [
   { value: 'now', label: 'その場で払った' },
-  { value: 'on_account', label: 'かけ（あとで請求）' },
+  { value: 'on_account', label: 'かけ（掛けカード）' },
 ];
 
 /** 「記録する」で選ぶ項目。オイル交換・支出の各項目に加え、タイヤ・ブレーキの点検と走行距離だけの記録もできる */
@@ -133,6 +134,17 @@ const WEAR_FORM: Record<WearKind, { replaced: string; remaining: string; hint: s
   },
 };
 
+/** 走行距離の見込みを入れておく項目（走行距離を使う記録） */
+const ODO_ESTIMATE_KINDS = new Set<RecordKind>(['oil_change', 'odometer', 'fuel', 'tire', 'brake']);
+
+/** その日のメーターの見込み（km）。記録が無ければ null */
+function estimateMeterKm(bundle: VehicleBundle, date: string): number | null {
+  const readings = bundle.state.readings;
+  if (readings.length === 0) return null;
+  const replacements = bundle.meterReplacements.map((m) => ({ replacedOn: m.replaced_on, odoBeforeKm: m.odo_before_km, odoAfterKm: m.odo_after_km }));
+  return estimatedMeterReading(readings, replacements, dailyPace(readings, bundle.vehicle.annual_km_estimate), date);
+}
+
 function litersText(n: number | null): string {
   return n == null ? '' : n.toLocaleString('ja-JP', { maximumFractionDigits: 2 });
 }
@@ -201,7 +213,9 @@ export function RecordForm({
   const initialFullTank = fuelRow ? fuelRow.fuel_full_tank === true : true;
 
   const [date, setDate] = useState<string>(initialDate);
-  const [odo, setOdo] = useState(initialOdoText);
+  const [odoInputText, setOdo] = useState(initialOdoText);
+  // 新しい記録は、走行距離にペースからの見込みを最初から入れておく（自分で入れるまで。日付を変えたら見込みも変わる）
+  const [odoTouched, setOdoTouched] = useState(!!target);
   const [amountInput, setAmount] = useState(initialAmount != null ? String(initialAmount) : '');
   const [liters, setLiters] = useState(initialLiters);
   const [unitPrice, setUnitPrice] = useState(initialUnitPrice);
@@ -234,6 +248,13 @@ export function RecordForm({
   const isOil = kind === 'oil_change';
   const isOdoOnly = kind === 'odometer';
   const wear = isWearKind(kind) ? kind : null;
+  const estimateKm = !target && ODO_ESTIMATE_KINDS.has(kind) ? estimateMeterKm(bundle, date) : null;
+  const odoFromEstimate = !odoTouched && odoInputText === '' && estimateKm != null;
+  const odo = odoFromEstimate ? String(fromKm(estimateKm, unit)) : odoInputText;
+  const changeOdo = (v: string) => {
+    setOdo(v);
+    setOdoTouched(true);
+  };
   const odoInput = parseInteger(odo);
   const odoKm = odoInput == null ? null : toKm(odoInput, unit);
   const litersN = parseDecimal(liters, 2);
@@ -301,7 +322,8 @@ export function RecordForm({
   // 満タンで走行距離と給油量があれば、前回の満タンからの燃費をその場で見せる
   // 給油の記録は多くても数百件なので、毎回計算する（useMemo にすると、計算後の金額の表示と組み合わせたとき React Compiler の lint が通らない）
   const economy = (() => {
-    if (!isFuel || !fullTank || odoKm == null || !Number.isFinite(odoKm) || litersN == null || !litersValid) return null;
+    // 見込みの走行距離では燃費を出さない（メーターの数字を入れてから）
+    if (!isFuel || !fullTank || odoFromEstimate || odoKm == null || !Number.isFinite(odoKm) || litersN == null || !litersValid) return null;
     const others = fuelFills(bundle.expenses.filter((e) => e.id !== fuelRow?.id));
     const candidate = { id: '__editing__', date, odoKm, liters: litersN, fullTank: true, amountYen: 0 };
     const replacements = bundle.meterReplacements.map((m) => ({ replacedOn: m.replaced_on, odoBeforeKm: m.odo_before_km, odoAfterKm: m.odo_after_km }));
@@ -363,7 +385,8 @@ export function RecordForm({
   // 入力途中で戻ろうとしたら確かめる（保存後は確かめない）
   const dirty =
     date !== initialDate ||
-    odo !== initialOdoText ||
+    // 見込みを入れただけでは入力中にしない
+    odoInputText !== initialOdoText ||
     liters !== initialLiters ||
     unitPrice !== initialUnitPrice ||
     fuelType !== initialFuelType ||
@@ -411,6 +434,7 @@ export function RecordForm({
     }
     if (d.odo != null) {
       setOdo(String(d.odo));
+      setOdoTouched(true);
       m.draftValues.odo = String(d.odo);
       filled.push('走行距離');
     }
@@ -463,6 +487,15 @@ export function RecordForm({
 
   const save = async () => {
     if (!valid) return;
+    if (odoFromEstimate) {
+      const ok = await new Promise<boolean>((resolve) =>
+        Alert.alert('走行距離は見込みのままです', `メーターの数字（${odo}${distanceUnitLabel(unit)}）と合っていますか。違えば直してから記録してください。`, [
+          { text: '直す', style: 'cancel', onPress: () => resolve(false) },
+          { text: '合っている', onPress: () => resolve(true) },
+        ]),
+      );
+      if (!ok) return;
+    }
     if (odoKm != null) {
       // 編集中の記録自身とは比べない
       const others = bundle.points
@@ -549,13 +582,15 @@ export function RecordForm({
         <Field
           label={odoRequired ? '走行距離（ODO）' : '走行距離（ODO・任意）'}
           value={odo}
-          onChangeText={setOdo}
+          onChangeText={changeOdo}
           keyboardType="number-pad"
           suffix={distanceUnitLabel(unit)}
           hint={
             odoKm != null && !Number.isFinite(odoKm)
               ? '数字で入力してください'
-              : isFuel
+              : odoFromEstimate
+                ? 'これまでのペースからの見込みです。メーターの数字と違えば直してください。'
+                : isFuel
                 ? '満タンの給油で入れると、燃費を計算します。'
                 : undefined
           }
@@ -564,7 +599,7 @@ export function RecordForm({
           <>
             <AppText variant="label">支払い</AppText>
             <Segmented options={PAYMENT_OPTIONS} value={onAccount ? 'on_account' : 'now'} onChange={(v) => setOnAccount(v === 'on_account')} />
-            {onAccount && <AppText variant="caption">請求書の税抜の金額を入れてください。消費税はアプリで足します。</AppText>}
+            {onAccount && <AppText variant="caption">掛けカードの請求書の税抜の単価を入れてください。消費税などはアプリで足します。</AppText>}
           </>
         )}
         {isFuel && (

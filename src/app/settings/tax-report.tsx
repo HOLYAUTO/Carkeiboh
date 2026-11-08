@@ -87,7 +87,7 @@ function Report({ bundle }: { bundle: VehicleBundle }) {
           </>
         )}
         {report.onAccountCount > 0 && (
-          <AppText variant="caption">{`かけ（あとで請求）で記録した分が ${report.onAccountCount}件・${yen(report.onAccountYen)} あります。年内に支払っていない分も、使った日の年の経費になります。`}</AppText>
+          <AppText variant="caption">{`掛けカードで給油した分が ${report.onAccountCount}件・${yen(report.onAccountYen)} あります。年内に支払っていない分も、使った日の年の経費になります。`}</AppText>
         )}
       </Card>
 
