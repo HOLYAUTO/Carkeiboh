@@ -599,7 +599,12 @@ export function RecordForm({
           <>
             <AppText variant="label">支払い</AppText>
             <Segmented options={PAYMENT_OPTIONS} value={onAccount ? 'on_account' : 'now'} onChange={(v) => setOnAccount(v === 'on_account')} />
-            {onAccount && <AppText variant="caption">掛けカードの請求書の税抜の単価を入れてください。消費税などはアプリで足します。</AppText>}
+            {onAccount && (
+              <>
+                <AppText variant="caption">掛けカードの請求書の税抜の単価を入れてください。消費税などはアプリで足します。</AppText>
+                {isFuel && !target && <Button title="月の明細からまとめて登録する" variant="plain" onPress={() => router.push('/records/fuel-statement')} />}
+              </>
+            )}
           </>
         )}
         {isFuel && (

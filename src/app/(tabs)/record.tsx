@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { KindPicker } from '../../components/RecordForm';
-import { AppText, Card, IconButton, ListRow, Screen, ScreenHeader } from '../../components/ui';
+import { AppText, Card, Divider, IconButton, ListRow, Screen, ScreenHeader } from '../../components/ui';
 
 /** 項目を選ぶと入力画面（/records/new）を開く。入力画面からは「戻る」やスワイプでここに戻れる */
 export default function Record() {
@@ -10,6 +10,8 @@ export default function Record() {
       <AppText variant="caption">入力画面では、写真（レシート・メーター）や音声からも入力できます。</AppText>
       <KindPicker onSelect={(kind) => router.push({ pathname: '/records/new', params: { kind } })} />
       <Card style={{ paddingVertical: 4 }}>
+        <ListRow title="掛けカードの明細から給油をまとめて登録" detail="月の明細の写真を読み取ります" onPress={() => router.push('/records/fuel-statement')} />
+        <Divider />
         <ListRow title="記録の一覧" detail="編集・削除はこちらから" onPress={() => router.push('/records')} />
       </Card>
     </Screen>
