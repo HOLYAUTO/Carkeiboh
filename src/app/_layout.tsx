@@ -135,6 +135,7 @@ function RootNavigator() {
         <Stack.Screen name="records/index" options={{ title: '記録の一覧' }} />
         <Stack.Screen name="records/[id]" options={{ title: '記録の編集' }} />
         <Stack.Screen name="records/fuel-statement" options={{ title: '掛けカードの明細から登録' }} />
+        <Stack.Screen name="records/receipts" options={{ title: 'レシートをまとめて取り込む' }} />
         <Stack.Screen name="settings/index" options={{ title: '設定' }} />
         <Stack.Screen name="settings/vehicle" options={{ title: '車両情報と周期' }} />
         <Stack.Screen name="settings/deadlines" options={{ title: '車検・点検・保険' }} />

@@ -10,6 +10,8 @@ export default function Record() {
       <AppText variant="caption">入力画面では、写真（レシート・メーター）や音声からも入力できます。</AppText>
       <KindPicker onSelect={(kind) => router.push({ pathname: '/records/new', params: { kind } })} />
       <Card style={{ paddingVertical: 4 }}>
+        <ListRow title="レシートをまとめて取り込む" detail="アルバムから何枚か選んで一度に登録" onPress={() => router.push('/records/receipts')} />
+        <Divider />
         <ListRow title="掛けカードの明細から給油をまとめて登録" detail="月の明細の写真を読み取ります" onPress={() => router.push('/records/fuel-statement')} />
         <Divider />
         <ListRow title="記録の一覧" detail="編集・削除はこちらから" onPress={() => router.push('/records')} />

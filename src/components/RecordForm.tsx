@@ -165,12 +165,15 @@ export function RecordForm({
   target,
   onSaved,
   prefill,
+  initialDraft,
 }: {
   bundle: VehicleBundle;
   kind: RecordKind;
   target?: EditTarget;
   /** 新しい記録に最初から入れておく値（スタンドに来たときの給油など） */
   prefill?: { note?: string };
+  /** 写真で読み取った内容（レシートをまとめて取り込む画面から開いたとき）。開いたときに一度だけ入れる */
+  initialDraft?: RecordDraft;
   /** 保存した記録を `/records/[id]` で開くための ID（例：`expense:…`）を渡す */
   onSaved: (recordRef: string) => void;
 }) {
@@ -484,6 +487,15 @@ export function RecordForm({
         : `読み取れる内容がありませんでした。もう一度試すか、手で入力してください。${otherKind}`,
     );
   };
+
+  const appliedInitialDraft = useRef(false);
+  useEffect(() => {
+    if (initialDraft && !appliedInitialDraft.current) {
+      appliedInitialDraft.current = true;
+      applyDraft(initialDraft, 'photo');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const save = async () => {
     if (!valid) return;
