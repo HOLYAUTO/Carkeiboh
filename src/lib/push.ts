@@ -58,6 +58,23 @@ export async function registerForPush(ask: boolean): Promise<PushStatus> {
   return status;
 }
 
+function isFuelVisit(data: unknown): data is { kind: 'fuel_visit'; station?: string } {
+  return (data as { kind?: unknown } | undefined)?.kind === 'fuel_visit';
+}
+
+/** 「給油しましたか？」（スタンドを出たときの通知）を押したら、スタンド名を入れた給油の画面を開く */
+export function useFuelVisitNotificationTaps() {
+  const response = Notifications.useLastNotificationResponse();
+  useEffect(() => {
+    if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+    const data = response.notification.request.content.data;
+    if (!isFuelVisit(data)) return;
+    Notifications.clearLastNotificationResponse();
+    const station = typeof data.station === 'string' ? data.station.slice(0, 60) : undefined;
+    router.push({ pathname: '/records/new', params: station ? { kind: 'fuel', station } : { kind: 'fuel' } });
+  }, [response]);
+}
+
 function isAnnouncement(data: unknown): data is { kind: 'announcement'; announcementId: string } {
   const d = data as { kind?: unknown; announcementId?: unknown } | undefined;
   return d?.kind === 'announcement' && typeof d.announcementId === 'string';

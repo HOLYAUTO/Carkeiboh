@@ -71,8 +71,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "近くの整備工場を距離の近い順に表示するために、現在地を使います。",
-          "locationAlwaysAndWhenInUsePermission": false,
+          "locationWhenInUsePermission": "近くの整備工場を距離の近い順に表示し、ガソリンスタンドでアプリを開いたときに給油の記録を勧めるために、現在地を使います。",
+          "locationAlwaysAndWhenInUsePermission": "「スタンドを出たら通知する」を選んだとき、アプリを閉じていてもガソリンスタンドを出たことを知り、給油の記録をお知らせするために位置情報を使います。正確な位置はサーバーに送りません。",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": false,
           "locationAlwaysPermission": false,
           "motionUsagePermission": false,
           "locationFullAccuracyPermission": false

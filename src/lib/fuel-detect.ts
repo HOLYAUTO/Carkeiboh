@@ -2,7 +2,7 @@
  * ガソリンスタンドに来たことを見つけて、給油の記録を勧める。どうするかは最初に一度だけ利用者に選んでもらい、端末に保存する。
  * - off：使わない（位置情報を使わない）
  * - on_open：アプリを開いたときだけ、近くのスタンドを調べる（「使用中のみ」の許可。バッテリーはほぼ使わない）
- * - after_visit：スタンドを出たら通知する（「常に許可」が要る。ストア版の更新で使えるようにする。それまでは on_open と同じ）
+ * - after_visit：スタンドを出たら通知する（「常に許可」が要る。src/lib/fuel-geofence.ts）。アプリを開いたときの知らせも出す
  * 現在地はサーバーに送らない。約5km四方の区画の名前だけを送ってスタンドの一覧を受け取り、近いかは端末で計算する。
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,12 +16,6 @@ import { invokeFunction } from './supabase';
 
 export const FUEL_DETECT_MODES = ['off', 'on_open', 'after_visit'] as const;
 export type FuelDetectMode = (typeof FUEL_DETECT_MODES)[number];
-
-/**
- * 「スタンドを出たら通知」に要る、アプリを閉じているときの位置の見張り（expo-task-manager と「常に許可」の設定）が
- * このアプリの版に入っているか。入れるにはストア用のビルドが要る（docs/open-questions.md の 71）
- */
-export const BACKGROUND_DETECTION_AVAILABLE = false;
 
 const MODE_KEY = 'ijilog.fuelDetectMode';
 const DISMISSED_KEY = 'ijilog.fuelPromptDismissed';
@@ -55,7 +49,7 @@ export function useSetFuelDetectMode() {
 }
 
 /** 区画ごとのスタンドの一覧。端末に30日ためておき、無い区画だけサーバーに聞く */
-async function stationsInTiles(tiles: string[]): Promise<FuelStation[]> {
+export async function stationsInTiles(tiles: string[]): Promise<FuelStation[]> {
   const now = Date.now();
   const found: FuelStation[] = [];
   const missing: string[] = [];

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import type { VehicleBundle } from '../lib/data';
 import { useFuelDetectMode, useStationHere } from '../lib/fuel-detect';
+import { refreshFuelGeofences } from '../lib/fuel-geofence';
 import { spacing } from '../theme';
 import { AppText, Button, Card } from './ui';
 
@@ -17,6 +18,8 @@ export function FuelStationPrompt({ data }: { data: VehicleBundle }) {
 
   useEffect(() => {
     if (mode.isSuccess && mode.data === null) router.push('/fuel-detect');
+    // 「スタンドを出たら通知」：アプリを開いたときに、今いる場所のまわりのスタンドを登録し直す（「常に許可」が外れていれば何もしない）
+    if (mode.data === 'after_visit') refreshFuelGeofences().catch(() => {});
   }, [mode.isSuccess, mode.data]);
 
   if (!station) return null;

@@ -3,7 +3,7 @@ import { Tabs, type BottomTabBarProps } from 'expo-router/js-tabs';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { registerForPush, useAnnouncementNotificationTaps } from '../../lib/push';
+import { registerForPush, useAnnouncementNotificationTaps, useFuelVisitNotificationTaps } from '../../lib/push';
 import { fonts, MIN_TAP, spacing, themedStyles, useColors } from '../../theme';
 
 /** タブの定義（01 4章：ホーム／維持費／記録する／通知。整備工場は送客のために追加。「記録する」を真ん中に置く） */
@@ -18,6 +18,7 @@ const TABS = [
 export default function TabsLayout() {
   const colors = useColors();
   useAnnouncementNotificationTaps();
+  useFuelVisitNotificationTaps();
   // 許可済みなら、起動のたびに端末のトークンを登録し直す（機種変更・再インストールに備える）
   useEffect(() => {
     registerForPush(false).catch(() => {});

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   distanceMeters,
+  shouldNotifyVisit,
   isTileKey,
   isVisit,
   nearestStations,
@@ -68,5 +69,24 @@ describe('parseOverpass', () => {
       { id: 'way/2', name: '出光', latitude: 34.2, longitude: 135.2 },
     ]);
     expect(parseOverpass(null)).toEqual([]);
+  });
+});
+
+describe('shouldNotifyVisit（スタンドを出たときの通知）', () => {
+  const min = 60_000;
+  it('2〜60分いて、給油を記録しておらず、今日まだ出していなければ出す', () => {
+    expect(shouldNotifyVisit({ enteredAtMs: 1000, exitedAtMs: 1000 + 5 * min, lastFuelSavedAtMs: null, alreadyNotifiedToday: false })).toBe(true);
+  });
+  it('前を通っただけ・入った時刻が分からない・長い駐車は出さない', () => {
+    expect(shouldNotifyVisit({ enteredAtMs: 1000, exitedAtMs: 1000 + min, lastFuelSavedAtMs: null, alreadyNotifiedToday: false })).toBe(false);
+    expect(shouldNotifyVisit({ enteredAtMs: null, exitedAtMs: 5 * min, lastFuelSavedAtMs: null, alreadyNotifiedToday: false })).toBe(false);
+    expect(shouldNotifyVisit({ enteredAtMs: 1000, exitedAtMs: 1000 + 90 * min, lastFuelSavedAtMs: null, alreadyNotifiedToday: false })).toBe(false);
+  });
+  it('立ち寄りのあいだに給油を記録していたら出さない（入る前の記録は関係ない）', () => {
+    expect(shouldNotifyVisit({ enteredAtMs: 1000, exitedAtMs: 1000 + 5 * min, lastFuelSavedAtMs: 1000 + 3 * min, alreadyNotifiedToday: false })).toBe(false);
+    expect(shouldNotifyVisit({ enteredAtMs: 1000, exitedAtMs: 1000 + 5 * min, lastFuelSavedAtMs: 500, alreadyNotifiedToday: false })).toBe(true);
+  });
+  it('同じスタンドは1日1回まで', () => {
+    expect(shouldNotifyVisit({ enteredAtMs: 1000, exitedAtMs: 1000 + 5 * min, lastFuelSavedAtMs: null, alreadyNotifiedToday: true })).toBe(false);
   });
 });
