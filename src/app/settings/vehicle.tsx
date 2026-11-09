@@ -141,6 +141,12 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
         <Field label="期間（任意）" value={filterMonths} onChangeText={setFilterMonths} keyboardType="number-pad" suffix="か月" />
       </Card>
 
+      <SectionTitle>車検証</SectionTitle>
+      <Card>
+        <AppText variant="caption">車検証の内容（種別・用途・排気量・重さなど）を入れると、自動車税と車検の重量税を自動で計算します。写真で読み取れます。</AppText>
+        <Button title="車検証の内容を見る・入れる" variant="secondary" onPress={() => router.push('/settings/certificate')} />
+      </Card>
+
       <Button title="保存する" disabled={!valid} loading={busy} onPress={save} />
       <Button title="このクルマを手放す（乗り換え・廃車）" variant="destructive" disabled={busy} onPress={() => router.push('/vehicles/release')} />
     </Screen>

@@ -11,12 +11,20 @@ import { invokeFunction } from '../../lib/supabase';
 import { ACCENTS, BASES } from '../../palettes';
 import { spacing, useTheme } from '../../theme';
 import { toJstDate } from '@domain/dates.ts';
+import { useFuelDetectMode, type FuelDetectMode } from '../../lib/fuel-detect';
+
+const FUEL_DETECT_LABELS: Record<FuelDetectMode, string> = {
+  on_open: 'スタンドでアプリを開いたときに知らせる',
+  after_visit: 'スタンドを出たら通知する',
+  off: '使わない',
+};
 
 export default function Settings() {
   const { bundle } = useVehicleBundle();
   const invalidate = useInvalidate();
   const staff = useStaff();
   const { choice } = useTheme();
+  const fuelMode = useFuelDetectMode();
   const [busy, setBusy] = useState(false);
 
   if (bundle.isPending) return <Loading />;
@@ -81,15 +89,23 @@ export default function Settings() {
         <Divider />
         <ListRow title="車両情報と周期" detail={`${vehicle.name}・オイル／フィルターの周期`} onPress={() => router.push('/settings/vehicle')} />
         <Divider />
+        <ListRow title="車検証" detail="記載内容（個人情報は伏せて表示）・税金の自動計算" onPress={() => router.push('/settings/certificate')} />
+        <Divider />
         <ListRow title="車検・点検・保険の期限" onPress={() => router.push('/settings/deadlines')} />
         <Divider />
         <ListRow title="走行距離とメーター交換" onPress={() => router.push('/settings/odometer')} />
         <Divider />
         <ListRow title="記録の一覧" onPress={() => router.push('/records')} />
+        <Divider />
+        <ListRow title="決まった支出" detail="保険・ローン・駐車場・自動車税など（毎月・毎年）" onPress={() => router.push('/settings/recurring')} />
+        <Divider />
+        <ListRow title="確定申告用のまとめ" detail="1年分の経費と明細の表（CSV）" onPress={() => router.push('/settings/tax-report')} />
       </Card>
 
       <SectionTitle>表示</SectionTitle>
       <Card style={{ gap: 0, paddingVertical: 4 }}>
+        <ListRow title="給油の記録のしかた" detail={FUEL_DETECT_LABELS[fuelMode.data ?? 'off']} onPress={() => router.push('/fuel-detect')} />
+        <Divider />
         <ListRow title="画面の色" detail={`${BASES[choice.base].label}・${ACCENTS[choice.accent].label}`} onPress={() => router.push('/settings/appearance')} />
         <Divider />
         <ListRow title="お知らせ" detail="アップデート・修正、たにぐち自動車の最新情報" onPress={() => router.push('/announcements')} />

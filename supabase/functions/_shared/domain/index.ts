@@ -9,3 +9,7 @@ export * from './announcements.ts';
 export * from './billing.ts';
 export * from './units.ts';
 export * from './fuel.ts';
+export * from './bookkeeping.ts';
+export * from './vehicle-tax.ts';
+export * from './vehicle-certificate.ts';
+export * from './recurring.ts';

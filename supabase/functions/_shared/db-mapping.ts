@@ -4,6 +4,8 @@
 import type { VehicleData } from './domain/vehicle.ts';
 import type { DeadlineKind, ReminderKind } from './domain/reminders.ts';
 import { isDistanceUnit, type DistanceUnit } from './domain/units.ts';
+import type { Powertrain, VehicleClass, VehicleTaxSpec } from './domain/vehicle-tax.ts';
+import type { BusinessClass, VehicleUsage } from './domain/vehicle-certificate.ts';
 
 export interface VehicleRow {
   id: string;
@@ -26,6 +28,36 @@ export interface VehicleRow {
   photo_updated_at: string | null;
   /** メーターの単位。DB の距離はすべて km で持ち、画面と通知の文だけこの単位にする */
   distance_unit: DistanceUnit;
+  /** 仕事で使う割合（%、確定申告のまとめに使う）。未設定は null */
+  business_use_percent?: number | null;
+  /** 自動車税・重量税の計算に使う車検証の項目（任意） */
+  vehicle_class?: VehicleClass | null;
+  displacement_cc?: number | null;
+  first_registered_on?: string | null;
+  powertrain?: Powertrain | null;
+  vehicle_weight_kg?: number | null;
+  /** 車検証の用途・自家用/事業用・乗車定員・最大積載量・車両総重量（任意） */
+  usage?: VehicleUsage | null;
+  business_class?: BusinessClass | null;
+  seating_capacity?: number | null;
+  max_load_kg?: number | null;
+  gross_weight_kg?: number | null;
+}
+
+/** 車両の行を、自動車税・重量税の計算の形にする */
+export function vehicleTaxSpec(v: VehicleRow): VehicleTaxSpec {
+  return {
+    vehicleClass: v.vehicle_class ?? null,
+    displacementCc: v.displacement_cc ?? null,
+    firstRegisteredOn: v.first_registered_on ?? null,
+    powertrain: v.powertrain ?? null,
+    vehicleWeightKg: v.vehicle_weight_kg ?? null,
+    usage: v.usage ?? null,
+    businessClass: v.business_class ?? null,
+    seatingCapacity: v.seating_capacity ?? null,
+    maxLoadKg: v.max_load_kg ?? null,
+    grossWeightKg: v.gross_weight_kg ?? null,
+  };
 }
 
 export interface OilChangeRow {

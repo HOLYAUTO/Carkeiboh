@@ -2,9 +2,8 @@
 import { handle, HttpError, json, readJson, requirePost } from '../_shared/http.ts';
 import { LedraAlreadyLinkedError, ledraClientFromEnv, LedraTokenError, type LedraConsent } from '../_shared/ledra-client.ts';
 import {
-  CONSENT_ITEMS,
+  ACCEPTED_CONSENTS,
   CONSENT_RECIPIENT,
-  CONSENT_VERSION,
   extractLinkToken,
   TOKEN_INVALID_MESSAGE,
 } from '../_shared/ledra-records.ts';
@@ -27,7 +26,10 @@ Deno.serve(
 
     const token = extractLinkToken(body.qrData ?? '');
     if (!token || !body.vehicleId) throw new HttpError(400, 'invalid_request', '連携用のQRコードではありません。');
-    if (body.consentVersion !== CONSENT_VERSION) {
+    // 同意した版の項目（更新前のアプリから届く1つ前の版も受け付ける）
+    const consentVersion = typeof body.consentVersion === 'string' ? body.consentVersion : '';
+    const consentItems = ACCEPTED_CONSENTS[consentVersion];
+    if (!consentItems) {
       throw new HttpError(409, 'consent_outdated', '同意画面の内容が更新されました。アプリを最新にして、もう一度お試しください。');
     }
 
@@ -57,9 +59,9 @@ Deno.serve(
       // 同意画面に出したのと同じ照会で提供元を確かめ、同意の控えに残す
       const preview = await ledra.previewToken(token);
       consent = {
-        version: CONSENT_VERSION,
+        version: consentVersion,
         recipient: CONSENT_RECIPIENT,
-        items: CONSENT_ITEMS,
+        items: consentItems,
         agreed_at: agreedAt,
         consumer_link_ref: linkRowId,
         provider_shop_name: preview.shopName,

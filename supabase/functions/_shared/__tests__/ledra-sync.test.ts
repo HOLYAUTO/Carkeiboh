@@ -4,7 +4,7 @@ import { syncLink, type LedraLinkRow } from '../ledra-sync.ts';
 import type { SupabaseClient } from '../supabase.ts';
 
 /** 書き込みを記録するだけの Supabase（upsert・update の中身を確かめる） */
-function fakeAdmin() {
+function fakeAdmin(selectData: Record<string, unknown[]> = {}) {
   const calls: { table: string; op: string; value: unknown }[] = [];
   const chain = (table: string, op: string, value: unknown) => {
     calls.push({ table, op, value });
@@ -14,7 +14,7 @@ function fakeAdmin() {
       return c;
     };
     c.select = () => Promise.resolve({ data: [], error: null });
-    c.then = (resolve: (v: unknown) => void) => resolve({ data: null, error: null });
+    c.then = (resolve: (v: unknown) => void) => resolve({ data: op === 'select' ? (selectData[table] ?? []) : null, error: null });
     return c;
   };
   const admin = {
@@ -22,6 +22,7 @@ function fakeAdmin() {
       upsert: (value: unknown) => chain(table, 'upsert', value),
       update: (value: unknown) => chain(table, 'update', value),
       delete: () => chain(table, 'delete', null),
+      select: (cols: unknown) => chain(table, 'select', cols),
     }),
   } as unknown as SupabaseClient;
   return { admin, calls };
@@ -41,12 +42,18 @@ const link: LedraLinkRow = {
 const oil = { record_id: 'c1', work_date: '2026-10-01', odo_km: 41000, oil_changed: true, filter_changed: false, shop_name: '本店', voided: false };
 const tire = { record_id: 'i1', kind: 'tire', work_date: '2026-10-31', odo_km: null, replaced: false, remaining_mm: 4.5, shop_name: '本店', voided: false };
 
-function ledra(wear: () => Promise<{ records: unknown[]; nextCursor: string | null; hasMore: boolean }>): LedraClient {
+type Page = { records: unknown[]; nextCursor: string | null; hasMore: boolean };
+const notConsented = async (): Promise<Page> => {
+  throw new LedraNotConsentedError('HTTP 404');
+};
+
+function ledra(wear: () => Promise<Page>, services: () => Promise<Page> = notConsented): LedraClient {
   return {
     previewToken: async () => ({ shopName: '本店' }) as never,
     confirmLink: async () => ({ linkId: 'lnk', shopName: null }),
     fetchOilRecords: async () => ({ records: [oil], nextCursor: 'oc1', hasMore: false }),
     fetchWearRecords: wear,
+    fetchServiceRecords: services,
     revokeLink: async () => {},
   };
 }
@@ -104,3 +111,37 @@ describe('ledra-client のタイヤ・ブレーキ取得', () => {
     }
   });
 });
+
+describe('整備・車検の金額の取り込み（6章）', () => {
+  const shaken = { record_id: 's1', kind: 'shaken', work_date: '2026-11-20', odo_km: 52300, title: '車検', total_yen: 98450, statutory_fees_yen: 32650, shop_name: '本店', voided: false };
+  const oilAmount = { record_id: 'c1', kind: 'oil_change', work_date: '2026-10-01', odo_km: 41000, title: 'オイル交換', total_yen: 5500, statutory_fees_yen: null, shop_name: '本店', voided: false };
+
+  it('車検は支出に、オイル交換の金額は同じ記録IDのオイル交換に紐づけて入れ、位置を進める', async () => {
+    const { admin, calls } = fakeAdmin({ oil_changes: [{ id: 'oil-row-1', ledra_record_id: 'c1' }] });
+    const r = await syncLink(
+      admin,
+      ledra(notConsented, async () => ({ records: [shaken, oilAmount], nextCursor: 'sc1', hasMore: false })),
+      link,
+    );
+    expect(r).toEqual({ status: 'ok', imported: 3, skipped: 0, removed: 0 });
+    const ups = calls.filter((c) => c.op === 'upsert' && c.table === 'expenses').map((c) => c.value as Record<string, unknown>[]);
+    expect(ups[0][0]).toMatchObject({ category: 'shaken', amount_yen: 98450, exempt_yen: 32650, source: 'ledra', ledra_record_id: 's1', oil_change_id: null });
+    expect(ups[1][0]).toMatchObject({ category: 'oil_change', amount_yen: 5500, oil_change_id: 'oil-row-1', ledra_record_id: 'c1' });
+    const cursors = calls.filter((c) => c.table === 'ledra_links' && c.op === 'update').map((c) => c.value as Record<string, unknown>);
+    expect(cursors.some((v) => v.service_sync_cursor === 'sc1')).toBe(true);
+  });
+
+  it('オイル交換の記録がまだ無い金額があれば、位置を進めずに次の回に読み直す', async () => {
+    const { admin, calls } = fakeAdmin({ oil_changes: [] });
+    await syncLink(admin, ledra(notConsented, async () => ({ records: [oilAmount], nextCursor: 'sc1', hasMore: false })), link);
+    const cursors = calls.filter((c) => c.table === 'ledra_links' && c.op === 'update').map((c) => c.value as Record<string, unknown>);
+    expect(cursors.some((v) => 'service_sync_cursor' in v)).toBe(false);
+  });
+
+  it('同意していない連携（403・404）は、連携を止めずに飛ばす', async () => {
+    const { admin } = fakeAdmin();
+    const r = await syncLink(admin, ledra(notConsented, notConsented), link);
+    expect(r.status).toBe('ok');
+  });
+});
+

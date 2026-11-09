@@ -10,6 +10,8 @@ import { toJstDate, type IsoDate } from '@domain/dates.ts';
 import type { ExpenseCategory } from '@domain/costs.ts';
 import type { FuelFill, FuelPriceBasis, FuelType } from '@domain/fuel.ts';
 import type { DistanceUnit } from '@domain/units.ts';
+import type { BookkeepingExpense } from '@domain/bookkeeping.ts';
+import { EMPTY_CERTIFICATE, type VehicleCertificate } from '@domain/vehicle-certificate.ts';
 import type { DeadlineKind } from '@domain/reminders.ts';
 import { buildVehicleState, type VehicleState } from '@domain/vehicle.ts';
 import {
@@ -40,6 +42,13 @@ export interface ExpenseRow {
   fuel_type: FuelType | null;
   fuel_price_basis: FuelPriceBasis | null;
   fuel_full_tank: boolean | null;
+  /** かけ（後払い）か。かけのときは税抜の金額（entered_amount_yen）から税込（amount_yen）を出す */
+  on_account: boolean;
+  entered_amount_yen: number | null;
+  /** 消費税のかからない分（車検の法定費用など） */
+  exempt_yen: number | null;
+  /** ledra：整備工場（Ledra）から取り込んだ金額。利用者は変えられない */
+  source?: 'manual' | 'ledra';
   created_at: string;
 }
 
@@ -401,6 +410,7 @@ export interface OilChangeInput {
   oilChanged: boolean;
   filterChanged: boolean;
   amountYen: number | null;
+  payment?: PaymentDetails;
 }
 
 /** 自分で入力したオイル交換を保存する。金額はその記録に紐づく支出1件として持つ（二重計上しない） */
@@ -417,12 +427,18 @@ export async function saveOilChange(input: OilChangeInput) {
       ? await supabase.from('oil_changes').update(row).eq('id', input.id).select('id').single()
       : await supabase.from('oil_changes').insert(row).select('id').single(),
   ) as { id: string };
-  await saveOilChangeAmount(input.vehicleId, saved.id, input.date, input.amountYen);
+  await saveOilChangeAmount(input.vehicleId, saved.id, input.date, input.amountYen, input.payment);
   return saved;
 }
 
 /** Ledra から来た記録にも、金額だけは後から追記できる */
-export async function saveOilChangeAmount(vehicleId: string, oilChangeId: string, date: IsoDate, amountYen: number | null) {
+export async function saveOilChangeAmount(
+  vehicleId: string,
+  oilChangeId: string,
+  date: IsoDate,
+  amountYen: number | null,
+  payment: PaymentDetails = PAID_NOW,
+) {
   if (amountYen == null || amountYen <= 0) {
     unwrap(await supabase.from('expenses').delete().eq('oil_change_id', oilChangeId));
     return;
@@ -435,6 +451,9 @@ export async function saveOilChangeAmount(vehicleId: string, oilChangeId: string
         category: 'oil_change',
         spent_on: date,
         amount_yen: amountYen,
+        on_account: payment.onAccount,
+        entered_amount_yen: payment.onAccount ? payment.enteredAmountYen : null,
+        exempt_yen: payment.exemptYen,
       },
       { onConflict: 'oil_change_id' },
     ),
@@ -456,7 +475,19 @@ export interface ExpenseInput {
   note: string | null;
   /** 給油のときだけ。給油以外は null を入れる */
   fuel: FuelDetails | null;
+  payment: PaymentDetails;
 }
+
+/** 支払い方法と税の区分（確定申告のまとめに使う） */
+export interface PaymentDetails {
+  onAccount: boolean;
+  /** かけのとき入れた税抜の金額（給油以外） */
+  enteredAmountYen: number | null;
+  /** 消費税のかからない分（車検の法定費用など） */
+  exemptYen: number | null;
+}
+
+export const PAID_NOW: PaymentDetails = { onAccount: false, enteredAmountYen: null, exemptYen: null };
 
 export interface FuelDetails {
   liters: number | null;
@@ -482,6 +513,28 @@ export function fuelFills(expenses: ExpenseRow[]): FuelFill[] {
     }));
 }
 
+/** 支出の行を確定申告のまとめの形にする */
+export function bookkeepingExpenses(expenses: ExpenseRow[]): BookkeepingExpense[] {
+  return expenses.map((e) => ({
+    date: e.spent_on,
+    category: e.category,
+    amountYen: e.amount_yen,
+    onAccount: e.on_account === true,
+    enteredAmountYen: e.entered_amount_yen,
+    exemptYen: e.exempt_yen,
+    fuel:
+      e.category === 'fuel'
+        ? {
+            fuelType: e.fuel_type,
+            liters: e.fuel_liters != null ? Number(e.fuel_liters) : null,
+            unitPrice: e.fuel_unit_price != null ? Number(e.fuel_unit_price) : null,
+            basis: e.fuel_price_basis,
+          }
+        : null,
+    note: e.note,
+  }));
+}
+
 /** 保存した記録の ID を返す（保存直後に「内容を直す」から編集画面を開くため） */
 export async function saveExpense(input: ExpenseInput): Promise<{ id: string }> {
   const row = {
@@ -496,6 +549,9 @@ export async function saveExpense(input: ExpenseInput): Promise<{ id: string }> 
     fuel_price_basis: input.fuel?.unitPrice != null ? input.fuel.priceBasis : null,
     fuel_type: input.fuel?.fuelType ?? null,
     fuel_full_tank: input.fuel ? input.fuel.fullTank : null,
+    on_account: input.payment.onAccount,
+    entered_amount_yen: input.payment.onAccount && input.category !== 'fuel' ? input.payment.enteredAmountYen : null,
+    exempt_yen: input.payment.exemptYen,
   };
   return unwrap(
     input.id
@@ -660,4 +716,125 @@ export function logInputSession(s: InputSession) {
     .then(({ error }) => {
       if (error) console.warn('入力の計測を送れませんでした', error.message);
     });
+}
+
+// ---------------------------------------------------------------------------
+// 車検証
+// ---------------------------------------------------------------------------
+
+/** 車検証の項目のうち vehicles に持つもの（税の計算に使う）。それ以外は vehicle_certificates */
+const CERTIFICATE_VEHICLE_FIELDS = [
+  'firstRegisteredOn',
+  'vehicleClass',
+  'usage',
+  'businessClass',
+  'displacementCc',
+  'powertrain',
+  'seatingCapacity',
+  'maxLoadKg',
+  'vehicleWeightKg',
+  'grossWeightKg',
+] as const satisfies readonly (keyof VehicleCertificate)[];
+
+const CERTIFICATE_TABLE_FIELDS = (Object.keys(EMPTY_CERTIFICATE) as (keyof VehicleCertificate)[]).filter(
+  (k) => !(CERTIFICATE_VEHICLE_FIELDS as readonly string[]).includes(k),
+);
+
+/** registeredOn → registered_on、axleFfKg → axle_ff_kg */
+function snake(key: string): string {
+  return key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+}
+
+export function useVehicleCertificate(vehicle: VehicleRow | undefined) {
+  return useQuery({
+    queryKey: ['vehicle-certificate', vehicle?.user_id, vehicle?.id],
+    enabled: !!vehicle,
+    queryFn: async (): Promise<VehicleCertificate> => {
+      const rows = unwrap(await supabase.from('vehicle_certificates').select('*').eq('vehicle_id', vehicle!.id)) as Record<string, unknown>[];
+      const row = rows[0] ?? {};
+      const v = vehicle as unknown as Record<string, unknown>;
+      const cert = { ...EMPTY_CERTIFICATE } as Record<string, unknown>;
+      for (const k of CERTIFICATE_TABLE_FIELDS) cert[k] = row[snake(k)] ?? null;
+      for (const k of CERTIFICATE_VEHICLE_FIELDS) cert[k] = v[snake(k)] ?? null;
+      return cert as unknown as VehicleCertificate;
+    },
+  });
+}
+
+/**
+ * 車検証を保存する。税の計算に使う項目は vehicles に、それ以外は vehicle_certificates に入れる。
+ * ナンバーが未登録なら車検証のナンバーを入れ、満了日が今の車検の期限と違えば期限も更新する
+ */
+export async function saveVehicleCertificate(vehicle: VehicleRow, cert: VehicleCertificate, currentShakenDueOn: IsoDate | null) {
+  const certRow: Record<string, unknown> = { vehicle_id: vehicle.id };
+  for (const k of CERTIFICATE_TABLE_FIELDS) certRow[snake(k)] = cert[k];
+  unwrap(await supabase.from('vehicle_certificates').upsert(certRow, { onConflict: 'vehicle_id' }));
+  const patch: Record<string, unknown> = {};
+  for (const k of CERTIFICATE_VEHICLE_FIELDS) patch[snake(k)] = cert[k];
+  if (!vehicle.plate_number && cert.registrationNumber) patch.plate_number = cert.registrationNumber.slice(0, 30);
+  await updateVehicle(vehicle.id, patch as Partial<Omit<VehicleRow, 'id' | 'user_id'>>);
+  if (cert.expiresOn && cert.expiresOn !== currentShakenDueOn) await registerDeadline(vehicle.id, 'shaken', cert.expiresOn);
+}
+
+// ---------------------------------------------------------------------------
+// 決まった支出（毎月・毎年）
+// ---------------------------------------------------------------------------
+
+export type RecurringCategory = 'maintenance' | 'shaken' | 'insurance' | 'car_tax' | 'parking_toll' | 'loan_lease' | 'other';
+
+export interface RecurringExpenseRow {
+  id: string;
+  vehicle_id: string;
+  category: RecurringCategory;
+  /** 自動車税だけは null（車検証の内容から計算した税額を使う） */
+  amount_yen: number | null;
+  frequency: 'monthly' | 'yearly';
+  month_of_year: number | null;
+  day_of_month: number;
+  starts_on: IsoDate;
+  ends_on: IsoDate | null;
+  note: string | null;
+}
+
+export interface RecurringBundle {
+  rules: RecurringExpenseRow[];
+  /** 記録した・飛ばした回（recurring_id → 日付） */
+  handled: Map<string, Set<IsoDate>>;
+}
+
+export function useRecurringExpenses(vehicle: VehicleRow | undefined) {
+  return useQuery({
+    queryKey: ['recurring', vehicle?.user_id, vehicle?.id],
+    enabled: !!vehicle,
+    queryFn: async (): Promise<RecurringBundle> => {
+      const rules = unwrap(
+        await supabase.from('recurring_expenses').select('*').eq('vehicle_id', vehicle!.id).order('created_at'),
+      ) as RecurringExpenseRow[];
+      const handled = new Map<string, Set<IsoDate>>();
+      if (rules.length > 0) {
+        const occ = unwrap(
+          await supabase.from('recurring_expense_occurrences').select('recurring_id, due_on').in('recurring_id', rules.map((r) => r.id)),
+        ) as { recurring_id: string; due_on: IsoDate }[];
+        for (const o of occ) {
+          if (!handled.has(o.recurring_id)) handled.set(o.recurring_id, new Set());
+          handled.get(o.recurring_id)!.add(o.due_on);
+        }
+      }
+      return { rules, handled };
+    },
+  });
+}
+
+export async function saveRecurringExpense(input: Omit<RecurringExpenseRow, 'id'> & { id?: string }) {
+  const { id, ...row } = input;
+  unwrap(id ? await supabase.from('recurring_expenses').update(row).eq('id', id) : await supabase.from('recurring_expenses').insert(row));
+}
+
+export async function deleteRecurringExpense(id: string) {
+  unwrap(await supabase.from('recurring_expenses').delete().eq('id', id));
+}
+
+/** 1回分を記録する（支出を作る）か飛ばす */
+export async function handleRecurringExpense(id: string, dueOn: IsoDate, record: boolean, amountYen: number | null) {
+  unwrap(await supabase.rpc('handle_recurring_expense', { p_recurring_id: id, p_due_on: dueOn, p_record: record, p_amount_yen: amountYen }));
 }

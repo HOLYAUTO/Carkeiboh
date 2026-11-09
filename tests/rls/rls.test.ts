@@ -172,6 +172,216 @@ describe.skipIf(!pool)('RLS', () => {
     });
   });
 
+  it('かけ（後払い）の税抜の金額と、消費税のかからない分を DB でも確かめる', async () => {
+    await asUser(alice, async (c) => {
+      const ok = await c.query(
+        `insert into public.expenses (vehicle_id, spent_on, category, amount_yen, on_account, entered_amount_yen, exempt_yen)
+         values ($1, '2026-11-01', 'shaken', 85000, true, 80000, 30000) returning on_account`,
+        [aliceVehicle],
+      );
+      expect(ok.rows[0].on_account).toBe(true);
+      const def = await c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen) values ($1, '2026-11-01', 'other', 100) returning on_account`, [aliceVehicle]);
+      expect(def.rows[0].on_account).toBe(false);
+      // 税抜の金額は、かけのときだけ・税込より大きくできない・給油には使わない
+      await expectFail(
+        c,
+        () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, entered_amount_yen) values ($1, '2026-11-01', 'other', 1100, 1000)`, [aliceVehicle]),
+        /expenses_entered_amount_on_account/,
+      );
+      await expectFail(
+        c,
+        () =>
+          c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, on_account, entered_amount_yen) values ($1, '2026-11-01', 'other', 1000, true, 1100)`, [
+            aliceVehicle,
+          ]),
+        /expenses_entered_amount_on_account/,
+      );
+      await expectFail(
+        c,
+        () =>
+          c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, on_account, entered_amount_yen) values ($1, '2026-11-01', 'fuel', 1100, true, 1000)`, [
+            aliceVehicle,
+          ]),
+        /expenses_entered_amount_on_account/,
+      );
+      await expectFail(
+        c,
+        () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, exempt_yen) values ($1, '2026-11-01', 'shaken', 1000, 1001)`, [aliceVehicle]),
+        /expenses_exempt_within_amount/,
+      );
+      // 仕事で使う割合は 0〜100%
+      const u = await c.query(`update public.vehicles set business_use_percent = 60 where id = $1`, [aliceVehicle]);
+      expect(u.rowCount).toBe(1);
+      await expectFail(c, () => c.query(`update public.vehicles set business_use_percent = 101 where id = $1`, [aliceVehicle]), /check constraint/);
+      await c.query(`update public.vehicles set business_use_percent = null where id = $1`, [aliceVehicle]);
+    });
+    // 他人の車両の割合は変えられない
+    await asUser(alice, async (c) => {
+      const u = await c.query(`update public.vehicles set business_use_percent = 10 where id = $1`, [bobVehicle]);
+      expect(u.rowCount).toBe(0);
+    });
+  });
+
+  it('車検証の項目（種別・排気量・初度登録・燃料・車両重量）は本人だけが入れられ、値を DB でも確かめる', async () => {
+    await asUser(alice, async (c) => {
+      const ok = await c.query(
+        `update public.vehicles set vehicle_class = 'standard', displacement_cc = 1496, first_registered_on = '2020-06-01', powertrain = 'hybrid', vehicle_weight_kg = 1180 where id = $1`,
+        [aliceVehicle],
+      );
+      expect(ok.rowCount).toBe(1);
+      await expectFail(c, () => c.query(`update public.vehicles set vehicle_class = 'truck' where id = $1`, [aliceVehicle]), /check constraint/);
+      await expectFail(c, () => c.query(`update public.vehicles set powertrain = 'steam' where id = $1`, [aliceVehicle]), /check constraint/);
+      await expectFail(c, () => c.query(`update public.vehicles set first_registered_on = '2020-06-15' where id = $1`, [aliceVehicle]), /check constraint/);
+      await expectFail(c, () => c.query(`update public.vehicles set displacement_cc = 0 where id = $1`, [aliceVehicle]), /check constraint/);
+      const other = await c.query(`update public.vehicles set displacement_cc = 660 where id = $1`, [bobVehicle]);
+      expect(other.rowCount).toBe(0);
+      await c.query(
+        `update public.vehicles set vehicle_class = null, displacement_cc = null, first_registered_on = null, powertrain = null, vehicle_weight_kg = null where id = $1`,
+        [aliceVehicle],
+      );
+    });
+  });
+
+  it('車検証の記載内容（所有者・使用者を含む）は本人だけが読み書きでき、他人のものは見えない', async () => {
+    // 本人は作れる。値の範囲を DB でも確かめる（このブロックの変更は最後に戻る）
+    await asUser(alice, async (c) => {
+      const ins = await c.query(
+        `insert into public.vehicle_certificates (vehicle_id, registration_number, owner_name, expires_on) values ($1, '品川 300 あ 12-34', '山田太郎', '2027-06-30') returning user_id`,
+        [aliceVehicle],
+      );
+      expect(ins.rows[0].user_id).toBe(alice);
+      const u = await c.query(`update public.vehicles set usage = 'passenger', business_class = 'private', seating_capacity = 5, gross_weight_kg = 1455 where id = $1`, [aliceVehicle]);
+      expect(u.rowCount).toBe(1);
+      await expectFail(c, () => c.query(`update public.vehicles set usage = 'truck' where id = $1`, [aliceVehicle]), /check constraint/);
+      await expectFail(c, () => c.query(`update public.vehicles set business_class = 'rental' where id = $1`, [aliceVehicle]), /check constraint/);
+      // 他人の車両には作れない
+      await expectFail(c, () => c.query(`insert into public.vehicle_certificates (vehicle_id, owner_name) values ($1, 'x')`, [bobVehicle]), /violates|policy|foreign key/);
+    });
+    // 本人の車検証を他人は読めず、変えられない
+    await asAdmin(
+      `insert into public.vehicle_certificates (vehicle_id, user_id, owner_name, owner_address) values ($1, $2, '山田太郎', '東京都千代田区1-1')`,
+      [aliceVehicle, alice],
+    );
+    try {
+      await asUser(bob, async (c) => {
+        expect((await c.query(`select * from public.vehicle_certificates`)).rows).toHaveLength(0);
+        expect((await c.query(`update public.vehicle_certificates set owner_name = 'x' where vehicle_id = $1`, [aliceVehicle])).rowCount).toBe(0);
+        expect((await c.query(`delete from public.vehicle_certificates where vehicle_id = $1`, [aliceVehicle])).rowCount).toBe(0);
+      });
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select owner_name from public.vehicle_certificates where vehicle_id = $1`, [aliceVehicle]);
+        expect(r.rows[0].owner_name).toBe('山田太郎');
+      });
+    } finally {
+      await asAdmin(`delete from public.vehicle_certificates where vehicle_id = $1`, [aliceVehicle]);
+    }
+  });
+
+  it('ガソリンスタンドの場所の控えは、利用者からは読み書きできない（サーバーだけが使う）', async () => {
+    await asAdmin(`insert into public.fuel_station_tiles (tile, stations) values ('694_2709', '[]') on conflict do nothing`);
+    try {
+      for (const who of [alice, null]) {
+        await asUser(who, async (c) => {
+          await expectFail(c, () => c.query(`select * from public.fuel_station_tiles`), /permission denied/);
+          await expectFail(c, () => c.query(`insert into public.fuel_station_tiles (tile) values ('1_1')`), /permission denied/);
+        });
+      }
+      await expect(asAdmin(`insert into public.fuel_station_tiles (tile) values ('bad tile')`)).rejects.toThrow(/check constraint/);
+    } finally {
+      await asAdmin(`delete from public.fuel_station_tiles where tile = '694_2709'`);
+    }
+  });
+
+  it('決まった支出：本人だけが登録・記録でき、同じ回は二度記録できない', async () => {
+    await asUser(alice, async (c) => {
+      const r = await c.query(
+        `insert into public.recurring_expenses (vehicle_id, category, amount_yen, frequency, day_of_month, starts_on) values ($1, 'parking_toll', 15000, 'monthly', 27, '2026-08-01') returning id`,
+        [aliceVehicle],
+      );
+      const id = r.rows[0].id;
+      const rec = await c.query(`select public.handle_recurring_expense($1, '2026-10-27', true) as expense_id`, [id]);
+      const expense = await c.query(`select amount_yen, category, spent_on::text from public.expenses where id = $1`, [rec.rows[0].expense_id]);
+      expect(expense.rows[0]).toEqual({ amount_yen: 15000, category: 'parking_toll', spent_on: '2026-10-27' });
+      // 同じ回はもう記録できない（支出も作られない）
+      await expectFail(c, () => c.query(`select public.handle_recurring_expense($1, '2026-10-27', true)`, [id]), /duplicate key/);
+      const skip = await c.query(`select public.handle_recurring_expense($1, '2026-09-27', false) as expense_id`, [id]);
+      expect(skip.rows[0].expense_id).toBeNull();
+      const occ = await c.query(`select due_on::text, status from public.recurring_expense_occurrences where recurring_id = $1 order by due_on`, [id]);
+      expect(occ.rows).toEqual([
+        { due_on: '2026-09-27', status: 'skipped' },
+        { due_on: '2026-10-27', status: 'recorded' },
+      ]);
+      // 金額なしは自動車税だけ。毎年なら月が要る
+      await expectFail(
+        c,
+        () => c.query(`insert into public.recurring_expenses (vehicle_id, category, frequency, day_of_month) values ($1, 'insurance', 'monthly', 1)`, [aliceVehicle]),
+        /check constraint/,
+      );
+      await expectFail(
+        c,
+        () => c.query(`insert into public.recurring_expenses (vehicle_id, category, amount_yen, frequency, day_of_month) values ($1, 'insurance', 1, 'yearly', 1)`, [aliceVehicle]),
+        /check constraint/,
+      );
+      const tax = await c.query(
+        `insert into public.recurring_expenses (vehicle_id, category, frequency, month_of_year, day_of_month) values ($1, 'car_tax', 'yearly', 5, 31) returning amount_yen`,
+        [aliceVehicle],
+      );
+      expect(tax.rows[0].amount_yen).toBeNull();
+      // 他人の車両には作れない
+      await expectFail(
+        c,
+        () => c.query(`insert into public.recurring_expenses (vehicle_id, category, amount_yen, frequency, day_of_month) values ($1, 'other', 1, 'monthly', 1)`, [bobVehicle]),
+        /violates|policy|foreign key/,
+      );
+    });
+    // 他人の登録は見えず、記録もできない
+    const rule = await asAdmin(
+      `insert into public.recurring_expenses (vehicle_id, user_id, category, amount_yen, frequency, day_of_month) values ($1, $2, 'other', 1000, 'monthly', 1) returning id`,
+      [aliceVehicle, alice],
+    );
+    try {
+      await asUser(bob, async (c) => {
+        expect((await c.query(`select * from public.recurring_expenses`)).rows).toHaveLength(0);
+        await expectFail(c, () => c.query(`select public.handle_recurring_expense($1, '2026-10-01', true)`, [rule.rows[0].id]), /recurring_not_found/);
+      });
+    } finally {
+      await asAdmin(`delete from public.recurring_expenses where id = $1`, [rule.rows[0].id]);
+    }
+  });
+
+  it('整備工場（Ledra）から来た支出は、本人も作れず・変えられず・消せない（読むだけ）', async () => {
+    const ins = await asAdmin(
+      `insert into public.expenses (vehicle_id, user_id, spent_on, category, amount_yen, exempt_yen, source, ledra_record_id) values ($1, $2, '2026-11-20', 'shaken', 98450, 32650, 'ledra', 's1') returning id`,
+      [aliceVehicle, alice],
+    );
+    const id = ins.rows[0].id;
+    try {
+      await asUser(alice, async (c) => {
+        const r = await c.query(`select amount_yen, source from public.expenses where id = $1`, [id]);
+        expect(r.rows[0]).toEqual({ amount_yen: 98450, source: 'ledra' });
+        expect((await c.query(`update public.expenses set amount_yen = 1 where id = $1`, [id])).rowCount).toBe(0);
+        expect((await c.query(`delete from public.expenses where id = $1`, [id])).rowCount).toBe(0);
+        await expectFail(
+          c,
+          () => c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen, source, ledra_record_id) values ($1, '2026-11-20', 'shaken', 1, 'ledra', 'x')`, [aliceVehicle]),
+          /row-level security/,
+        );
+        // 自分の支出を Ledra のものに書き換えることもできない
+        const own = await c.query(`insert into public.expenses (vehicle_id, spent_on, category, amount_yen) values ($1, '2026-11-20', 'other', 100) returning id`, [aliceVehicle]);
+        await expectFail(c, () => c.query(`update public.expenses set source = 'ledra', ledra_record_id = 'y' where id = $1`, [own.rows[0].id]), /row-level security/);
+      });
+      // 同じ車両で同じ記録は1件だけ
+      await expect(
+        asAdmin(
+          `insert into public.expenses (vehicle_id, user_id, spent_on, category, amount_yen, source, ledra_record_id) values ($1, $2, '2026-11-20', 'shaken', 1, 'ledra', 's1')`,
+          [aliceVehicle, alice],
+        ),
+      ).rejects.toThrow(/expenses_ledra_record_unique/);
+    } finally {
+      await asAdmin(`delete from public.expenses where id = $1`, [id]);
+    }
+  });
+
   it('メーターの単位は km か mile だけで、既定は km', async () => {
     const r = await asAdmin(`select distance_unit from public.vehicles where id = $1`, [aliceVehicle]);
     expect(r.rows[0].distance_unit).toBe('km');

@@ -3,7 +3,19 @@ import { Alert } from 'react-native';
 import { EXPENSE_CATEGORIES } from '@domain/costs.ts';
 import { isWearKind, kindLabel, RecordForm, type RecordKind } from '../../components/RecordForm';
 import { ErrorView, Loading, Screen } from '../../components/ui';
+import type { RecordDraft } from '@shared/record-draft.ts';
 import { useVehicleBundle } from '../../lib/data';
+
+function parseDraft(json: string | undefined): RecordDraft | undefined {
+  if (!json) return undefined;
+  try {
+    // 画面のあいだで受け渡すだけなので、範囲の確認はサーバーの sanitizeDraft に任せる（入力欄に入れたあと利用者が確かめる）
+    const d = JSON.parse(json) as RecordDraft;
+    return d && typeof d === 'object' ? d : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function isKind(v: unknown): v is RecordKind {
   return typeof v === 'string' && (v === 'odometer' || isWearKind(v) || (EXPENSE_CATEGORIES as readonly string[]).includes(v));
@@ -14,7 +26,10 @@ function isKind(v: unknown): v is RecordKind {
  * 左上の「戻る」・横スワイプ・Android の戻る操作で、項目選びにすぐ戻れる。保存しても元の画面に戻る。
  */
 export default function NewRecord() {
-  const { kind } = useLocalSearchParams<{ kind?: string }>();
+  // station：ホームの「給油を記録する」・スタンドを出たときの通知から開いたときのスタンド名（メモに入れる）
+  // draft：レシートをまとめて取り込む画面から、読み取った内容を入れた状態で開くとき（JSON）
+  const { kind, station, draft } = useLocalSearchParams<{ kind?: string; station?: string; draft?: string }>();
+  const initialDraft = parseDraft(draft);
   const { bundle } = useVehicleBundle();
 
   if (!isKind(kind)) return <ErrorView message="記録する項目が見つかりません。" onRetry={() => router.back()} />;
@@ -41,7 +56,7 @@ export default function NewRecord() {
   return (
     <Screen>
       <Stack.Screen options={{ title: kindLabel(kind) }} />
-      <RecordForm bundle={bundle.data} kind={kind} onSaved={onSaved} />
+      <RecordForm bundle={bundle.data} kind={kind} onSaved={onSaved} prefill={station ? { note: station.slice(0, 60) } : undefined} initialDraft={initialDraft} />
     </Screen>
   );
 }

@@ -41,10 +41,27 @@
 ## 3. 限定配布（TestFlight・Google Play 内部テスト）
 
 ```sh
-npx eas-cli@latest build --profile production --platform all
-npx eas-cli@latest submit --profile production --platform ios      # TestFlight
-npx eas-cli@latest submit --profile production --platform android  # 内部テスト（track: internal）
+./scripts/release-build.sh   # iOS・Android をビルドし、TestFlight と内部テストへそのまま提出（ios / android だけも可）
 ```
+
+すでにできたビルドを提出し直すとき：
+
+```sh
+npx eas-cli@latest submit --profile production --platform ios --latest      # TestFlight
+npx eas-cli@latest submit --profile production --platform android --latest  # 内部テスト（track: internal）
+```
+
+#### Android を自動で提出するための準備（最初の1回だけ）
+
+EAS が Google Play に提出するには、Google Play のサービスアカウントの鍵（JSON）を EAS に登録しておく。鍵はリポジトリに入れない。
+
+1. Google Cloud コンソールで、Play Console に紐づけるプロジェクトを選び、「Google Play Android Developer API」を有効にする
+2. 「IAM と管理 → サービスアカウント」でサービスアカウント（例：`eas-submit`）を作り、「鍵 → 鍵を追加 → JSON」で鍵をダウンロードする
+3. Play Console の「ユーザーと権限 → 新しいユーザーを招待」で、サービスアカウントのメールアドレスを招待し、イジログ（`app.ijilog`）に
+   「テスト トラックへのリリース」（とアプリの情報の閲覧）の権限を付ける
+4. expo.dev の cartrust / carkeibo →「Credentials → Android → app.ijilog → Google Service Account Key for Play Store Submissions」に鍵の JSON をアップロードする
+   （または `npx eas-cli@latest credentials --platform android` → production → Google Service Account → Upload）
+5. 最初の1回だけは、Play Console に AAB を手でアップロードしてあること（Google の API が、まだリリースの無いアプリには提出させないため）
 
 - ストア上の販売元は HOLY と表示されるため、アプリ名・説明文でたにぐち自動車のアプリであることが分かるようにする（`app.json` の `description`、ストアの説明文）
 - 利用規約・プライバシーポリシー（名義はたにぐち自動車、HOLY は開発・管理の委託先）の URL を、アプリ（`EXPO_PUBLIC_TERMS_URL` / `EXPO_PUBLIC_PRIVACY_URL`）とストアの両方に設定する

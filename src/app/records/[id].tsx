@@ -1,3 +1,4 @@
+import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
@@ -17,7 +18,7 @@ import {
   type ExpenseRow,
   type WearCheckRow,
 } from '../../lib/data';
-import { fullDate, km, parseInteger } from '../../lib/format';
+import { fullDate, km, parseInteger, yen } from '../../lib/format';
 import { spacing } from '../../theme';
 
 export default function EditRecord() {
@@ -63,6 +64,10 @@ export default function EditRecord() {
     return <LedraRecord bundle={data} row={target.row} expense={target.expense} />;
   }
   if (target.type === 'wear' && target.row.source === 'ledra') return <LedraWearRecord bundle={data} row={target.row} />;
+  if (target.type === 'expense' && target.row.source === 'ledra') return <LedraExpenseRecord bundle={data} row={target.row} />;
+  if (target.type === 'oil' && target.expense?.source === 'ledra') {
+    return <LedraRecord bundle={data} row={target.row} expense={target.expense} />;
+  }
 
   const remove = () =>
     Alert.alert('この記録を削除しますか', '削除すると元に戻せません。', [
@@ -128,9 +133,35 @@ function LedraRecord({ bundle, row, expense }: { bundle: VehicleBundle; row: Oil
         <Info label="オイルフィルター交換" value={row.filter_changed ? 'あり' : 'なし'} />
         {!!row.shop_name && <Info label="店舗" value={row.shop_name} mono={false} />}
       </Card>
+      {expense?.source === 'ledra' ? (
+        <Card>
+          <Info label="金額（整備工場の記録）" value={yen(expense.amount_yen)} />
+        </Card>
+      ) : (
+        <Card>
+          <Field label="金額（任意）" value={amount} onChangeText={setAmount} keyboardType="number-pad" suffix="円" hint="入力すると維持費に1件として数えます。" />
+          <Button title="金額を保存する" disabled={!valid} loading={busy} onPress={save} />
+        </Card>
+      )}
+    </Screen>
+  );
+}
+
+/** Ledra から来た整備・車検の金額：編集できない */
+function LedraExpenseRecord({ bundle, row }: { bundle: VehicleBundle; row: ExpenseRow }) {
+  return (
+    <Screen>
       <Card>
-        <Field label="金額（任意）" value={amount} onChangeText={setAmount} keyboardType="number-pad" suffix="円" hint="入力すると維持費に1件として数えます。" />
-        <Button title="金額を保存する" disabled={!valid} loading={busy} onPress={save} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <AppText variant="heading">{EXPENSE_CATEGORY_LABELS[row.category]}</AppText>
+          <Badge label="証明付き" />
+        </View>
+        <AppText variant="caption">整備工場の記録（Ledra）から取り込んだ金額です。内容は変更できません。</AppText>
+        <Info label="作業日" value={fullDate(row.spent_on)} />
+        {row.odo_km != null && <Info label="走行距離（ODO）" value={km(row.odo_km, vehicleUnit(bundle.vehicle))} />}
+        <Info label="金額" value={yen(row.amount_yen)} />
+        {row.exempt_yen != null && <Info label="うち法定費用" value={yen(row.exempt_yen)} />}
+        {!!row.note && <Info label="内容" value={row.note} mono={false} />}
       </Card>
     </Screen>
   );

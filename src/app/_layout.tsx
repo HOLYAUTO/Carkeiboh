@@ -12,6 +12,7 @@ import { ErrorView, Loading } from '../components/ui';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { useBillingListener } from '../lib/billing';
 import { usePlan, useVehicle } from '../lib/data';
+import { useQuickActions } from '../lib/quick-actions';
 import { fonts, ThemeProvider, useColors, useTheme } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -69,6 +70,7 @@ function RootNavigator() {
   // 複数台プランの期限が切れて上限を超えているときは、残すクルマを選ぶまでほかの画面に進めない
   const mustChooseVehicle = signedIn && hasVehicle && plan.data?.mustChooseVehicle === true;
   useBillingListener();
+  useQuickActions();
 
   useEffect(() => {
     if (!loading && !checkingVehicle) SplashScreen.hideAsync().catch(() => {});
@@ -134,11 +136,17 @@ function RootNavigator() {
         <Stack.Screen name="records/new" options={{ title: '記録する' }} />
         <Stack.Screen name="records/index" options={{ title: '記録の一覧' }} />
         <Stack.Screen name="records/[id]" options={{ title: '記録の編集' }} />
+        <Stack.Screen name="records/fuel-statement" options={{ title: '掛けカードの明細から登録' }} />
+        <Stack.Screen name="records/receipts" options={{ title: 'レシートをまとめて取り込む' }} />
         <Stack.Screen name="settings/index" options={{ title: '設定' }} />
         <Stack.Screen name="settings/vehicle" options={{ title: '車両情報と周期' }} />
         <Stack.Screen name="settings/deadlines" options={{ title: '車検・点検・保険' }} />
         <Stack.Screen name="settings/odometer" options={{ title: '走行距離とメーター交換' }} />
         <Stack.Screen name="settings/appearance" options={{ title: '画面の色' }} />
+        <Stack.Screen name="settings/tax-report" options={{ title: '確定申告用のまとめ' }} />
+        <Stack.Screen name="settings/certificate" options={{ title: '車検証' }} />
+        <Stack.Screen name="fuel-detect" options={{ title: '給油の記録のしかた' }} />
+        <Stack.Screen name="settings/recurring" options={{ title: '決まった支出' }} />
         <Stack.Screen name="announcements/index" options={{ title: 'お知らせ' }} />
         <Stack.Screen name="announcements/[id]" options={{ title: 'お知らせ' }} />
         <Stack.Screen name="admin/announcements/index" options={{ title: 'お知らせの管理' }} />
