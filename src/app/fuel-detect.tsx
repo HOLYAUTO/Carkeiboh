@@ -29,6 +29,21 @@ const OPTIONS: { mode: FuelDetectMode; title: string; body: string; note: string
   },
 ];
 
+/** Google Play の「目立つ開示」の文面（docs/store/play-location-declaration.md と同じ内容にする） */
+const BACKGROUND_LOCATION_DISCLOSURE =
+  'イジログは「スタンドを出たら通知する」のために、アプリを閉じているときや使っていないときも、位置情報を収集します。' +
+  'ガソリンスタンドに出入りしたことを端末の中で調べ、出たときに給油の記録をお知らせするためだけに使います。' +
+  '正確な位置はサーバーに送らず、広告や第三者への提供にも使いません。設定でいつでも止められます。';
+
+function confirmBackgroundLocation(): Promise<boolean> {
+  return new Promise((resolve) =>
+    Alert.alert('アプリを閉じているときの位置情報の利用', BACKGROUND_LOCATION_DISCLOSURE, [
+      { text: '使わない', style: 'cancel', onPress: () => resolve(false) },
+      { text: '同意して続ける', onPress: () => resolve(true) },
+    ]),
+  );
+}
+
 /**
  * 給油の記録のしかた（スタンドに来たら知らせるか）を選ぶ。最初に一度だけ開き、あとから設定で変えられる。
  * 現在地はサーバーに送らない（約5km四方の区画だけを送って、その中のスタンドの場所を受け取る）
@@ -68,6 +83,12 @@ export default function FuelDetectChoice() {
           Alert.alert('スタンドを出たら通知する', 'このアプリの版では使えません。アプリを最新にしてください。それまでは、スタンドでアプリを開いたときにお知らせします。', [
             { text: 'OK', onPress: done },
           ]);
+          return;
+        }
+        // Google Play の決まり（目立つ開示）：アプリを閉じているときの位置を使う前に、何のために集めるかをアプリの中で示して同意を得る
+        if (!(await confirmBackgroundLocation())) {
+          await setMode('on_open');
+          done();
           return;
         }
         // 「常に許可」と通知の許可を求める。断られたら「アプリを開いたとき」にする
