@@ -537,6 +537,8 @@ export function bookkeepingExpenses(expenses: ExpenseRow[]): BookkeepingExpense[
 
 /** 保存した記録の ID を返す（保存直後に「内容を直す」から編集画面を開くため） */
 export async function saveExpense(input: ExpenseInput): Promise<{ id: string }> {
+  // スタンドに立ち寄っているあいだに給油を記録したら、出たときの「給油しましたか？」を出さない（src/lib/fuel-geofence.ts）
+  if (input.category === 'fuel' && !input.id) await AsyncStorage.setItem('ijilog.lastFuelSavedAt', String(Date.now())).catch(() => {});
   const row = {
     vehicle_id: input.vehicleId,
     category: input.category,

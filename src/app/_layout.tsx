@@ -13,6 +13,8 @@ import { AuthProvider, useAuth } from '../lib/auth';
 import { useBillingListener } from '../lib/billing';
 import { usePlan, useVehicle } from '../lib/data';
 import { useQuickActions } from '../lib/quick-actions';
+// スタンドの出入りの見張り（TaskManager.defineTask）は起動の最初に定義する
+import '../lib/fuel-geofence';
 import { fonts, ThemeProvider, useColors, useTheme } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});

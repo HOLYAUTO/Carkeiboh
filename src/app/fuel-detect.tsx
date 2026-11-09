@@ -3,7 +3,9 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { AppText, Button, Card, Screen } from '../components/ui';
-import { BACKGROUND_DETECTION_AVAILABLE, useFuelDetectMode, useSetFuelDetectMode, type FuelDetectMode } from '../lib/fuel-detect';
+import { useFuelDetectMode, useSetFuelDetectMode, type FuelDetectMode } from '../lib/fuel-detect';
+import { isGeofencingSupported, refreshFuelGeofences, requestAlwaysPermission, stopFuelGeofences } from '../lib/fuel-geofence';
+import { registerForPush } from '../lib/push';
 import { fonts, radius, spacing, useColors } from '../theme';
 
 const OPTIONS: { mode: FuelDetectMode; title: string; body: string; note: string }[] = [
@@ -17,7 +19,7 @@ const OPTIONS: { mode: FuelDetectMode; title: string; body: string; note: string
     mode: 'after_visit',
     title: 'スタンドを出たら通知する',
     body: 'ガソリンスタンドに数分いて出たら「給油しましたか？」と通知します。押すと入力した状態の記録画面が開きます。',
-    note: '位置情報を「常に許可」にする必要があります。スマホの省電力の仕組みで見張るので、消耗は少なめですが、まったく使わないわけではありません。',
+    note: '位置情報を「常に許可」にする必要があります（このあと聞かれます）。スマホの省電力の仕組みで、近くのスタンドに出入りしたときだけ動くので、消耗は少なめです。',
   },
   {
     mode: 'off',
@@ -43,6 +45,8 @@ export default function FuelDetectChoice() {
   const decide = async () => {
     setBusy(true);
     try {
+      // 「スタンドを出たら通知」以外を選んだら、アプリを閉じているときの見張りを止める
+      if (selected !== 'after_visit') await stopFuelGeofences();
       if (selected === 'off') {
         await setMode('off');
         done();
@@ -58,15 +62,35 @@ export default function FuelDetectChoice() {
         ]);
         return;
       }
-      await setMode(selected);
-      if (selected === 'after_visit' && !BACKGROUND_DETECTION_AVAILABLE) {
-        Alert.alert(
-          'スタンドを出たら通知する',
-          'この知らせ方は、次のアプリの更新（ストア版）から使えるようになります。それまでは、スタンドでアプリを開いたときにお知らせします。',
-          [{ text: 'OK', onPress: done }],
-        );
+      if (selected === 'after_visit') {
+        if (!(await isGeofencingSupported())) {
+          await setMode('on_open');
+          Alert.alert('スタンドを出たら通知する', 'このアプリの版では使えません。アプリを最新にしてください。それまでは、スタンドでアプリを開いたときにお知らせします。', [
+            { text: 'OK', onPress: done },
+          ]);
+          return;
+        }
+        // 「常に許可」と通知の許可を求める。断られたら「アプリを開いたとき」にする
+        const always = await requestAlwaysPermission();
+        if (!always) {
+          await setMode('on_open');
+          Alert.alert(
+            '「常に許可」になっていません',
+            'アプリを閉じているときにスタンドを出たことを知るには、位置情報を「常に許可」にする必要があります。それまでは、スタンドでアプリを開いたときにお知らせします。',
+            [
+              { text: 'OK', onPress: done },
+              { text: '設定を開く', onPress: () => Linking.openSettings() },
+            ],
+          );
+          return;
+        }
+        await registerForPush(true).catch(() => {});
+        await setMode('after_visit');
+        await refreshFuelGeofences().catch(() => false);
+        done();
         return;
       }
+      await setMode(selected);
       done();
     } finally {
       setBusy(false);

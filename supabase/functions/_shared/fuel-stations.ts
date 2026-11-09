@@ -112,3 +112,18 @@ export function parseOverpass(json: unknown): FuelStation[] {
   }
   return out;
 }
+
+/**
+ * スタンドを出たときに「給油しましたか？」を出すか。2〜60分いた・そのあいだに給油を記録していない・
+ * 今日そのスタンドでまだ出していない、のすべてを満たすときだけ
+ */
+export function shouldNotifyVisit(input: {
+  enteredAtMs: number | null;
+  exitedAtMs: number;
+  lastFuelSavedAtMs: number | null;
+  alreadyNotifiedToday: boolean;
+}): boolean {
+  if (!input.enteredAtMs || !isVisit(input.enteredAtMs, input.exitedAtMs)) return false;
+  if (input.lastFuelSavedAtMs && input.lastFuelSavedAtMs >= input.enteredAtMs) return false;
+  return !input.alreadyNotifiedToday;
+}
