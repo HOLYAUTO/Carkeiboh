@@ -28,7 +28,7 @@
 | 8 | 走行ペースの計算期間 | 直近1年の記録（2件未満なら全期間） | 古い乗り方に引きずられないため | `domain/pace.ts` |
 | 9 | 年間走行距離の選択肢（初回設定） | 3,000／5,000／8,000／10,000／15,000km | 1分以内で終わるよう選ぶだけにした。設定で任意の値に変更できる | `src/app/onboarding.tsx` |
 | 10 | 「記録する」の項目 | 5.3 の9項目（ローン・リースを含む）＋「走行距離だけ」 | 4章の画面表には「ローン・リース」がないが 5.3 にはあるため入れた。走行距離だけの記録はペース計算の精度のため | `src/components/RecordForm.tsx` |
-| 11 | 利用規約・プライバシーポリシー | 差し込む場所だけ作成（URL 未設定時は「準備中」）。下書き：プライバシーポリシー `docs/legal/privacy-policy-draft.md`、利用規約 `docs/legal/terms-of-service-draft.md` | 文面の確定（専門家の確認）、公開する URL、下書きの【要確認】（番地・代表者・電話番号とメールアドレス・保存期間・制定日など） | `EXPO_PUBLIC_TERMS_URL` / `EXPO_PUBLIC_PRIVACY_URL` |
+| 11 | 利用規約・プライバシーポリシー | 差し込む場所だけ作成（URL 未設定時は「準備中」）。下書き：プライバシーポリシー `docs/legal/privacy-policy-draft.md`、利用規約 `docs/legal/terms-of-service-draft.md`、ストアの説明 `docs/store/store-listing.md` | 文面の確定（専門家の確認）、公開する URL、下書きの【要確認】（番地・代表者・電話番号とメールアドレス・保存期間・制定日など）。ストアのカテゴリ、App Store の審査用アカウント | `EXPO_PUBLIC_TERMS_URL` / `EXPO_PUBLIC_PRIVACY_URL` |
 | 12 | アプリのアイコン | Expo の仮アイコンのまま | 01 9-2 で仮アイコン可 | `assets/` |
 
 ## 仕様の解釈として決めたもの（違っていれば直します）
