@@ -32,6 +32,34 @@ export const DEADLINE_LABELS: Record<DeadlineKind, string> = {
   insurance: '自動車保険の満期',
 };
 
+/**
+ * ワンタッチ更新の選択肢（月数）。車検は自家用乗用が2年・事業用や貨物が1年、
+ * 法定点検は12か月・24か月、保険は1年契約が多い。任意点検は半年ごとの人もいるので6か月から
+ */
+export const DEADLINE_RENEW_MONTHS: Record<DeadlineKind, number[]> = {
+  shaken: [12, 24],
+  inspection_legal: [12, 24],
+  inspection_voluntary: [6, 12],
+  insurance: [12, 24],
+};
+
+/** '1年後'・'6か月後' */
+export function renewLabel(months: number): string {
+  return months % 12 === 0 ? `${months / 12}年後` : `${months}か月後`;
+}
+
+/**
+ * ワンタッチ更新の新しい期限。今の期限から months 後にする（満了日の前に車検を受けると、新しい満了日は前の満了日から数えるため）。
+ * 期限が未登録、または months 後でもまだ今日より前（長く更新していなかった）なら、今日から数える
+ */
+export function renewedDueOn(current: IsoDate | null, months: number, today: IsoDate): IsoDate {
+  if (current) {
+    const next = addMonths(current, months);
+    if (next > today) return next;
+  }
+  return addMonths(today, months);
+}
+
 /** 有効な期限だけを渡す（更新を登録した旧契約は superseded として除外される） */
 export interface Deadline {
   id: string;
