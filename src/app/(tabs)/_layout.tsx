@@ -33,9 +33,14 @@ export default function TabsLayout() {
   );
 }
 
+/** 目に入りやすいよう、大きな丸いボタンにして少し浮かせるタブ */
+const PRIMARY_TAB = 'record';
+const PRIMARY_SIZE = 60;
+
 /**
  * タブバー。等幅に並べ、選んでいるタブは上端の赤い線とアイコンの塗り・赤い色で示す。
  * 色だけで伝えないよう、ラベルも必ず出す。
+ * 「記録する」だけはアクセント色の大きな丸いボタンにして、バーから少しはみ出させる。
  */
 function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const colors = useColors();
@@ -47,6 +52,32 @@ function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
         const tab = TABS.find((t) => t.name === route.name);
         if (!tab) return null;
         const focused = state.index === index;
+        const primary = tab.name === PRIMARY_TAB;
+        const onPress = () => {
+          const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigateToTab(route.key);
+        };
+        if (primary) {
+          return (
+            <Pressable
+              key={route.key}
+              style={styles.item}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={tab.title}
+              onPress={onPress}
+            >
+              {({ pressed }) => (
+                <>
+                  <View style={[styles.primaryButton, pressed && styles.primaryButtonPressed]}>
+                    <Ionicons name="add" size={36} color={colors.onAccent} />
+                  </View>
+                  <Text style={[styles.label, styles.primaryLabel]}>{tab.title}</Text>
+                </>
+              )}
+            </Pressable>
+          );
+        }
         return (
           <Pressable
             key={route.key}
@@ -54,10 +85,7 @@ function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
             accessibilityRole="tab"
             accessibilityState={{ selected: focused }}
             accessibilityLabel={tab.title}
-            onPress={() => {
-              const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-              if (!focused && !event.defaultPrevented) navigateToTab(route.key);
-            }}
+            onPress={onPress}
           >
             <Ionicons name={focused ? tab.icon : tab.outline} size={24} color={focused ? colors.accentText : colors.textSecondary} />
             <Text style={[styles.label, focused && styles.labelActive]}>{tab.title}</Text>
@@ -91,5 +119,24 @@ const useStyles = themedStyles((colors) =>
     itemActive: { borderTopColor: colors.accent },
     label: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
     labelActive: { fontFamily: fonts.semibold, color: colors.text },
+    primaryButton: {
+      width: PRIMARY_SIZE,
+      height: PRIMARY_SIZE,
+      borderRadius: PRIMARY_SIZE / 2,
+      // バーの上へ半分近くはみ出させる（ラベルの位置は他のタブとそろえる）
+      marginTop: -PRIMARY_SIZE / 2 - spacing.xs,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.accent,
+      borderWidth: 4,
+      borderColor: colors.background,
+      shadowColor: '#000000',
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 6,
+    },
+    primaryButtonPressed: { backgroundColor: colors.accentPressed },
+    primaryLabel: { fontFamily: fonts.semibold, color: colors.accentText },
   }),
 );
