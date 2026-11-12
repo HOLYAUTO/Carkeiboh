@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_REMINDER_SETTINGS,
   pendingNotifications,
+  renewedDueOn,
+  renewLabel,
   upcomingItems,
   type ReminderInput,
 } from '../../supabase/functions/_shared/domain/reminders.ts';
@@ -163,5 +165,27 @@ describe('ホームの「もうすぐの期限」', () => {
       ['insurance', 'normal', 79],
     ]);
     expect(items[1].estimated).toBe(true);
+  });
+});
+
+describe('renewedDueOn（ワンタッチ更新）', () => {
+  it('今の期限から1年・2年後にする', () => {
+    expect(renewedDueOn('2027-03-15', 12, '2026-11-12')).toBe('2028-03-15');
+    expect(renewedDueOn('2027-03-15', 24, '2026-11-12')).toBe('2029-03-15');
+  });
+  it('期限切れでも、足して今日より後なら今の期限から数える', () => {
+    expect(renewedDueOn('2026-10-01', 12, '2026-11-12')).toBe('2027-10-01');
+  });
+  it('足してもまだ過ぎているときと、未登録のときは今日から数える', () => {
+    expect(renewedDueOn('2024-05-01', 12, '2026-11-12')).toBe('2027-11-12');
+    expect(renewedDueOn(null, 6, '2026-11-12')).toBe('2027-05-12');
+  });
+  it('うるう日は月末に寄せる', () => {
+    expect(renewedDueOn('2028-02-29', 12, '2026-11-12')).toBe('2029-02-28');
+  });
+  it('表示用のラベル', () => {
+    expect(renewLabel(12)).toBe('1年後');
+    expect(renewLabel(24)).toBe('2年後');
+    expect(renewLabel(6)).toBe('6か月後');
   });
 });
