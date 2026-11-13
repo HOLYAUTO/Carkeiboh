@@ -36,11 +36,17 @@ export default function TabsLayout() {
 /** 目に入りやすいよう、大きな丸いボタンにして少し浮かせるタブ */
 const PRIMARY_TAB = 'record';
 const PRIMARY_SIZE = 60;
+/**
+ * 丸いボタンが区切り線より上に出る高さ。
+ * はみ出させると Android では出た部分を押しても反応しないため、バーの高さに含めて上に余白を取り、区切り線をその下に引く。
+ * 値は、ラベルの位置が他のタブとそろう高さ（他のタブの区切り線からラベルまで：重ね -1 + 上端の線 2 + 余白 8 + アイコン 24 + 間 3 = 36 を、ボタンの高さから引いた分）
+ */
+const OVERHANG = PRIMARY_SIZE - 36;
 
 /**
  * タブバー。等幅に並べ、選んでいるタブは上端の赤い線とアイコンの塗り・赤い色で示す。
  * 色だけで伝えないよう、ラベルも必ず出す。
- * 「記録する」だけはアクセント色の大きな丸いボタンにして、バーから少しはみ出させる。
+ * 「記録する」だけはアクセント色の大きな丸いボタンにして、区切り線から少し上に出す。選んでいるときはラベルの下に線を出す。
  */
 function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const colors = useColors();
@@ -48,20 +54,20 @@ function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.xs }]} accessibilityRole="tablist">
+      <View style={styles.divider} pointerEvents="none" />
       {state.routes.map((route, index) => {
         const tab = TABS.find((t) => t.name === route.name);
         if (!tab) return null;
         const focused = state.index === index;
-        const primary = tab.name === PRIMARY_TAB;
         const onPress = () => {
           const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
           if (!focused && !event.defaultPrevented) navigateToTab(route.key);
         };
-        if (primary) {
+        if (tab.name === PRIMARY_TAB) {
           return (
             <Pressable
               key={route.key}
-              style={styles.item}
+              style={[styles.item, styles.primaryItem]}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={tab.title}
@@ -73,6 +79,7 @@ function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
                     <Ionicons name="add" size={36} color={colors.onAccent} />
                   </View>
                   <Text style={[styles.label, styles.primaryLabel]}>{tab.title}</Text>
+                  <View style={[styles.primaryIndicator, focused && styles.primaryIndicatorActive]} />
                 </>
               )}
             </Pressable>
@@ -100,31 +107,33 @@ const useStyles = themedStyles((colors) =>
   StyleSheet.create({
     bar: {
       flexDirection: 'row',
+      alignItems: 'flex-start',
       backgroundColor: colors.background,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
+      paddingTop: OVERHANG,
       paddingHorizontal: spacing.xs,
     },
+    // バーの区切り線。丸いボタンの分だけ下げて引く
+    divider: { position: 'absolute', left: 0, right: 0, top: OVERHANG, height: 1, backgroundColor: colors.border },
     item: {
       flex: 1,
       minHeight: MIN_TAP + 8,
       alignItems: 'center',
-      justifyContent: 'center',
       gap: 3,
       paddingTop: spacing.sm,
       borderTopWidth: 2,
       borderTopColor: 'transparent',
+      // 選んでいるときの上端の赤い線を、区切り線に重ねる
       marginTop: -1,
     },
     itemActive: { borderTopColor: colors.accent },
     label: { fontFamily: fonts.medium, fontSize: 11, color: colors.textSecondary },
     labelActive: { fontFamily: fonts.semibold, color: colors.text },
+    // 丸いボタンのタブは、区切り線より上の余白から始める（押せる範囲もバーの中に収まる）
+    primaryItem: { marginTop: -OVERHANG, paddingTop: 0, borderTopWidth: 0, gap: 0 },
     primaryButton: {
       width: PRIMARY_SIZE,
       height: PRIMARY_SIZE,
       borderRadius: PRIMARY_SIZE / 2,
-      // バーの上へ半分近くはみ出させる（ラベルの位置は他のタブとそろえる）
-      marginTop: -PRIMARY_SIZE / 2 - spacing.xs,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.accent,
@@ -138,5 +147,8 @@ const useStyles = themedStyles((colors) =>
     },
     primaryButtonPressed: { backgroundColor: colors.accentPressed },
     primaryLabel: { fontFamily: fonts.semibold, color: colors.accentText },
+    // 選んでいるときだけ色を付ける（形は常に置いて、選んだときに高さが変わらないようにする）
+    primaryIndicator: { width: 20, height: 3, borderRadius: 2, marginTop: 2 },
+    primaryIndicatorActive: { backgroundColor: colors.accent },
   }),
 );
