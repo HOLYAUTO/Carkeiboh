@@ -9,7 +9,7 @@
 | --- | --- | --- | --- |
 | 1 | プライバシーポリシー・利用規約の【要確認】（住所の番地・代表者・連絡先・制定日など）を埋め、たにぐち自動車の確認を受ける（`docs/legal/`） | たにぐち自動車・HOLY | 未 |
 | 2 | 2つを Web に公開する場所を決めて公開し、URL をアプリ（`eas.json` の production の `EXPO_PUBLIC_PRIVACY_URL`・`EXPO_PUBLIC_TERMS_URL` と EAS の production の環境変数）とストアに入れる | HOLY | 未 |
-| 3 | 定期購入 `ijilog_plus_monthly`（サブスクリプショングループ「複数台プラン」）と消耗型 `ijilog_restore_fee` を作り、審査用のスクリーンショット・説明を入れて、このバージョンに付ける（`docs/setup.md`） | HOLY | 未確認 |
+| 3 | 定期購入 `ijilog_plus_monthly`（サブスクリプショングループ「複数台プラン」）と消耗型 `ijilog_restore_fee` を作る。最初のバージョンには定期購入だけを付ける（手順は `docs/store/app-store-iap.md`） | HOLY | 未 |
 | 4 | スクリーンショット（6.9インチ：1320×2868 など）を、TestFlight で入れた実機から撮る | HOLY | 未 |
 | 5 | カテゴリを決める（仮：ライフスタイル／ファイナンス） | たにぐち自動車 | 未 |
 | 6 | 下の「App のプライバシー」「年齢制限」を入れる | HOLY | 未 |
