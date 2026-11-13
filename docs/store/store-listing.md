@@ -108,7 +108,10 @@ the list of nearby gas stations (OpenStreetMap data).
 Before requesting "Always" permission, the app shows an in-app explanation and asks for consent.
 The default choice is "When I open the app" (when-in-use only), and the user can choose "Off".
 
-Demo account: 【要確認：審査用のアカウント（メールアドレス・パスワード）】
+Sign-in: No demo account is needed. An account is created on first sign-in.
+Please use "Sign in with Apple", or enter any email address you can receive and type the 6-digit code sent to it.
+After signing in, register a vehicle (name and current odometer reading are enough) to see the home screen,
+reminders and costs. The "Multi-vehicle plan" (auto-renewable subscription) is needed only to register a second vehicle.
 ```
 
 ## 5. あわせて入れるところ
@@ -120,4 +123,4 @@ Demo account: 【要確認：審査用のアカウント（メールアドレス
 | App Store | App のプライバシー | 位置情報の分：「おおよその位置情報」を「アプリの機能」で収集・ユーザーに紐づけない（サーバーは区画と利用者を結びつけて保存しない）・トラッキングに使わない。正確な位置情報は収集しない。ほかの項目（メールアドレス・写真など）は、プライバシーポリシーの第2項にあわせて入れる |
 | Google Play | データ セーフティ | `docs/store/play-location-declaration.md` の3章 |
 | Google Play | 位置情報の権限 | `docs/store/play-location-declaration.md` の1章・2章 |
-| 両方 | カテゴリ | 【要確認：「ライフスタイル」か「ファイナンス」か「ナビゲーション」か】 |
+| 両方 | カテゴリ | 仮：プライマリ「ライフスタイル」・セカンダリ「ファイナンス」（App Store）、「自動車」（Google Play の「自動車・乗り物」）。【要確認】 |
