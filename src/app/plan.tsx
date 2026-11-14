@@ -77,6 +77,16 @@ export default function Plan() {
           ))}
         </View>
         <AppText variant="label">{price ? `料金：${price}／月（自動更新）` : products.isPending ? '料金を読み込み中…' : '料金を読み込めませんでした'}</AppText>
+        {!price && !products.isPending && (
+          <>
+            <AppText variant="caption">
+              {products.isError
+                ? `ストアにつながりませんでした（${products.error instanceof Error ? products.error.message : String(products.error)}）。`
+                : 'ストアに複数台プランが見つかりませんでした。時間をおいて、もう一度読み込んでください。'}
+            </AppText>
+            <Button title="もう一度読み込む" variant="plain" loading={products.isFetching} onPress={() => products.refetch()} />
+          </>
+        )}
         {subscribed && s.subscription?.entitledUntil && (
           <AppText variant="caption">
             {s.subscription.autoRenew === false
