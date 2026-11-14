@@ -277,6 +277,30 @@ describe.skipIf(!pool)('RLS', () => {
     }
   });
 
+  it('利用記録は2年を過ぎたら消せる。利用者は消す処理を呼べない', async () => {
+    const insert = (finished: string) =>
+      asAdmin(
+        `insert into public.input_sessions (user_id, kind, mode, method, outcome, opened_at, finished_at)
+         values ($1, 'fuel', 'new', 'manual', 'abandoned', $2::timestamptz, $2::timestamptz) returning id`,
+        [alice, finished],
+      );
+    const old = (await insert(new Date(Date.now() - 3 * 365 * 86_400_000).toISOString())).rows[0].id;
+    const recent = (await insert(new Date().toISOString())).rows[0].id;
+    try {
+      for (const who of [alice, null]) {
+        await asUser(who, async (c) => {
+          await expectFail(c, () => c.query(`select public.purge_old_usage_logs()`), /permission denied/);
+        });
+      }
+      const res = await asAdmin(`select public.purge_old_usage_logs() as r`);
+      expect(res.rows[0].r.input_sessions).toBeGreaterThanOrEqual(1);
+      const left = await asAdmin(`select id from public.input_sessions where id = any($1)`, [[old, recent]]);
+      expect(left.rows.map((r) => r.id)).toEqual([recent]);
+    } finally {
+      await asAdmin(`delete from public.input_sessions where id = any($1)`, [[old, recent]]);
+    }
+  });
+
   it('ガソリンスタンドの場所の控えは、利用者からは読み書きできない（サーバーだけが使う）', async () => {
     await asAdmin(`insert into public.fuel_station_tiles (tile, stations) values ('694_2709', '[]') on conflict do nothing`);
     try {
