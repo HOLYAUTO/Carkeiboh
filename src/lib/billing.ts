@@ -51,13 +51,18 @@ export function useBillingProducts() {
     staleTime: 10 * 60_000,
     queryFn: async (): Promise<BillingProducts> => {
       await ensureConnected();
-      const [subs, items] = await Promise.all([
+      // 事務手数料の商品はまだストアに無いことがある（最初の審査では定期購入だけを出す）。その失敗で定期購入まで読めなくならないよう、別々に待つ
+      const [subs, items] = await Promise.allSettled([
         fetchProducts({ skus: [BILLING_PRODUCTS.plusMonthly], type: 'subs' }),
         fetchProducts({ skus: [BILLING_PRODUCTS.restoreFee], type: 'in-app' }),
       ]);
+      if (subs.status === 'rejected') throw subs.reason;
       return {
-        plus: ((subs ?? []) as ProductSubscription[]).find((p) => p.id === BILLING_PRODUCTS.plusMonthly) ?? null,
-        restoreFee: ((items ?? []) as Product[]).find((p) => p.id === BILLING_PRODUCTS.restoreFee) ?? null,
+        plus: ((subs.value ?? []) as ProductSubscription[]).find((p) => p.id === BILLING_PRODUCTS.plusMonthly) ?? null,
+        restoreFee:
+          items.status === 'fulfilled'
+            ? ((items.value ?? []) as Product[]).find((p) => p.id === BILLING_PRODUCTS.restoreFee) ?? null
+            : null,
       };
     },
   });
