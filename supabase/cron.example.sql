@@ -70,3 +70,10 @@ select cron.schedule(
   );
   $$
 );
+
+-- 利用記録（広告・整備工場の操作・入力の計測）を2年で消す：毎日 日本時間 4:41（= UTC 19:41）。プライバシーポリシー 第11項
+select cron.schedule(
+  'usage-log-retention-daily',
+  '41 19 * * *',
+  $$ select public.purge_old_usage_logs(); $$
+);
