@@ -87,6 +87,11 @@ export async function buyPlus(product: ProductSubscription, userId: string) {
   });
 }
 
+/** 利用者が購入の画面を閉じた（取り消した）ときのエラーか。このときは何も知らせない */
+export function isPurchaseCancelled(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { code?: unknown }).code === ErrorCode.UserCancelled;
+}
+
 /** 復旧の事務手数料を払う。結果は useBillingListener に届く */
 export async function buyRestoreFee(product: Product, userId: string) {
   await ensureConnected();

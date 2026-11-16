@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Alert, Linking, Platform, View } from 'react-native';
 import { AppText, Badge, Button, Card, ErrorView, Loading, Screen, SectionTitle } from '../components/ui';
-import { buyPlus, buyRestoreFee, openSubscriptionSettings, restorePurchases, useBillingProducts } from '../lib/billing';
+import { buyPlus, buyRestoreFee, isPurchaseCancelled, openSubscriptionSettings, restorePurchases, useBillingProducts } from '../lib/billing';
 import { config } from '../lib/config';
 import { restoreSuspendedVehicles, usePlan } from '../lib/data';
 import { useAuth } from '../lib/auth';
@@ -47,6 +47,7 @@ export default function Plan() {
     try {
       await fn();
     } catch (e) {
+      if (isPurchaseCancelled(e)) return;
       Alert.alert('うまくいきませんでした', e instanceof Error ? e.message : '時間をおいてお試しください。');
     } finally {
       setBusy(null);
