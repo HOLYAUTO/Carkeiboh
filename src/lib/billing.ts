@@ -92,6 +92,21 @@ export function isPurchaseCancelled(e: unknown): boolean {
   return typeof e === 'object' && e !== null && (e as { code?: unknown }).code === ErrorCode.UserCancelled;
 }
 
+/** ストアから返ってきたエラーの中身（code・message・debugMessage）を1行にする。取り消しでも原因を確かめられるよう、画面に小さく出す */
+export function purchaseErrorDetail(e: unknown): string {
+  if (typeof e !== 'object' || e === null) return String(e);
+  const { code, message, debugMessage, responseCode } = e as {
+    code?: unknown;
+    message?: unknown;
+    debugMessage?: unknown;
+    responseCode?: unknown;
+  };
+  return [code, responseCode, message, debugMessage !== message ? debugMessage : null]
+    .filter((v) => v != null && v !== '')
+    .map(String)
+    .join(' / ');
+}
+
 /** 復旧の事務手数料を払う。結果は useBillingListener に届く */
 export async function buyRestoreFee(product: Product, userId: string) {
   await ensureConnected();

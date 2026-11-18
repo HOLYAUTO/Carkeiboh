@@ -5,7 +5,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Alert, Linking, Platform, View } from 'react-native';
 import { AppText, Badge, Button, Card, ErrorView, Loading, Screen, SectionTitle } from '../components/ui';
-import { buyPlus, buyRestoreFee, isPurchaseCancelled, openSubscriptionSettings, restorePurchases, useBillingProducts } from '../lib/billing';
+import {
+  buyPlus,
+  buyRestoreFee,
+  isPurchaseCancelled,
+  openSubscriptionSettings,
+  purchaseErrorDetail,
+  restorePurchases,
+  useBillingProducts,
+} from '../lib/billing';
 import { config } from '../lib/config';
 import { restoreSuspendedVehicles, usePlan } from '../lib/data';
 import { useAuth } from '../lib/auth';
@@ -32,6 +40,8 @@ export default function Plan() {
   const plan = usePlan();
   const products = useBillingProducts();
   const [busy, setBusy] = useState<'buy' | 'fee' | 'restore' | 'unsuspend' | null>(null);
+  /** ストアの画面が閉じられたときの、ストアからの返事（お知らせはせず、小さく表示して原因を確かめられるようにする） */
+  const [cancelDetail, setCancelDetail] = useState<string | null>(null);
 
   if (plan.isPending) return <Loading />;
   if (plan.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => plan.refetch()} />;
@@ -44,11 +54,15 @@ export default function Plan() {
 
   const run = async (kind: NonNullable<typeof busy>, fn: () => Promise<void>) => {
     setBusy(kind);
+    setCancelDetail(null);
     try {
       await fn();
     } catch (e) {
-      if (isPurchaseCancelled(e)) return;
-      Alert.alert('うまくいきませんでした', e instanceof Error ? e.message : '時間をおいてお試しください。');
+      if (isPurchaseCancelled(e)) {
+        setCancelDetail(purchaseErrorDetail(e));
+        return;
+      }
+      Alert.alert('うまくいきませんでした', e instanceof Error ? purchaseErrorDetail(e) : '時間をおいてお試しください。');
     } finally {
       setBusy(null);
     }
@@ -107,6 +121,11 @@ export default function Plan() {
       )}
       {subscribed && (
         <Button title="解約・お支払い方法の変更" variant="secondary" onPress={() => run('buy', openSubscriptionSettings)} />
+      )}
+      {cancelDetail && (
+        <AppText variant="caption">
+          {`${Platform.OS === 'ios' ? 'App Store' : 'Google Play'}の手続きが途中で終わりました。もう一度お試しください。（ストアからの返事：${cancelDetail}）`}
+        </AppText>
       )}
       <Button
         title="購入を復元"
