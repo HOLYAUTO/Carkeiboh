@@ -183,7 +183,7 @@
 
 | # | 項目 | 仮の値・実装 | 判断が必要なこと | 場所 |
 | --- | --- | --- | --- | --- |
-| 85 | 利用規約・プライバシーポリシーの公開先 | **決定**：株式会社HOLY のホームページに置く。**プライバシーポリシーは公開済み（2026-11-19）**：https://www.holy-inc.jp/ijilog/privacy（文面は holy-auto/holy-inc の `src/content/ijilog/privacy.ts`、制定日 2026年12月1日）。`eas.json` の production に `EXPO_PUBLIC_PRIVACY_URL` を設定 | 利用規約の公開する URL。決まったら `eas.json` の production と EAS の production の環境変数（`EXPO_PUBLIC_TERMS_URL`・`EXPO_PUBLIC_PRIVACY_URL`）、ストアに入れる | `docs/legal/` |
+| 85 | 利用規約・プライバシーポリシーの公開先 | **決定**：株式会社HOLY のホームページに置く。**プライバシーポリシーは公開済み（2026-11-19）**：https://www.holy-inc.jp/ijilog/privacy（文面は holy-auto/holy-inc の `src/content/ijilog/privacy.ts`、制定日 2026年12月1日）。**利用規約も公開済み（2026-11-19）**：https://www.holy-inc.jp/ijilog/terms（文面は同 `src/content/ijilog/terms.ts`、制定日 2026年12月1日）。`eas.json` の production に `EXPO_PUBLIC_PRIVACY_URL`・`EXPO_PUBLIC_TERMS_URL` を設定 | EAS の production の環境変数とストアに2つの URL を入れる。文面の専門家・たにぐち自動車の確認 | `docs/legal/` |
 | 86 | 利用記録の保存期間 | **決定**：広告の表示・タップ、整備工場の画面の操作、入力の使いやすさの計測は2年。`purge_old_usage_logs()` を毎日 日本時間 4:41 に実行して消す（本番に登録済み）。それ以外はアカウント削除まで | — | マイグレーション `20261114000001_usage_log_retention.sql`、`supabase/cron.example.sql` |
 | 87 | HOLY が購入の情報を使うことの書き方 | **決定**：共同利用（たにぐち自動車・HOLY。管理の責任者は HOLY） | 専門家の確認 | `docs/legal/privacy-policy-draft.md` 第8項 |
 | 88 | 音声認識 | 今の作り（端末の提供元のサーバーで処理されることがある。当社は受け取らない）をそのまま書いた | 端末の中だけで処理する設定にするか（対応していない端末では使えなくなる） | 同 第5項、`src/components/QuickInput.tsx` |
