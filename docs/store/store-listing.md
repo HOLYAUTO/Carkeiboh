@@ -77,7 +77,7 @@ App Store Connect・Play Console の「ストアの掲載情報」に入れる�
 ・外部の広告配信サービスは使っていません。アプリ内の広告には「PR」と広告主の名前を表示します
 ・アカウントは、アプリの設定からいつでも削除できます
 
-利用規約：【要確認：利用規約の URL】
+利用規約：https://www.holy-inc.jp/ijilog/terms
 プライバシーポリシー：https://www.holy-inc.jp/ijilog/privacy
 
 ガソリンスタンドの場所：© OpenStreetMap contributors
