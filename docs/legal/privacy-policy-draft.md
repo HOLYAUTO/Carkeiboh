@@ -1,5 +1,7 @@
 # イジログ プライバシーポリシー（下書き）
 
+> **公開版：** https://www.holy-inc.jp/ijilog/privacy（2026-11-19 公開、制定日 2026年12月1日）。公開している文面は holy-auto/holy-inc の `src/content/ijilog/privacy.ts` にあり、たにぐち自動車の所在地・代表者・電話番号はそちらに入れてある（問い合わせ窓口は電話のみ）。文面を変えるときは両方を直す。
+>
 > **これは下書きです。** `docs/legal/privacy-policy-items.md` とアプリのコードをもとに作りました。公開前に、弁護士などの専門家の確認を受けてください。
 > 【要確認】と書いたところは、まだ決まっていない項目です。推測で埋めず、仮の書き方にしてあります。
 > 位置情報（第6項）の書き方は、アプリの中の説明（`src/app/fuel-detect.tsx` の `BACKGROUND_LOCATION_DISCLOSURE`）・

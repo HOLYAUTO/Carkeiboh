@@ -8,7 +8,7 @@
 | # | やること | 誰が | 状態 |
 | --- | --- | --- | --- |
 | 1 | プライバシーポリシー・利用規約の【要確認】（住所の番地・代表者・連絡先・制定日など）を埋め、たにぐち自動車の確認を受ける（`docs/legal/`） | たにぐち自動車・HOLY | 未 |
-| 2 | 2つを **HOLY のホームページ**に公開し（2026-11-14 決定）、URL をアプリ（`eas.json` の production の `EXPO_PUBLIC_PRIVACY_URL`・`EXPO_PUBLIC_TERMS_URL` と EAS の production の環境変数）とストアに入れる | HOLY | 未 |
+| 2 | 2つを **HOLY のホームページ**に公開し（2026-11-14 決定）、URL をアプリ（`eas.json` の production の `EXPO_PUBLIC_PRIVACY_URL`・`EXPO_PUBLIC_TERMS_URL` と EAS の production の環境変数）とストアに入れる | HOLY | プライバシーポリシーは公開・`eas.json` に設定済み（https://www.holy-inc.jp/ijilog/privacy）。ストアへの入力と利用規約は未 |
 | 3 | 定期購入 `ijilog_plus_monthly`（サブスクリプショングループ「複数台プラン」）と消耗型 `ijilog_restore_fee` を作る。最初のバージョンには定期購入だけを付ける（手順は `docs/store/app-store-iap.md`） | HOLY | 未 |
 | 4 | スクリーンショット（6.9インチ：1320×2868 など）を、TestFlight で入れた実機から撮る | HOLY | 未 |
 | 5 | カテゴリを決める（仮：ライフスタイル／ファイナンス） | たにぐち自動車 | 未 |
