@@ -78,7 +78,7 @@ DRY_RUN=1 ./scripts/publish-update.sh "変更の内容"  # 書き出しと接続
 - **`eas update` を直接実行しない**：Expo のアカウント（cartrust）には Ledra 用の共有の環境変数（`EXPO_PUBLIC_SUPABASE_URL` など）があり、
   直接実行するとイジログではなく Ledra の Supabase に向いた版が配られることがある（2026-10-29 に起き、ログインできなくなった）。
   スクリプトは接続先をイジログに固定して書き出し、中身にほかの Supabase が入っていないことを確かめてから配る
-- ビルド（`eas build`）は `eas.json` の production に接続先を書いて固定している
+- ビルド（`eas build`）は `eas.json` の production と preview に接続先を書いて固定している（EAS の preview・development にもイジログの `EXPO_PUBLIC_SUPABASE_URL`・`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` を設定済み。ただし同じ名前の共有の変数と並ぶので、`eas.json` で固定する）
 
 - ビルドの種類（`eas.json` の `development` / `preview` / `production`）ごとに、同じ名前の channel の更新を受け取る
 - 更新を受け取れるのは `expo-updates` を入れた後のビルドだけ。それより前に配ったビルドには届かない
