@@ -78,7 +78,7 @@ App Store Connect・Play Console の「ストアの掲載情報」に入れる�
 ・アカウントは、アプリの設定からいつでも削除できます
 
 利用規約：【要確認：利用規約の URL】
-プライバシーポリシー：【要確認：プライバシーポリシーの URL】
+プライバシーポリシー：https://www.holy-inc.jp/ijilog/privacy
 
 ガソリンスタンドの場所：© OpenStreetMap contributors
 ```
