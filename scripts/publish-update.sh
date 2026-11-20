@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # 本番（production）に EAS Update を配る。必ずこのスクリプトを使う（eas update を直接実行しない）。
 #
-# 理由：Expo のアカウント（cartrust）には Ledra 用の共有の環境変数（EXPO_PUBLIC_SUPABASE_URL など）があり、
-# eas update --environment production で作ると、イジログの値ではなく Ledra の Supabase に向いた版になることがある
-# （2026-10-29 に実際に起き、iPhone でログインできなくなった）。
+# 理由：以前は Expo のアカウント（cartrust）に Ledra 用の共有の環境変数（EXPO_PUBLIC_SUPABASE_URL など）があり、
+# eas update --environment production で作ると、イジログの値ではなく Ledra の Supabase に向いた版になった
+# （2026-10-29 に実際に起き、iPhone でログインできなくなった）。共有の環境変数は 2026-11-20 に削除したが、
+# 間違った接続先の版を配らないための確認として、引き続きこのスクリプトを使う。
 # このスクリプトは接続先をイジログに固定して書き出し、中身に別の Supabase が入っていないことを確かめてから配る。
 #
 # 使い方: ./scripts/publish-update.sh "変更の内容"

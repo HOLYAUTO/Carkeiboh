@@ -75,10 +75,13 @@ JavaScript・画像だけの修正は、ストアの審査を通さずに配れ�
 DRY_RUN=1 ./scripts/publish-update.sh "変更の内容"  # 書き出しと接続先の確認だけ
 ```
 
-- **`eas update` を直接実行しない**：Expo のアカウント（cartrust）には Ledra 用の共有の環境変数（`EXPO_PUBLIC_SUPABASE_URL` など）があり、
-  直接実行するとイジログではなく Ledra の Supabase に向いた版が配られることがある（2026-10-29 に起き、ログインできなくなった）。
-  スクリプトは接続先をイジログに固定して書き出し、中身にほかの Supabase が入っていないことを確かめてから配る
-- ビルド（`eas build`）は `eas.json` の production と preview に接続先を書いて固定している（EAS の preview・development にもイジログの `EXPO_PUBLIC_SUPABASE_URL`・`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` を設定済み。ただし同じ名前の共有の変数と並ぶので、`eas.json` で固定する）
+- **配るときはスクリプトを使う**：スクリプトは接続先をイジログに固定して書き出し、中身にほかの Supabase が入っていないことを確かめてから配る。
+  以前は Expo のアカウント（cartrust）に Ledra 用の共有の環境変数（`EXPO_PUBLIC_SUPABASE_URL` など）があり、`eas update` を直接実行すると
+  Ledra の Supabase に向いた版が配られることがあった（2026-10-29 に起き、ログインできなくなった）。共有の環境変数は 2026-11-20 に削除したが、
+  間違った接続先の版を配らないための確認として、引き続きスクリプトを使う
+- EAS の環境変数はイジログのプロジェクトのものだけ（production・preview・development のどれにも `EXPO_PUBLIC_SUPABASE_URL`・`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`・`EXPO_PUBLIC_PRIVACY_URL`・`EXPO_PUBLIC_TERMS_URL`）。
+  アカウントの共有の環境変数は置かない（同じアカウントのほかのアプリの値が混ざるため）
+- ビルド（`eas build`）は、念のため `eas.json` の production と preview にも接続先を書いて固定している
 
 - ビルドの種類（`eas.json` の `development` / `preview` / `production`）ごとに、同じ名前の channel の更新を受け取る
 - 更新を受け取れるのは `expo-updates` を入れた後のビルドだけ。それより前に配ったビルドには届かない
