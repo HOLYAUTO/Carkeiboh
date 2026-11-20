@@ -13,13 +13,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { AT_STATION_METERS, stationAt, tilesAround, type FuelStation } from '@shared/fuel-stations.ts';
 import { invokeFunction } from './supabase';
+import { STORAGE_KEYS } from './storage-keys';
 
 export const FUEL_DETECT_MODES = ['off', 'on_open', 'after_visit'] as const;
 export type FuelDetectMode = (typeof FUEL_DETECT_MODES)[number];
 
-const MODE_KEY = 'ijilog.fuelDetectMode';
-const DISMISSED_KEY = 'ijilog.fuelPromptDismissed';
-const TILE_KEY_PREFIX = 'ijilog.fuelStations.';
 const TILE_CACHE_DAYS = 30;
 /** 端末が覚えている位置で十分な鮮度（アプリを開いた時点でスタンドにいるかを見るので短め） */
 const LAST_KNOWN_MAX_AGE_MS = 2 * 60_000;
@@ -33,7 +31,7 @@ export function useFuelDetectMode() {
   return useQuery({
     queryKey: ['fuel-detect-mode'],
     queryFn: async (): Promise<FuelDetectMode | null> => {
-      const v = await AsyncStorage.getItem(MODE_KEY).catch(() => null);
+      const v = await AsyncStorage.getItem(STORAGE_KEYS.fuelDetectMode).catch(() => null);
       return isMode(v) ? v : null;
     },
     staleTime: Infinity,
@@ -43,7 +41,7 @@ export function useFuelDetectMode() {
 export function useSetFuelDetectMode() {
   const qc = useQueryClient();
   return async (mode: FuelDetectMode) => {
-    await AsyncStorage.setItem(MODE_KEY, mode).catch(() => {});
+    await AsyncStorage.setItem(STORAGE_KEYS.fuelDetectMode, mode).catch(() => {});
     qc.setQueryData(['fuel-detect-mode'], mode);
   };
 }
@@ -54,7 +52,7 @@ export async function stationsInTiles(tiles: string[]): Promise<FuelStation[]> {
   const found: FuelStation[] = [];
   const missing: string[] = [];
   for (const tile of tiles) {
-    const raw = await AsyncStorage.getItem(TILE_KEY_PREFIX + tile).catch(() => null);
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.fuelStationsTilePrefix + tile).catch(() => null);
     const cached = raw ? (JSON.parse(raw) as { at: number; stations: FuelStation[] }) : null;
     if (cached && now - cached.at < TILE_CACHE_DAYS * 86_400_000) found.push(...cached.stations);
     else missing.push(tile);
@@ -63,7 +61,7 @@ export async function stationsInTiles(tiles: string[]): Promise<FuelStation[]> {
     const res = await invokeFunction<{ tiles: Record<string, FuelStation[]> }>('fuel-stations', { tiles: missing });
     for (const [tile, stations] of Object.entries(res.tiles)) {
       found.push(...stations);
-      await AsyncStorage.setItem(TILE_KEY_PREFIX + tile, JSON.stringify({ at: now, stations })).catch(() => {});
+      await AsyncStorage.setItem(STORAGE_KEYS.fuelStationsTilePrefix + tile, JSON.stringify({ at: now, stations })).catch(() => {});
     }
   }
   return found;
@@ -83,11 +81,11 @@ export async function findStationHere(): Promise<FuelStation | null> {
 
 /** 「今日はこのスタンドのお知らせを出さない」の印（記録した・閉じた） */
 async function dismissedToday(stationId: string, today: string): Promise<boolean> {
-  return (await AsyncStorage.getItem(DISMISSED_KEY).catch(() => null)) === `${stationId}@${today}`;
+  return (await AsyncStorage.getItem(STORAGE_KEYS.fuelPromptDismissed).catch(() => null)) === `${stationId}@${today}`;
 }
 
 export async function dismissStationPrompt(stationId: string, today: string) {
-  await AsyncStorage.setItem(DISMISSED_KEY, `${stationId}@${today}`).catch(() => {});
+  await AsyncStorage.setItem(STORAGE_KEYS.fuelPromptDismissed, `${stationId}@${today}`).catch(() => {});
 }
 
 /**

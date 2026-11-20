@@ -127,7 +127,12 @@ function RecurringForm({ bundle, target, onDone }: { bundle: VehicleBundle; targ
         text: '消す',
         style: 'destructive',
         onPress: async () => {
-          await deleteRecurringExpense(target!.id).catch((e) => Alert.alert('消せませんでした', e instanceof Error ? e.message : String(e)));
+          try {
+            await deleteRecurringExpense(target!.id);
+          } catch (e) {
+            Alert.alert('消せませんでした', e instanceof Error ? e.message : String(e));
+            return;
+          }
           await invalidate();
           onDone();
         },

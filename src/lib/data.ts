@@ -24,6 +24,7 @@ import {
 } from '@shared/db-mapping.ts';
 import { useAuth } from './auth';
 import { invokeFunction, supabase } from './supabase';
+import { STORAGE_KEYS } from './storage-keys';
 
 export type { VehicleRow, OilChangeRow, DeadlineRow, MeterReplacementRow, OdometerPointRow };
 
@@ -137,20 +138,18 @@ export function useVehicles() {
   });
 }
 
-const SELECTED_VEHICLE_KEY = 'ijilog.selectedVehicleId';
-
 function useSelectedVehicleId() {
   return useQuery({
     queryKey: ['selectedVehicleId'],
     staleTime: Infinity,
-    queryFn: async () => (await AsyncStorage.getItem(SELECTED_VEHICLE_KEY).catch(() => null)) ?? null,
+    queryFn: async () => (await AsyncStorage.getItem(STORAGE_KEYS.selectedVehicleId).catch(() => null)) ?? null,
   });
 }
 
 /** 表示する車両を切り替える。端末に覚えておき、次に開いたときも同じ車両を出す */
 export async function selectVehicle(qc: QueryClient, vehicleId: string) {
   qc.setQueryData(['selectedVehicleId'], vehicleId);
-  await AsyncStorage.setItem(SELECTED_VEHICLE_KEY, vehicleId).catch(() => {});
+  await AsyncStorage.setItem(STORAGE_KEYS.selectedVehicleId, vehicleId).catch(() => {});
 }
 
 /**
@@ -538,7 +537,7 @@ export function bookkeepingExpenses(expenses: ExpenseRow[]): BookkeepingExpense[
 /** 保存した記録の ID を返す（保存直後に「内容を直す」から編集画面を開くため） */
 export async function saveExpense(input: ExpenseInput): Promise<{ id: string }> {
   // スタンドに立ち寄っているあいだに給油を記録したら、出たときの「給油しましたか？」を出さない（src/lib/fuel-geofence.ts）
-  if (input.category === 'fuel' && !input.id) await AsyncStorage.setItem('ijilog.lastFuelSavedAt', String(Date.now())).catch(() => {});
+  if (input.category === 'fuel' && !input.id) await AsyncStorage.setItem(STORAGE_KEYS.lastFuelSavedAt, String(Date.now())).catch(() => {});
   const row = {
     vehicle_id: input.vehicleId,
     category: input.category,
