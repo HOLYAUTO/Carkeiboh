@@ -4,7 +4,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './auth';
-import { unwrap } from './data';
+import { unwrap } from './db';
 import { supabase } from './supabase';
 
 export type StaffOrg = 'holy' | 'taniguchi';

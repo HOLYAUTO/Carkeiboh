@@ -13,6 +13,7 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
+import { toJstDate } from '@domain/dates.ts';
 import { nearestStations, shouldNotifyVisit, tilesAround, type FuelStation } from '@shared/fuel-stations.ts';
 import { stationsInTiles } from './fuel-detect';
 import { STORAGE_KEYS } from './storage-keys';
@@ -38,10 +39,6 @@ function stationRegionId(s: FuelStation): string {
 function parseStationRegionId(id: string | undefined): { id: string; name: string } | null {
   const m = id?.match(/^st\|([^|]+)\|(.*)$/);
   return m ? { id: m[1], name: m[2] } : null;
-}
-
-function jstToday(): string {
-  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 }
 
 /** このアプリの版でアプリを閉じているときの見張りが使えるか（Expo Go・古いストア版では使えない） */
@@ -138,7 +135,7 @@ export async function handleGeofenceEvent(eventType: Location.GeofencingEventTyp
   }
   const entered = Number(await AsyncStorage.getItem(enterKey)) || null;
   await AsyncStorage.removeItem(enterKey);
-  const todayKey = `${station.id}@${jstToday()}`;
+  const todayKey = `${station.id}@${toJstDate(new Date())}`;
   const notify = shouldNotifyVisit({
     enteredAtMs: entered,
     exitedAtMs: nowMs,

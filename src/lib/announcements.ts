@@ -5,7 +5,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { unreadAnnouncements, visibleAnnouncements, type AnnouncementCategory } from '@domain/announcements.ts';
 import { useAuth } from './auth';
-import { unwrap } from './data';
+import { deleteRow, saveRow, unwrap } from './db';
 import { supabase } from './supabase';
 import type { StaffOrg } from './staff';
 
@@ -169,13 +169,7 @@ export async function saveAnnouncement(input: AnnouncementInput): Promise<{ id: 
     expires_at: input.expiresAt,
     send_push: input.sendPush,
   };
-  return unwrap(
-    input.id
-      ? await supabase.from('announcements').update(row).eq('id', input.id).select('id').single()
-      : await supabase.from('announcements').insert(row).select('id').single(),
-  ) as { id: string };
+  return saveRow('announcements', row, input.id);
 }
 
-export async function deleteAnnouncement(id: string) {
-  unwrap(await supabase.from('announcements').delete().eq('id', id));
-}
+export const deleteAnnouncement = (id: string) => deleteRow('announcements', id);
