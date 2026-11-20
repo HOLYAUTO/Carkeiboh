@@ -79,7 +79,7 @@
 
 | # | 項目 | 内容 | 判断が必要なこと | 場所 |
 | --- | --- | --- | --- | --- |
-| 42 | 本番の更新が Ledra の Supabase に向いた | `eas update --environment production` で配った版が、アカウント共有の環境変数（Ledra 用）の `EXPO_PUBLIC_SUPABASE_URL` を使い、iPhone でログインできなくなった（キーはイジログのものだったため、Ledra 側で読み書きはされていない）。接続先を固定して配り直し、以後は `scripts/publish-update.sh` で配る。ビルドは `eas.json` で接続先を固定 | 根本的には、イジログを Ledra と別の Expo アカウントへ移すか、共有の環境変数を Ledra のプロジェクトだけの変数に変える（Ledra 側の設定変更が必要）。preview・development の環境は、いまも Ledra の接続先しかない | `scripts/publish-update.sh`、`eas.json`、`docs/setup.md` 2章 |
+| 42 | 本番の更新が Ledra の Supabase に向いた | `eas update --environment production` で配った版が、アカウント共有の環境変数（Ledra 用）の `EXPO_PUBLIC_SUPABASE_URL` を使い、iPhone でログインできなくなった（キーはイジログのものだったため、Ledra 側で読み書きはされていない）。接続先を固定して配り直し、以後は `scripts/publish-update.sh` で配る。ビルドは `eas.json` で接続先を固定 | **解消（2026-11-20）**：アカウント共有の Ledra 用の環境変数（`EXPO_PUBLIC_SUPABASE_URL`・`EXPO_PUBLIC_SUPABASE_ANON_KEY`・`EXPO_PUBLIC_API_UR`）を削除し、preview・development にもイジログの接続先を設定した。同じアカウントの Ledra のアプリがこれらを使っていた場合は、Ledra のプロジェクト側に設定し直す必要がある | `scripts/publish-update.sh`、`eas.json`、`docs/setup.md` 2章 |
 
 ## 2026-10-31 の要望で変えたもの（戻る・アプリ名・紹介用QRコード）
 
