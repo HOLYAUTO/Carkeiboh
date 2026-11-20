@@ -35,7 +35,8 @@ export function canPayOnAccount(kind: RecordKind): boolean {
   return kind !== 'odometer' && !isWearKind(kind) && canBeOnAccount(kind);
 }
 
-function recordDate(target: EditTarget): string {
+/** 記録の日付 */
+export function recordDate(target: EditTarget): string {
   switch (target.type) {
     case 'oil':
     case 'wear':

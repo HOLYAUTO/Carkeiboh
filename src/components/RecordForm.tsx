@@ -28,7 +28,16 @@ import { QuickInput } from './QuickInput';
 import { PaymentFields, TaxSpecNotice, WearFields } from './record-form/sections';
 import { useInputMetrics } from './record-form/useInputMetrics';
 import { useLeaveGuard } from './record-form/useLeaveGuard';
-import { canPayOnAccount, estimateMeterKm, initialAmountIsManual, initialValues, isDirty, recordTaxes, type FormValues } from './record-form/values';
+import {
+  canPayOnAccount,
+  estimateMeterKm,
+  initialAmountIsManual,
+  initialValues,
+  isDirty,
+  recordDate,
+  recordTaxes,
+  type FormValues,
+} from './record-form/values';
 import { AppText, Button, Card, DateField, Field, Notice, ToggleRow } from './ui';
 
 function litersText(n: number | null): string {
@@ -236,9 +245,9 @@ export function RecordForm({
     }
     if (odoKm == null) return true;
     // 編集中の記録自身とは比べない
-    const initialOdoKm = target?.row.odo_km ?? null;
+    const self = target?.row.odo_km != null ? { date: recordDate(target), odoKm: target.row.odo_km } : null;
     const others = bundle.points
-      .filter((p) => !(initialOdoKm != null && p.date === initial.date && p.odo_km === initialOdoKm))
+      .filter((p) => !(self && p.date === self.date && p.odo_km === self.odoKm))
       .map((p) => ({ date: p.date, odoKm: p.odo_km }));
     const warnings = checkOdoEntry({ date, odoKm }, others, toMeterReplacements(bundle.meterReplacements), unit);
     metrics.warned(warnings.length);
