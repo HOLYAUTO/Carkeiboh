@@ -1,4 +1,4 @@
-import { addDays, addMonths, diffDays, formatMonthDay, type IsoDate } from './dates.ts';
+import { addDays, addMonths, diffDays, formatDaysLeft, formatMonthDay, type IsoDate } from './dates.ts';
 import type { ServiceForecast } from './service.ts';
 import { formatDistance, type DistanceUnit } from './units.ts';
 
@@ -130,12 +130,6 @@ export interface ReminderInput {
   distanceUnit?: DistanceUnit;
 }
 
-function remainingDaysText(days: number): string {
-  if (days > 0) return `あと${days}日`;
-  if (days === 0) return '今日';
-  return `${-days}日超過`;
-}
-
 function serviceNotification(
   kind: 'oil' | 'filter',
   input: ServiceReminderInput,
@@ -170,7 +164,7 @@ function serviceNotification(
     );
   }
   if (forecast.dueDate && forecast.remainingDays != null) {
-    parts.push(`目安日 ${formatMonthDay(forecast.dueDate)}（${remainingDaysText(forecast.remainingDays)}）`);
+    parts.push(`目安日 ${formatMonthDay(forecast.dueDate)}（${formatDaysLeft(forecast.remainingDays)}）`);
   }
   const overdue =
     (forecast.remainingKm != null && forecast.remainingKm <= 0) ||
@@ -201,7 +195,7 @@ function deadlineNotification(
   return {
     kind: deadlineKind(deadline.kind),
     keys: [key],
-    title: days === 0 ? `今日は${label}日です` : `${label}まで${remainingDaysText(days)}`,
+    title: days === 0 ? `今日は${label}日です` : `${label}まで${formatDaysLeft(days)}`,
     body: `${label}日は ${formatMonthDay(deadline.dueOn)} です。`,
   };
 }
@@ -274,5 +268,3 @@ export function upcomingItems(
   for (const d of input.deadlines) push(deadlineKind(d.kind), DEADLINE_LABELS[d.kind], d.dueOn, false);
   return items.sort((a, b) => a.remainingDays - b.remainingDays);
 }
-
-export { remainingDaysText };

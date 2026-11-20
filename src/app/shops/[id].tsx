@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import { AppText, Badge, Button, Card, ErrorView, Loading, Screen } from '../../components/ui';
+import { AppText, Badge, Button, Card, ErrorView, QueryFallback, Screen } from '../../components/ui';
 import { logShopAction, useShops } from '../../lib/data';
 import { distanceKm, formatDistance } from '../../lib/geo';
 import { useCurrentPosition } from '../../lib/location';
@@ -19,8 +19,7 @@ export default function ShopDetail() {
     if (shop) logShopAction(shop.id, 'view');
   }, [shop?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (shops.isPending) return <Loading />;
-  if (shops.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => shops.refetch()} />;
+  if (!shops.isSuccess) return <QueryFallback queries={[shops]} />;
   if (!shop) return <ErrorView message="この整備工場は現在掲載されていません。" />;
 
   return (

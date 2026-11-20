@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { DEADLINE_LABELS, DEADLINE_RENEW_MONTHS, renewedDueOn, renewLabel, type DeadlineKind } from '@domain/reminders.ts';
-import { AppText, Button, Card, DateField, ErrorView, Loading, Screen } from '../../components/ui';
+import { AppText, Button, Card, DateField, QueryFallback, Screen } from '../../components/ui';
 import { registerDeadline, removeDeadline, useInvalidate, useVehicleBundle, type DeadlineRow } from '../../lib/data';
-import { daysLeft, fullDate } from '../../lib/format';
-import { diffDays } from '@domain/dates.ts';
+import { fullDate } from '../../lib/format';
+import { diffDays, formatDaysLeft } from '@domain/dates.ts';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 const KINDS: { kind: DeadlineKind; hint: string }[] = [
   { kind: 'shaken', hint: '車検を受けたら、新しい満了日を登録してください。前の満了日の通知と警告が止まります。' },
@@ -16,8 +17,7 @@ const KINDS: { kind: DeadlineKind; hint: string }[] = [
 
 export default function Deadlines() {
   const { bundle } = useVehicleBundle();
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   return (
     <Screen>
       {KINDS.map(({ kind, hint }) => (
@@ -52,7 +52,7 @@ function DeadlineCard({ kind, hint, vehicleId, today, current }: { kind: Deadlin
       await invalidate();
       return true;
     } catch (e) {
-      Alert.alert('登録できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('登録できませんでした', e);
       return false;
     } finally {
       setBusy(null);
@@ -84,7 +84,7 @@ function DeadlineCard({ kind, hint, vehicleId, today, current }: { kind: Deadlin
       await invalidate();
       setUndo(null);
     } catch (e) {
-      Alert.alert('元に戻せませんでした', e instanceof Error ? e.message : String(e));
+      alertError('元に戻せませんでした', e);
     }
   };
 
@@ -95,7 +95,7 @@ function DeadlineCard({ kind, hint, vehicleId, today, current }: { kind: Deadlin
       await invalidate();
       setUndo(null);
     } catch (e) {
-      Alert.alert('削除できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('削除できませんでした', e);
     }
   };
 
@@ -105,7 +105,7 @@ function DeadlineCard({ kind, hint, vehicleId, today, current }: { kind: Deadlin
       {current ? (
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <AppText>{fullDate(current.due_on)}</AppText>
-          <AppText style={{ color: days! < 0 ? colors.caution : colors.text }}>{days! < 0 ? `期限切れ・${daysLeft(days!)}` : daysLeft(days!)}</AppText>
+          <AppText style={{ color: days! < 0 ? colors.caution : colors.text }}>{days! < 0 ? `期限切れ・${formatDaysLeft(days!)}` : formatDaysLeft(days!)}</AppText>
         </View>
       ) : (
         <AppText variant="caption">未登録</AppText>

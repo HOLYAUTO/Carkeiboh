@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
-import { AppText, Badge, Card, Divider, ErrorView, ListRow, Loading, Screen, SectionTitle } from '../../components/ui';
+import { AppText, Badge, Card, Divider, ListRow, QueryFallback, Screen, SectionTitle } from '../../components/ui';
 import { signOut } from '../../lib/auth';
 import { APP_OWNER, config, DEVELOPER } from '../../lib/config';
 import { useInvalidate, useVehicleBundle } from '../../lib/data';
@@ -12,6 +12,7 @@ import { ACCENTS, BASES } from '../../palettes';
 import { spacing, useTheme } from '../../theme';
 import { toJstDate } from '@domain/dates.ts';
 import { useFuelDetectMode, type FuelDetectMode } from '../../lib/fuel-detect';
+import { confirmDestructive } from '../../lib/alerts';
 
 const FUEL_DETECT_LABELS: Record<FuelDetectMode, string> = {
   on_open: 'スタンドでアプリを開いたときに知らせる',
@@ -27,54 +28,36 @@ export default function Settings() {
   const fuelMode = useFuelDetectMode();
   const [busy, setBusy] = useState(false);
 
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   const { vehicle, ledraLink } = bundle.data;
   const linked = ledraLink?.status === 'active';
 
   const unlink = () =>
-    Alert.alert('整備工場との連携を解除しますか', '解除すると、以後のオイル交換の記録は取り込まれません。取り込み済みの記録は残ります。', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '解除する',
-        style: 'destructive',
-        onPress: async () => {
-          setBusy(true);
-          try {
-            await invokeFunction('ledra-unlink', { linkId: ledraLink!.id });
-            await invalidate();
-          } catch (e) {
-            Alert.alert('解除できませんでした', e instanceof Error ? e.message : String(e));
-          } finally {
-            setBusy(false);
-          }
-        },
+    confirmDestructive({
+      title: '整備工場との連携を解除しますか',
+      message: '解除すると、以後のオイル交換の記録は取り込まれません。取り込み済みの記録は残ります。',
+      confirmText: '解除する',
+      errorTitle: '解除できませんでした',
+      setBusy,
+      action: async () => {
+        await invokeFunction('ledra-unlink', { linkId: ledraLink!.id });
+        await invalidate();
       },
-    ]);
+    });
 
   const deleteAccount = () =>
-    Alert.alert(
-      'アカウントを削除しますか',
-      '登録したクルマ・記録・維持費など、すべてのデータが削除され、元に戻せません。整備工場との連携も解除されます。\n\n複数台プランをお申し込みの場合は、先に App Store／Google Play の設定から解約してください（アカウントを削除しても解約にはなりません）。',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '削除する',
-          style: 'destructive',
-          onPress: async () => {
-            setBusy(true);
-            try {
-              await invokeFunction('delete-account');
-              await signOut();
-            } catch (e) {
-              Alert.alert('削除できませんでした', e instanceof Error ? e.message : String(e));
-            } finally {
-              setBusy(false);
-            }
-          },
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'アカウントを削除しますか',
+      message:
+        '登録したクルマ・記録・維持費など、すべてのデータが削除され、元に戻せません。整備工場との連携も解除されます。\n\n複数台プランをお申し込みの場合は、先に App Store／Google Play の設定から解約してください（アカウントを削除しても解約にはなりません）。',
+      confirmText: '削除する',
+      errorTitle: '削除できませんでした',
+      setBusy,
+      action: async () => {
+        await invokeFunction('delete-account');
+        await signOut();
+      },
+    });
 
   const openLegal = (url: string) => {
     if (url) Linking.openURL(url);

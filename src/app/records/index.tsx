@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
-import { AppText, Badge, Card, Divider, ErrorView, Loading, Num, Screen } from '../../components/ui';
+import { AppText, Badge, Card, Divider, Num, QueryFallback, Screen } from '../../components/ui';
 import { wearTitle } from '../../components/RecordForm';
 import { useVehicleBundle, vehicleUnit } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
@@ -82,8 +82,7 @@ export default function Records() {
     return list.sort((a, b) => (a.date === b.date ? b.sortKey.localeCompare(a.sortKey) : b.date.localeCompare(a.date)));
   }, [bundle.data]);
 
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
 
   return (
     <Screen>

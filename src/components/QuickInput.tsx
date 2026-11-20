@@ -16,6 +16,7 @@ import { recognizeTextOnDevice } from '../../modules/ijilog-ocr';
 import { invokeFunction } from '../lib/supabase';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
 import { AppText, Button, Card } from './ui';
+import { alertError } from '../lib/alerts';
 
 /** 読み取りに送る写真の長辺。レシートの小さな文字が読める程度に残し、通信量を抑える */
 const PHOTO_MAX_SIDE = 1600;
@@ -119,7 +120,7 @@ export function QuickInput({
         onDraft(onDevice, 'photo');
       }
     } catch (e) {
-      Alert.alert('読み取れませんでした', e instanceof Error ? e.message : String(e));
+      alertError('読み取れませんでした', e);
     } finally {
       setReading(false);
     }

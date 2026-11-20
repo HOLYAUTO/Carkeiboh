@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useStaff, type StaffOrg } from '../lib/staff';
-import { Card, EmptyState, ErrorView, Loading, Screen } from './ui';
+import { Card, EmptyState, QueryFallback, Screen } from './ui';
 
 /**
  * 運営メニューの画面の入れ物。スタッフでなければ中身を出さない
@@ -8,8 +8,7 @@ import { Card, EmptyState, ErrorView, Loading, Screen } from './ui';
  */
 export function StaffOnly({ children }: { children: (org: StaffOrg) => ReactNode }) {
   const staff = useStaff();
-  if (staff.isPending) return <Loading />;
-  if (staff.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => staff.refetch()} />;
+  if (!staff.isSuccess) return <QueryFallback queries={[staff]} />;
   if (!staff.data) {
     return (
       <Screen>

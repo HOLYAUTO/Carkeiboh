@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { DEFAULT_FILTER_INTERVAL, OIL_INTERVAL_KM_CHOICES, OIL_INTERVAL_MONTH_CHOICES } from '@domain/service.ts';
 import { distanceUnitLabel, fromKm, toKm, type DistanceUnit } from '@domain/units.ts';
-import { AppText, Button, Card, ErrorView, Field, Loading, Screen, SectionTitle, Segmented } from '../../components/ui';
-import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
+import { AppText, Button, Card, Field, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
+import { updateVehicle, useInvalidate, useVehicleBundle, vehicleUnit, type VehicleRow } from '../../lib/data';
 import { km, parseInteger } from '../../lib/format';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 const UNIT_OPTIONS: { value: DistanceUnit; label: string }[] = [
   { value: 'km', label: 'km' },
@@ -40,8 +41,7 @@ function Chips<T extends number>({ options, value, onChange, unit }: { options: 
 
 export default function VehicleSettings() {
   const { bundle } = useVehicleBundle();
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   return <VehicleForm vehicle={bundle.data.vehicle} />;
 }
 
@@ -50,7 +50,7 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
   const [name, setName] = useState(vehicle.name);
   const [plate, setPlate] = useState(vehicle.plate_number ?? '');
   // 距離の入力欄はメーターの単位で見せ、保存するときに km に直す
-  const [unit, setUnit] = useState<DistanceUnit>(vehicle.distance_unit === 'mile' ? 'mile' : 'km');
+  const [unit, setUnit] = useState<DistanceUnit>(vehicleUnit(vehicle));
   const shown = (value: number | null) => (value != null ? String(fromKm(value, unit)) : '');
   const [annual, setAnnual] = useState(shown(vehicle.annual_km_estimate));
   const [oilKm, setOilKm] = useState(shown(vehicle.oil_interval_km));
@@ -102,7 +102,7 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
       await invalidate();
       router.back();
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }

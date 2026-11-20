@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Fragment, useState } from 'react';
 import { Alert } from 'react-native';
-import { AppText, Button, Card, Divider, ErrorView, ListRow, Loading, Notice, Screen, SectionTitle } from '../components/ui';
+import { AppText, Button, Card, Divider, ListRow, Notice, QueryFallback, Screen, SectionTitle } from '../components/ui';
 import { keepVehicle, selectVehicle, useVehicles } from '../lib/data';
 import { useColors } from '../theme';
 
@@ -19,8 +19,7 @@ export default function KeepVehicle() {
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (vehicles.isPending) return <Loading />;
-  if (vehicles.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => vehicles.refetch()} />;
+  if (!vehicles.isSuccess) return <QueryFallback queries={[vehicles]} />;
   const list = vehicles.data;
   const chosen = list.find((v) => v.id === selected) ?? null;
 

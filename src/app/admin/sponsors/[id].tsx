@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { SPONSOR_IMAGE_ASPECT, SponsorCard } from '../../../components/SponsorSlot';
 import { StaffOnly } from '../../../components/StaffOnly';
-import { AppText, Button, Card, DateField, Divider, ErrorView, Field, Loading, Screen, Segmented, SectionTitle, ToggleRow } from '../../../components/ui';
+import { AppText, Button, Card, DateField, Divider, ErrorView, Field, QueryFallback, Screen, SectionTitle, Segmented, ToggleRow } from '../../../components/ui';
 import { todayJst } from '../../../lib/data';
 import { parseInteger } from '../../../lib/format';
 import { SPONSOR_PLACEMENT_LABELS, type SponsorPlacement } from '../../../lib/sponsor-pick';
@@ -21,6 +21,7 @@ import {
 } from '../../../lib/sponsors';
 import { STAFF_ORG_LABELS, type StaffOrg } from '../../../lib/staff';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../../../theme';
+import { alertError, confirmDestructive } from '../../../lib/alerts';
 
 /** 画像の横幅。画面いっぱいに出してもきれいに見え、通信量を抑えられる大きさ */
 const IMAGE_WIDTH = 1200;
@@ -35,8 +36,7 @@ export default function EditSponsor() {
 function Loader({ id, org }: { id: string; org: StaffOrg }) {
   const ads = useManagedSponsorAds();
   if (id === 'new') return <Form org={org} current={null} />;
-  if (ads.isPending) return <Loading />;
-  if (ads.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => ads.refetch()} />;
+  if (!ads.isSuccess) return <QueryFallback queries={[ads]} />;
   const current = ads.data.find((a) => a.id === id);
   if (!current) return <ErrorView message="この広告は削除されています。" />;
   if (org !== 'holy' && current.org !== org) return <ErrorView message="他社が管理する広告は編集できません。" />;
@@ -90,7 +90,7 @@ function Form({ org, current }: { org: StaffOrg; current: SponsorAdRow | null })
       setNewImage(await prepareImage(result.assets[0]));
       setRemoveImage(false);
     } catch (e) {
-      Alert.alert('画像を読み込めませんでした', e instanceof Error ? e.message : String(e));
+      alertError('画像を読み込めませんでした', e);
     } finally {
       setBusy(false);
     }
@@ -143,32 +143,25 @@ function Form({ org, current }: { org: StaffOrg; current: SponsorAdRow | null })
       router.back();
     } catch (e) {
       if (uploaded) await removeSponsorImage(uploaded);
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }
   };
 
   const remove = () =>
-    Alert.alert('この広告を削除しますか', '表示・タップの記録も消えます。掲載を止めるだけなら「公開する」をオフにしてください。', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '削除する',
-        style: 'destructive',
-        onPress: async () => {
-          setBusy(true);
-          try {
-            await deleteSponsorAd(current!);
-            await refresh();
-            router.back();
-          } catch (e) {
-            Alert.alert('削除できませんでした', e instanceof Error ? e.message : String(e));
-          } finally {
-            setBusy(false);
-          }
-        },
+    confirmDestructive({
+      title: 'この広告を削除しますか',
+      message: '表示・タップの記録も消えます。掲載を止めるだけなら「公開する」をオフにしてください。',
+      confirmText: '削除する',
+      errorTitle: '削除できませんでした',
+      setBusy,
+      action: async () => {
+        await deleteSponsorAd(current!);
+        await refresh();
+        router.back();
       },
-    ]);
+    });
 
   return (
     <Screen>

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Fragment } from 'react';
-import { AppText, Badge, Card, Divider, ErrorView, ListRow, Loading, Screen, SectionTitle } from '../../components/ui';
+import { AppText, Badge, Card, Divider, ListRow, QueryFallback, Screen, SectionTitle } from '../../components/ui';
 import { selectVehicle, usePlan, useVehicle, useVehicles } from '../../lib/data';
 import { useColors } from '../../theme';
 
@@ -14,10 +14,7 @@ export default function Vehicles() {
   const current = useVehicle();
   const plan = usePlan();
 
-  if (vehicles.isPending || plan.isPending) return <Loading />;
-  if (vehicles.isError || plan.isError) {
-    return <ErrorView message="読み込めませんでした。" onRetry={() => Promise.all([vehicles.refetch(), plan.refetch()])} />;
-  }
+  if (!vehicles.isSuccess || !plan.isSuccess) return <QueryFallback queries={[vehicles, plan]} />;
   const list = vehicles.data;
   const { plan: planName, vehicleLimit } = plan.data;
   const canAdd = list.length < vehicleLimit;

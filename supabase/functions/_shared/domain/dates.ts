@@ -73,6 +73,13 @@ export function monthsInclusive(from: IsoDate, to: IsoDate): number {
   return (ty - fy) * 12 + (tm - fm) + 1;
 }
 
+/** 表示用：残り日数 → 'あと3日'／'今日'／'2日超過'（色だけで状態を伝えないよう、必ず文字でも書く） */
+export function formatDaysLeft(days: number): string {
+  if (days > 0) return `あと${days}日`;
+  if (days === 0) return '今日';
+  return `${-days}日超過`;
+}
+
 /** 表示用：'2026-11-04' → '11/04' */
 export function formatMonthDay(date: IsoDate): string {
   return `${date.slice(5, 7)}/${date.slice(8, 10)}`;

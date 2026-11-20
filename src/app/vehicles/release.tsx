@@ -7,6 +7,7 @@ import { AppText, Button, Card, DateField, Divider, ErrorView, Loading, Screen, 
 import { releaseVehicle, selectVehicle, todayJst, useVehicle, useVehicles, type ReleaseReason } from '../../lib/data';
 import { APP_NAME } from '../../lib/config';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 const REASONS: { value: ReleaseReason; title: string; description: string; icon: 'swap-horizontal' | 'close-circle-outline' }[] = [
   {
@@ -51,7 +52,7 @@ function Form({ vehicleId, vehicleName, nextVehicleId }: { vehicleId: string; ve
       await qc.invalidateQueries();
       router.dismissAll();
     } catch (e) {
-      Alert.alert('手放せませんでした', e instanceof Error ? e.message : String(e));
+      alertError('手放せませんでした', e);
     } finally {
       setBusy(false);
     }

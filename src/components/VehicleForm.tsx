@@ -7,6 +7,7 @@ import { createVehicle } from '../lib/data';
 import { km, parseInteger } from '../lib/format';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
 import { AppText, Button, Card, DateField, Field, Segmented } from './ui';
+import { errorMessage } from '../lib/alerts';
 
 /** 年間走行距離の選択肢（メーターの単位の値）。mile は km の選択肢に近いきりのよい値 */
 const ANNUAL_PRESETS: Record<DistanceUnit, { values: number[]; initial: number }> = {
@@ -60,7 +61,7 @@ export function VehicleForm({ submitTitle, onCreated }: { submitTitle: string; o
       });
       await onCreated(vehicle.id);
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = errorMessage(e);
       if (message.includes('vehicle_limit_reached')) {
         Alert.alert('登録できる台数の上限です', '2台目からは複数台プランで登録できます。', [
           { text: '閉じる', style: 'cancel' },

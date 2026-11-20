@@ -109,6 +109,18 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
+type QueryState = { isPending: boolean; isError: boolean; refetch: () => unknown };
+
+/**
+ * 読み込みが済んでいないときの表示（読み込み中、または「再読み込み」付きのエラー）。
+ * 画面では `if (!q.isSuccess) return <QueryFallback queries={[q]} />;` と書く。以降は q.data をそのまま使える
+ */
+export function QueryFallback({ queries }: { queries: QueryState[] }) {
+  if (queries.some((q) => q.isPending)) return <Loading />;
+  const failed = queries.filter((q) => q.isError);
+  return <ErrorView message="読み込めませんでした。" onRetry={() => failed.forEach((q) => void q.refetch())} />;
+}
+
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const styles = useStyles();
   return <View style={[styles.card, style]}>{children}</View>;
@@ -198,21 +210,6 @@ export function Badge({ label, tone = 'accent' }: { label: string; tone?: 'accen
   return (
     <View style={{ backgroundColor: bg, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3, alignSelf: 'flex-start' }}>
       <Text style={{ color: fg, fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16 }}>{label}</Text>
-    </View>
-  );
-}
-
-export function ProgressBar({ value, tone = 'accent', label }: { value: number; tone?: 'accent' | 'caution'; label: string }) {
-  const colors = useColors();
-  const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
-  return (
-    <View
-      accessibilityRole="progressbar"
-      accessibilityLabel={label}
-      accessibilityValue={{ min: 0, max: 100, now: pct }}
-      style={{ height: 8, borderRadius: 4, backgroundColor: colors.track, overflow: 'hidden' }}
-    >
-      <View style={{ width: `${pct}%`, height: '100%', backgroundColor: tone === 'caution' ? colors.caution : colors.accent }} />
     </View>
   );
 }

@@ -14,7 +14,7 @@ import {
 } from '@domain/fuel.ts';
 import { checkOdoEntry } from '@domain/odo.ts';
 import { dailyPace, estimatedMeterReading } from '@domain/pace.ts';
-import { distanceUnitLabel, fromKm, toKm, type DistanceUnit } from '@domain/units.ts';
+import { distanceUnitLabel, fromKm, toKm } from '@domain/units.ts';
 import {
   fuelFills,
   logInputSession,
@@ -24,6 +24,7 @@ import {
   saveWearCheck,
   useInvalidate,
   useVehicleCertificate,
+  vehicleUnit,
   type ExpenseRow,
   type OdometerReadingRow,
   type OilChangeRow,
@@ -41,6 +42,7 @@ import { ComputedAmount } from './ComputedAmount';
 import { FuelEconomyPreview, FuelFields } from './FuelFields';
 import { QuickInput } from './QuickInput';
 import { AppText, Button, Card, DateField, Field, Notice, Segmented, ToggleRow } from './ui';
+import { alertError } from '../lib/alerts';
 
 const PAYMENT_OPTIONS: { value: 'now' | 'on_account'; label: string }[] = [
   { value: 'now', label: 'その場で払った' },
@@ -189,7 +191,7 @@ export function RecordForm({
           ? target.row.read_on
           : bundle.today;
   // 走行距離は DB では km。入力欄は車両の単位（km / mile）で見せる
-  const unit: DistanceUnit = bundle.vehicle.distance_unit === 'mile' ? 'mile' : 'km';
+  const unit = vehicleUnit(bundle.vehicle);
   const initialOdo = target ? target.row.odo_km : null;
   const initialOdoText = initialOdo != null ? String(fromKm(initialOdo, unit)) : '';
   const expenseRow = target?.type === 'oil' ? target.expense : target?.type === 'expense' ? target.row : null;
@@ -578,7 +580,7 @@ export function RecordForm({
       allowLeave.current = true;
       onSaved(recordRef);
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatDaysLeft } from '@domain/dates.ts';
 import { summarizeCosts } from '@domain/costs.ts';
 import { SERVICE_REMAINING_KM_ALERT, type UpcomingItem } from '@domain/reminders.ts';
 import type { ServiceForecast } from '@domain/service.ts';
@@ -11,12 +12,12 @@ import {
   Badge,
   Card,
   Divider,
-  ErrorView,
   IconButton,
   ListRow,
   NextActionCard,
   Num,
   ProgressRing,
+  QueryFallback,
   Screen,
   ScreenHeader,
   SectionTitle,
@@ -29,7 +30,7 @@ import { HomeNotices } from '../../components/HomeNotices';
 import { SponsorSlot } from '../../components/SponsorSlot';
 import { VehiclePhoto } from '../../components/VehiclePhoto';
 import { useVehicleBundle, vehicleUnit, type VehicleBundle } from '../../lib/data';
-import { daysLeft, fullDate, km, longDate, monthDay, weekday, yen } from '../../lib/format';
+import { fullDate, km, longDate, monthDay, weekday, yen } from '../../lib/format';
 import { cardShadow, fonts, radius, spacing, themedStyles, useColors } from '../../theme';
 
 const settingsButton = <IconButton icon="settings-outline" label="設定" onPress={() => router.push('/settings')} />;
@@ -45,7 +46,7 @@ export default function Home() {
       </Screen>
     );
   }
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   return <HomeContent data={bundle.data} refreshing={bundle.isRefetching} onRefresh={() => bundle.refetch()} />;
 }
 
@@ -85,7 +86,7 @@ function NextAction({ data }: { data: VehicleBundle }) {
     const parts = [
       oil.remainingKm != null && (oil.remainingKm > 0 ? `推定であと${km(oil.remainingKm, unit)}` : `推定で${km(-oil.remainingKm, unit)}超過`),
       oil.remainingDays != null &&
-        (oil.remainingDays >= 0 ? `目安日まで${daysLeft(oil.remainingDays)}` : `目安日を${-oil.remainingDays}日過ぎています`),
+        (oil.remainingDays >= 0 ? `目安日まで${formatDaysLeft(oil.remainingDays)}` : `目安日を${-oil.remainingDays}日過ぎています`),
     ].filter(Boolean);
     return (
       <NextActionCard
@@ -206,7 +207,7 @@ function OilCard({ forecast, unit }: { forecast: ServiceForecast; unit: Distance
             </AppText>
           </>
         ) : (
-          <Num size={32}>{forecast.remainingDays != null ? daysLeft(forecast.remainingDays) : '—'}</Num>
+          <Num size={32}>{forecast.remainingDays != null ? formatDaysLeft(forecast.remainingDays) : '—'}</Num>
         )}
       </Tachometer>
 
@@ -216,7 +217,7 @@ function OilCard({ forecast, unit }: { forecast: ServiceForecast; unit: Distance
         <Stat
           label="目安日"
           value={forecast.dueDate ? monthDay(forecast.dueDate) : '—'}
-          sub={forecast.remainingDays != null ? daysLeft(forecast.remainingDays) : undefined}
+          sub={forecast.remainingDays != null ? formatDaysLeft(forecast.remainingDays) : undefined}
           caution={near}
         />
       </View>
@@ -268,7 +269,7 @@ function FilterRow({ forecast, unit }: { forecast: ServiceForecast; unit: Distan
       {forecast.dueDate && forecast.remainingDays != null && (
         <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
           <AppText variant="caption">目安日 {monthDay(forecast.dueDate)}</AppText>
-          <AppText variant="caption" style={near ? { color: colors.caution } : undefined}>{daysLeft(forecast.remainingDays)}</AppText>
+          <AppText variant="caption" style={near ? { color: colors.caution } : undefined}>{formatDaysLeft(forecast.remainingDays)}</AppText>
         </View>
       )}
     </View>
@@ -299,7 +300,7 @@ function UpcomingRow({ item }: { item: UpcomingItem }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${item.label} ${fullDate(item.dueOn)} ${daysLeft(item.remainingDays)}`}
+      accessibilityLabel={`${item.label} ${fullDate(item.dueOn)} ${formatDaysLeft(item.remainingDays)}`}
       onPress={onPress}
       style={({ pressed }) => [styles.row, caution && { backgroundColor: colors.cautionBackground }, pressed && { opacity: 0.7 }]}
     >
@@ -311,7 +312,7 @@ function UpcomingRow({ item }: { item: UpcomingItem }) {
       <View style={{ flex: 1, gap: 2 }}>
         <AppText numberOfLines={2} style={{ fontFamily: fonts.semibold }}>{item.label}</AppText>
         <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: caution ? colors.caution : colors.textSecondary }}>
-          {daysLeft(item.remainingDays)}
+          {formatDaysLeft(item.remainingDays)}
           {item.estimated ? '（推定）' : ''}
         </Text>
       </View>

@@ -3,7 +3,7 @@ import { Pressable, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ANNOUNCEMENT_LABELS } from '@domain/announcements.ts';
 import { StaffOnly } from '../../../components/StaffOnly';
-import { AppText, Badge, Button, Card, Divider, EmptyState, ErrorView, Loading, Screen } from '../../../components/ui';
+import { AppText, Badge, Button, Card, Divider, EmptyState, QueryFallback, Screen } from '../../../components/ui';
 import { ANNOUNCEMENT_STATUS_LABELS, announcementStatus, useManagedAnnouncements } from '../../../lib/announcements';
 import { jstDateTime } from '../../../lib/format';
 import { STAFF_ORG_LABELS, type StaffOrg } from '../../../lib/staff';
@@ -17,8 +17,7 @@ export default function ManageAnnouncements() {
 function List({ org }: { org: StaffOrg }) {
   const colors = useColors();
   const list = useManagedAnnouncements();
-  if (list.isPending) return <Loading />;
-  if (list.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => list.refetch()} />;
+  if (!list.isSuccess) return <QueryFallback queries={[list]} />;
   const items = list.data;
 
   return (

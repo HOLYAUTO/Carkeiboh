@@ -4,12 +4,13 @@ import { Alert, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FUEL_TYPE_LABELS, type FuelPriceBasis } from '@domain/fuel.ts';
 import { matchesExistingFill, rowTotalYen, type Statement, type StatementRow } from '@shared/fuel-statement.ts';
-import { AppText, Badge, Button, Card, Divider, ErrorView, Loading, Notice, Num, Screen } from '../../components/ui';
+import { AppText, Badge, Button, Card, Divider, Notice, Num, QueryFallback, Screen } from '../../components/ui';
 import { fuelFills, PAID_NOW, saveExpense, useInvalidate, useVehicleBundle, type VehicleBundle } from '../../lib/data';
 import { fullDate, yen } from '../../lib/format';
 import { pickPhotos } from '../../lib/photo';
 import { invokeFunction } from '../../lib/supabase';
 import { spacing, useColors } from '../../theme';
+import { alertError, errorMessage } from '../../lib/alerts';
 
 /** 明細の写真は字が細かいので大きめにして送る */
 const PHOTO_MAX_SIDE = 2000;
@@ -28,8 +29,7 @@ interface Line extends StatementRow {
  */
 export default function FuelStatementScreen() {
   const { bundle } = useVehicleBundle();
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   return <FuelStatement bundle={bundle.data} />;
 }
 
@@ -72,7 +72,7 @@ function FuelStatement({ bundle }: { bundle: VehicleBundle }) {
           : '給油の行を読み取れませんでした。明るい場所で、明細の全体が写るように撮り直してください。',
       );
     } catch (e) {
-      Alert.alert('読み取れませんでした', e instanceof Error ? e.message : String(e));
+      alertError('読み取れませんでした', e);
     } finally {
       setReading(false);
     }
@@ -118,7 +118,7 @@ function FuelStatement({ bundle }: { bundle: VehicleBundle }) {
       Alert.alert('登録しました', `${saved}件の給油を登録しました。`, [{ text: 'OK', onPress: () => router.back() }]);
     } catch (e) {
       await invalidate();
-      Alert.alert('途中で保存できませんでした', `${saved}件は登録しました。${e instanceof Error ? e.message : String(e)}`);
+      Alert.alert('途中で保存できませんでした', `${saved}件は登録しました。${errorMessage(e)}`);
       setLines((prev) => prev.filter((l) => !selected.slice(0, saved).some((s) => s.key === l.key)));
     } finally {
       setBusy(false);

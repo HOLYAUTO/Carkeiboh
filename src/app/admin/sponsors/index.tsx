@@ -4,7 +4,7 @@ import { Pressable, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { addDays, addMonths, startOfMonth } from '@domain/dates.ts';
 import { StaffOnly } from '../../../components/StaffOnly';
-import { AppText, Badge, Button, Card, Divider, EmptyState, ErrorView, Loading, Num, Screen, Segmented } from '../../../components/ui';
+import { AppText, Badge, Button, Card, Divider, EmptyState, Num, QueryFallback, Screen, Segmented } from '../../../components/ui';
 import { todayJst } from '../../../lib/data';
 import { fullDate, number } from '../../../lib/format';
 import { isSponsorLive, SPONSOR_PLACEMENT_LABELS } from '../../../lib/sponsor-pick';
@@ -36,8 +36,7 @@ function List({ org }: { org: StaffOrg }) {
   const ads = useManagedSponsorAds();
   const stats = useSponsorStats(from, to);
 
-  if (ads.isPending) return <Loading />;
-  if (ads.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => ads.refetch()} />;
+  if (!ads.isSuccess) return <QueryFallback queries={[ads]} />;
 
   return (
     <Screen

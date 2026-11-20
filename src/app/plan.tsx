@@ -4,7 +4,7 @@ import { toJstDate } from '@domain/dates.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Alert, Linking, Platform, View } from 'react-native';
-import { AppText, Badge, Button, Card, ErrorView, Loading, Screen, SectionTitle } from '../components/ui';
+import { AppText, Badge, Button, Card, QueryFallback, Screen, SectionTitle } from '../components/ui';
 import {
   buyPlus,
   buyRestoreFee,
@@ -19,6 +19,7 @@ import { restoreSuspendedVehicles, usePlan } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { fullDate } from '../lib/format';
 import { spacing, useColors } from '../theme';
+import { errorMessage } from '../lib/alerts';
 
 const BENEFITS = [
   '家族や仕事のクルマをまとめて登録（最大5台）',
@@ -43,8 +44,7 @@ export default function Plan() {
   /** ストアの画面が閉じられたときの、ストアからの返事（お知らせはせず、小さく表示して原因を確かめられるようにする） */
   const [cancelDetail, setCancelDetail] = useState<string | null>(null);
 
-  if (plan.isPending) return <Loading />;
-  if (plan.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => plan.refetch()} />;
+  if (!plan.isSuccess) return <QueryFallback queries={[plan]} />;
   const s = plan.data;
   const userId = session?.user.id;
   const plus = products.data?.plus ?? null;
@@ -96,7 +96,7 @@ export default function Plan() {
           <>
             <AppText variant="caption">
               {products.isError
-                ? `ストアにつながりませんでした（${products.error instanceof Error ? products.error.message : String(products.error)}）。`
+                ? `ストアにつながりませんでした（${errorMessage(products.error)}）。`
                 : 'ストアに複数台プランが見つかりませんでした。時間をおいて、もう一度読み込んでください。'}
             </AppText>
             <Button title="もう一度読み込む" variant="plain" loading={products.isFetching} onPress={() => products.refetch()} />

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
-import { AppText, Button, Card, Divider, ErrorView, Field, ListRow, Loading, Screen, SectionTitle, Segmented } from '../../components/ui';
+import { AppText, Button, Card, Divider, Field, ListRow, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
 import {
   deleteRecurringExpense,
   saveRecurringExpense,
@@ -15,6 +15,7 @@ import {
 import { fullDate, parseInteger, yen } from '../../lib/format';
 import { amountFor, nextDue, RECURRING_CATEGORIES, recurringLabel, scheduleLabel } from '../../lib/recurring';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
+import { alertError, confirmDestructive } from '../../lib/alerts';
 
 const FREQUENCY_OPTIONS: { value: 'monthly' | 'yearly'; label: string }[] = [
   { value: 'monthly', label: '毎月' },
@@ -28,8 +29,7 @@ const FREQUENCY_OPTIONS: { value: 'monthly' | 'yearly'; label: string }[] = [
 export default function RecurringScreen() {
   const { bundle } = useVehicleBundle();
   const recurring = useRecurringExpenses(bundle.data?.vehicle);
-  if (bundle.isPending || recurring.isPending) return <Loading />;
-  if (bundle.isError || recurring.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => recurring.refetch()} />;
+  if (!bundle.isSuccess || !recurring.isSuccess) return <QueryFallback queries={[bundle, recurring]} />;
   return <RecurringList bundle={bundle.data} rules={recurring.data.rules} />;
 }
 
@@ -114,30 +114,25 @@ function RecurringForm({ bundle, target, onDone }: { bundle: VehicleBundle; targ
       await invalidate();
       onDone();
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }
   };
 
   const remove = () =>
-    Alert.alert('この決まった支出を消しますか', 'これまでに記録した支出は消えません。', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '消す',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteRecurringExpense(target!.id);
-          } catch (e) {
-            Alert.alert('消せませんでした', e instanceof Error ? e.message : String(e));
-            return;
-          }
-          await invalidate();
-          onDone();
-        },
+    confirmDestructive({
+      title: 'この決まった支出を消しますか',
+      message: 'これまでに記録した支出は消えません。',
+      confirmText: '消す',
+      errorTitle: '消せませんでした',
+      setBusy,
+      action: async () => {
+        await deleteRecurringExpense(target!.id);
+        await invalidate();
+        onDone();
       },
-    ]);
+    });
 
   return (
     <>

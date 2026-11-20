@@ -3,14 +3,31 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Linking, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatDaysLeft } from '@domain/dates.ts';
 import { ANNOUNCEMENT_LABELS } from '@domain/announcements.ts';
 import { REMINDER_LABELS, type ReminderKind } from '@domain/reminders.ts';
-import { AppText, Badge, Button, Card, Divider, ErrorView, IconButton, ListRow, Notice, Screen, ScreenHeader, SectionTitle, Skeleton, ToggleRow } from '../../components/ui';
+import {
+  AppText,
+  Badge,
+  Button,
+  Card,
+  Divider,
+  IconButton,
+  ListRow,
+  Notice,
+  QueryFallback,
+  Screen,
+  ScreenHeader,
+  SectionTitle,
+  Skeleton,
+  ToggleRow,
+} from '../../components/ui';
 import { setShopNewsOptIn, useAnnouncements } from '../../lib/announcements';
 import { updateVehicle, useInvalidate, useVehicleBundle, vehicleUnit, type VehicleRow } from '../../lib/data';
-import { daysLeft, fullDate, jstDateTime, km } from '../../lib/format';
+import { fullDate, jstDate, km } from '../../lib/format';
 import { getPushStatus, registerForPush, type PushStatus } from '../../lib/push';
 import { fonts, MIN_TAP, spacing, useColors } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 const ITEMS: { kind: ReminderKind; column: keyof VehicleRow; description: string }[] = [
   { kind: 'oil', column: 'notify_oil', description: '推定の残りが500km、目安日の1か月前・2週間前・当日（距離と期間の早い方）' },
@@ -49,7 +66,7 @@ export default function Notifications() {
       </Screen>
     );
   }
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   const { vehicle, state, notifications } = bundle.data;
   const alerts = state.upcoming.filter((u) => u.level !== 'normal');
   // 1件の通知が複数の段階をまとめて記録されることがあるので、同じ内容は1つにする
@@ -63,7 +80,7 @@ export default function Notifications() {
       await updateVehicle(vehicle.id, { [column]: value });
       await invalidate();
     } catch (e) {
-      Alert.alert('変更できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('変更できませんでした', e);
     } finally {
       // 続けて押されていたら、あとの切り替えの表示を残す
       setPending(({ [column]: current, ...rest }) => (current === value ? rest : { ...rest, [column]: current }));
@@ -77,7 +94,7 @@ export default function Notifications() {
       if (value) setPush(await registerForPush(true));
       await qc.invalidateQueries({ queryKey: ['announcementPrefs'] });
     } catch (e) {
-      Alert.alert('変更できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('変更できませんでした', e);
     } finally {
       setPendingShopNews(null);
     }
@@ -111,7 +128,7 @@ export default function Notifications() {
         </Card>
       ) : (
         alerts.map((a) => (
-          <Notice key={`${a.kind}-${a.dueOn}`} title={`${a.label}：${daysLeft(a.remainingDays)}`}>
+          <Notice key={`${a.kind}-${a.dueOn}`} title={`${a.label}：${formatDaysLeft(a.remainingDays)}`}>
             {fullDate(a.dueOn)}
             {a.estimated ? '（推定）' : ''}
           </Notice>
@@ -153,7 +170,7 @@ export default function Notifications() {
                   <View style={{ flex: 1, gap: 2 }}>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs }}>
                       {isNew && <Badge label="NEW" />}
-                      <AppText variant="caption">{ANNOUNCEMENT_LABELS[a.category]}・{jstDateTime(a.published_at).slice(0, 10)}</AppText>
+                      <AppText variant="caption">{ANNOUNCEMENT_LABELS[a.category]}・{jstDate(a.published_at)}</AppText>
                     </View>
                     <AppText numberOfLines={2} style={{ fontFamily: fonts.semibold }}>{a.title}</AppText>
                   </View>

@@ -1,9 +1,9 @@
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { RecordForm, wearTitle, type EditTarget, type RecordKind } from '../../components/RecordForm';
-import { AppText, Badge, Button, Card, ErrorView, Field, Loading, Num, Screen } from '../../components/ui';
+import { AppText, Badge, Button, Card, ErrorView, Field, Num, QueryFallback, Screen } from '../../components/ui';
 import {
   deleteExpense,
   deleteOdoReading,
@@ -20,14 +20,14 @@ import {
 } from '../../lib/data';
 import { fullDate, km, parseInteger, yen } from '../../lib/format';
 import { spacing } from '../../theme';
+import { alertError, confirmDestructive } from '../../lib/alerts';
 
 export default function EditRecord() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { bundle } = useVehicleBundle();
   const invalidate = useInvalidate();
 
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
 
   const [type, rowId] = (id ?? '').split(':');
   const data = bundle.data;
@@ -70,25 +70,20 @@ export default function EditRecord() {
   }
 
   const remove = () =>
-    Alert.alert('この記録を削除しますか', '削除すると元に戻せません。', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '削除する',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            if (target!.type === 'oil') await deleteOilChange(target!.row.id);
-            else if (target!.type === 'expense') await deleteExpense(target!.row.id);
-            else if (target!.type === 'wear') await deleteWearCheck(target!.row.id);
-            else await deleteOdoReading(target!.row.id);
-            await invalidate();
-            router.back();
-          } catch (e) {
-            Alert.alert('削除できませんでした', e instanceof Error ? e.message : String(e));
-          }
-        },
+    confirmDestructive({
+      title: 'この記録を削除しますか',
+      message: '削除すると元に戻せません。',
+      confirmText: '削除する',
+      errorTitle: '削除できませんでした',
+      action: async () => {
+        if (target!.type === 'oil') await deleteOilChange(target!.row.id);
+        else if (target!.type === 'expense') await deleteExpense(target!.row.id);
+        else if (target!.type === 'wear') await deleteWearCheck(target!.row.id);
+        else await deleteOdoReading(target!.row.id);
+        await invalidate();
+        router.back();
       },
-    ]);
+    });
 
   return (
     <Screen>
@@ -113,7 +108,7 @@ function LedraRecord({ bundle, row, expense }: { bundle: VehicleBundle; row: Oil
       await invalidate();
       router.back();
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }

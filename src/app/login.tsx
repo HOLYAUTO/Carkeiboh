@@ -1,10 +1,11 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { AppText, Button, Card, Field, Screen } from '../components/ui';
 import { APP_OWNER } from '../lib/config';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../lib/auth';
 import { radius, spacing, useColors } from '../theme';
+import { alertError } from '../lib/alerts';
 
 export default function Login() {
   const colors = useColors();
@@ -18,7 +19,7 @@ export default function Login() {
     try {
       await fn();
     } catch (e) {
-      Alert.alert('ログインできませんでした', e instanceof Error ? e.message : String(e));
+      alertError('ログインできませんでした', e);
     } finally {
       setBusy(null);
     }

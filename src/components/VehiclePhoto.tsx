@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { removeVehiclePhoto, saveVehiclePhoto, useInvalidate, useVehiclePhotoUrl, type VehicleRow } from '../lib/data';
 import { cardShadow, fonts, radius, spacing, themedStyles, useColors } from '../theme';
+import { alertError, confirmDestructive } from '../lib/alerts';
 
 /** 保存する写真の長辺。ホームの横幅いっぱいに出してもきれいに見え、通信量を抑えられる大きさ */
 const PHOTO_MAX_SIDE = 1600;
@@ -52,31 +53,24 @@ export function VehiclePhoto({ vehicle }: { vehicle: VehicleRow }) {
       await saveVehiclePhoto(vehicle, saved.base64);
       await invalidate();
     } catch (e) {
-      Alert.alert('写真を保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('写真を保存できませんでした', e);
     } finally {
       setBusy(false);
     }
   };
 
   const remove = () =>
-    Alert.alert('写真を外しますか', 'ホームに表示している愛車の写真を削除します。', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '外す',
-        style: 'destructive',
-        onPress: async () => {
-          setBusy(true);
-          try {
-            await removeVehiclePhoto(vehicle);
-            await invalidate();
-          } catch (e) {
-            Alert.alert('写真を外せませんでした', e instanceof Error ? e.message : String(e));
-          } finally {
-            setBusy(false);
-          }
-        },
+    confirmDestructive({
+      title: '写真を外しますか',
+      message: 'ホームに表示している愛車の写真を削除します。',
+      confirmText: '外す',
+      errorTitle: '写真を外せませんでした',
+      setBusy,
+      action: async () => {
+        await removeVehiclePhoto(vehicle);
+        await invalidate();
       },
-    ]);
+    });
 
   const openMenu = () =>
     Alert.alert(vehicle.photo_path ? '愛車の写真を変える' : '愛車の写真を追加', undefined, [

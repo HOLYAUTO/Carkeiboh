@@ -1,14 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, RefreshControl, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ANNOUNCEMENT_LABELS, type AnnouncementCategory } from '@domain/announcements.ts';
 import { AppText, Badge, Button, Card, Divider, EmptyState, ErrorView, Loading, Screen, Segmented } from '../../components/ui';
 import { markAnnouncementsSeen, setShopNewsOptIn, useAnnouncements } from '../../lib/announcements';
-import { jstDateTime } from '../../lib/format';
+import { jstDate } from '../../lib/format';
 import { registerForPush } from '../../lib/push';
 import { fonts, MIN_TAP, spacing, useColors } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 type Filter = 'all' | AnnouncementCategory;
 
@@ -48,7 +49,7 @@ export default function Announcements() {
       await registerForPush(true).catch(() => {});
       await qc.invalidateQueries({ queryKey: ['announcementPrefs'] });
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }
@@ -96,7 +97,7 @@ export default function Announcements() {
                   <View style={{ flex: 1, gap: 4 }}>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs }}>
                       {isNew && <Badge label="NEW" />}
-                      <AppText variant="caption">{ANNOUNCEMENT_LABELS[a.category]}・{jstDateTime(a.published_at).slice(0, 10)}</AppText>
+                      <AppText variant="caption">{ANNOUNCEMENT_LABELS[a.category]}・{jstDate(a.published_at)}</AppText>
                     </View>
                     <AppText numberOfLines={2} style={{ fontFamily: fonts.semibold }}>{a.title}</AppText>
                     <AppText variant="caption" numberOfLines={2}>{a.body}</AppText>
