@@ -1,51 +1,20 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
 import { DEFAULT_FILTER_INTERVAL, OIL_INTERVAL_KM_CHOICES, OIL_INTERVAL_MONTH_CHOICES } from '@domain/service.ts';
 import { distanceUnitLabel, fromKm, toKm, type DistanceUnit } from '@domain/units.ts';
-import { AppText, Button, Card, Field, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
+import { AppText, Button, Card, ChoiceChips, Field, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
+import { DISTANCE_UNIT_OPTIONS } from '../../components/VehicleForm';
 import { updateVehicle, useInvalidate, useVehicleBundle, vehicleUnit, type VehicleRow } from '../../lib/data';
-import { km, parseInteger } from '../../lib/format';
-import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
+import { km, number, parseInteger } from '../../lib/format';
 import { alertError } from '../../lib/alerts';
-
-const UNIT_OPTIONS: { value: DistanceUnit; label: string }[] = [
-  { value: 'km', label: 'km' },
-  { value: 'mile', label: 'mile（マイル）' },
-];
-
-function Chips<T extends number>({ options, value, onChange, unit }: { options: readonly T[]; value: number | null; onChange: (v: T) => void; unit: string }) {
-  const colors = useColors();
-  return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-      {options.map((o) => {
-        const selected = value === o;
-        return (
-          <Pressable
-            key={o}
-            accessibilityRole="radio"
-            accessibilityState={{ selected }}
-            onPress={() => onChange(o)}
-            style={{ minHeight: MIN_TAP, paddingHorizontal: spacing.md, borderRadius: radius.control, justifyContent: 'center', backgroundColor: selected ? colors.accent : colors.accentSoft }}
-          >
-            <Text style={{ fontFamily: fonts.num, color: selected ? colors.onAccent : colors.accentText }}>
-              {o.toLocaleString('ja-JP')}
-              {unit}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
 
 export default function VehicleSettings() {
   const { bundle } = useVehicleBundle();
   if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
-  return <VehicleForm vehicle={bundle.data.vehicle} />;
+  return <VehicleSettingsForm vehicle={bundle.data.vehicle} />;
 }
 
-function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
+function VehicleSettingsForm({ vehicle }: { vehicle: VehicleRow }) {
   const invalidate = useInvalidate();
   const [name, setName] = useState(vehicle.name);
   const [plate, setPlate] = useState(vehicle.plate_number ?? '');
@@ -118,7 +87,7 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
 
       <SectionTitle>メーターの単位</SectionTitle>
       <Card>
-        <Segmented options={UNIT_OPTIONS} value={unit} onChange={changeUnit} />
+        <Segmented options={DISTANCE_UNIT_OPTIONS} value={unit} onChange={changeUnit} />
         <AppText variant="caption">
           走行距離の入力と表示、お知らせの距離をこの単位にします。これまでの記録は同じ距離のまま換算して表示します（1mile = 1.609344km）。燃費は km/L で表示します。
         </AppText>
@@ -128,10 +97,10 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
       <Card>
         <AppText variant="label">距離</AppText>
         {/* 選択肢は km のきりのよい値なので、mile のときは入力欄だけにする */}
-        {unit === 'km' && <Chips options={OIL_INTERVAL_KM_CHOICES} value={oilKmN} onChange={(v) => setOilKm(String(v))} unit="km" />}
+        {unit === 'km' && <ChoiceChips options={OIL_INTERVAL_KM_CHOICES.map((v) => ({ value: v, label: `${number(v)}km` }))} value={oilKmN} onChange={(v) => setOilKm(String(v))} />}
         <Field label={unit === 'km' ? '距離を入力（任意の値）' : '距離'} value={oilKm} onChangeText={setOilKm} keyboardType="number-pad" suffix={unitLabel} />
         <AppText variant="label">期間</AppText>
-        <Chips options={OIL_INTERVAL_MONTH_CHOICES} value={oilMonths} onChange={setOilMonths} unit="か月" />
+        <ChoiceChips options={OIL_INTERVAL_MONTH_CHOICES.map((v) => ({ value: v, label: `${v}か月` }))} value={oilMonths} onChange={setOilMonths} />
         <AppText variant="caption">距離と期間の早い方を次回の目安にします。</AppText>
       </Card>
 

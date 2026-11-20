@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { PLAN_RESTORE_GRACE_DAYS } from '@domain/billing.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { Alert } from 'react-native';
-import { AppText, Button, Card, Divider, ListRow, Notice, QueryFallback, Screen, SectionTitle } from '../components/ui';
+import { AppText, Button, ListCard, ListRow, Notice, QueryFallback, Screen, SectionTitle } from '../components/ui';
 import { keepVehicle, selectVehicle, useVehicles } from '../lib/data';
 import { useColors } from '../theme';
 
@@ -57,26 +57,24 @@ export default function KeepVehicle() {
       </Notice>
 
       <SectionTitle>残すクルマ</SectionTitle>
-      <Card style={{ gap: 0, paddingVertical: 4 }}>
-        {list.map((v, i) => (
-          <Fragment key={v.id}>
-            {i > 0 && <Divider />}
-            <ListRow
-              title={v.name}
-              detail={v.plate_number ?? undefined}
-              right={
-                <Ionicons
-                  name={v.id === selected ? 'radio-button-on' : 'radio-button-off'}
-                  size={22}
-                  color={v.id === selected ? colors.accentText : colors.textTertiary}
-                  accessibilityLabel={v.id === selected ? '選択中' : '未選択'}
-                />
-              }
-              onPress={() => setSelected(v.id)}
-            />
-          </Fragment>
+      <ListCard>
+        {list.map((v) => (
+          <ListRow
+            key={v.id}
+            title={v.name}
+            detail={v.plate_number ?? undefined}
+            right={
+              <Ionicons
+                name={v.id === selected ? 'radio-button-on' : 'radio-button-off'}
+                size={22}
+                color={v.id === selected ? colors.accentText : colors.textTertiary}
+                accessibilityLabel={v.id === selected ? '選択中' : '未選択'}
+              />
+            }
+            onPress={() => setSelected(v.id)}
+          />
         ))}
-      </Card>
+      </ListCard>
 
       <Button title="このクルマを残す" onPress={confirm} disabled={!chosen} loading={busy} />
       <AppText variant="caption" style={{ textAlign: 'center' }}>

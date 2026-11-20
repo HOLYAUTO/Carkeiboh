@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
-import { AppText, Button, Card, Divider, Field, ListRow, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
+import { AppText, Button, Card, ChoiceChips, Field, ListCard, ListRow, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
 import {
   deleteRecurringExpense,
   saveRecurringExpense,
@@ -14,7 +14,7 @@ import {
 } from '../../lib/data';
 import { fullDate, parseInteger, yen } from '../../lib/format';
 import { amountFor, nextDue, RECURRING_CATEGORIES, recurringLabel, scheduleLabel } from '../../lib/recurring';
-import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
+import { spacing } from '../../theme';
 import { alertError, confirmDestructive } from '../../lib/alerts';
 
 const FREQUENCY_OPTIONS: { value: 'monthly' | 'yearly'; label: string }[] = [
@@ -39,22 +39,20 @@ function RecurringList({ bundle, rules }: { bundle: VehicleBundle; rules: Recurr
     <Screen>
       <AppText>毎月・毎年決まって払うものを登録しておくと、その日が来たらホームで「記録する」を押すだけで記録できます。</AppText>
       {rules.length > 0 && (
-        <Card style={{ gap: 0, paddingVertical: 4 }}>
-          {rules.map((r, i) => {
+        <ListCard>
+          {rules.map((r) => {
             const next = nextDue(r, bundle.today);
             const amount = next ? amountFor(r, next, bundle.vehicle) : r.amount_yen;
             return (
-              <View key={r.id}>
-                {i > 0 && <Divider />}
-                <ListRow
-                  title={`${recurringLabel(r)}　${amount != null ? yen(amount) : '自動で計算'}`}
-                  detail={`${scheduleLabel(r)}${next ? `・次は ${fullDate(next)}` : ''}`}
-                  onPress={() => setEditing(r)}
-                />
-              </View>
+              <ListRow
+                key={r.id}
+                title={`${recurringLabel(r)}　${amount != null ? yen(amount) : '自動で計算'}`}
+                detail={`${scheduleLabel(r)}${next ? `・次は ${fullDate(next)}` : ''}`}
+                onPress={() => setEditing(r)}
+              />
             );
           })}
-        </Card>
+        </ListCard>
       )}
       {editing ? (
         <RecurringForm key={editing === 'new' ? 'new' : editing.id} bundle={bundle} target={editing === 'new' ? null : editing} onDone={() => setEditing(null)} />
@@ -66,7 +64,6 @@ function RecurringList({ bundle, rules }: { bundle: VehicleBundle; rules: Recurr
 }
 
 function RecurringForm({ bundle, target, onDone }: { bundle: VehicleBundle; target: RecurringExpenseRow | null; onDone: () => void }) {
-  const colors = useColors();
   const invalidate = useInvalidate();
   const [category, setCategory] = useState<RecurringCategory>(target?.category ?? 'insurance');
   const [amount, setAmount] = useState(target?.amount_yen != null ? String(target.amount_yen) : '');
@@ -139,22 +136,7 @@ function RecurringForm({ bundle, target, onDone }: { bundle: VehicleBundle; targ
       <SectionTitle>{target ? '決まった支出を直す' : '決まった支出を追加する'}</SectionTitle>
       <Card>
         <AppText variant="label">項目</AppText>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          {RECURRING_CATEGORIES.map((c) => {
-            const on = c === category;
-            return (
-              <Pressable
-                key={c}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}
-                onPress={() => chooseCategory(c)}
-                style={{ minHeight: MIN_TAP, paddingHorizontal: spacing.md, borderRadius: radius.control, justifyContent: 'center', backgroundColor: on ? colors.accent : colors.accentSoft }}
-              >
-                <Text style={{ fontFamily: fonts.medium, color: on ? colors.onAccent : colors.accentText }}>{EXPENSE_CATEGORY_LABELS[c]}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <ChoiceChips options={RECURRING_CATEGORIES.map((c) => ({ value: c, label: EXPENSE_CATEGORY_LABELS[c] }))} value={category} onChange={chooseCategory} />
         <Field
           label={isCarTax ? '金額（空欄なら自動で計算）' : '金額'}
           value={amount}

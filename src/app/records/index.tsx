@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
-import { AppText, Badge, Card, Divider, Num, QueryFallback, Screen } from '../../components/ui';
+import { AppText, Badge, Card, ListCard, Num, QueryFallback, Screen } from '../../components/ui';
 import { wearTitle } from '../../components/RecordForm';
 import { useVehicleBundle, vehicleUnit } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
@@ -91,31 +91,29 @@ export default function Records() {
           <AppText variant="caption">まだ記録がありません。「記録する」から登録できます。</AppText>
         </Card>
       ) : (
-        <Card style={{ gap: 0, paddingVertical: spacing.xs }}>
-          {items.map((item, i) => (
-            <View key={item.id}>
-              {i > 0 && <Divider />}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${fullDate(item.date)} ${item.title}${item.verified ? ' 証明付き' : ''}`}
-                onPress={() => router.push({ pathname: '/records/[id]', params: { id: item.id } })}
-                style={({ pressed }) => ({ minHeight: 56, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.md, opacity: pressed ? 0.6 : 1 })}
-              >
-                <View style={{ flex: 1, gap: 2 }}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs }}>
-                    <AppText style={{ flexShrink: 1 }}>{item.title}</AppText>
-                    {item.verified && <Badge label="証明付き" />}
-                  </View>
-                  <AppText variant="caption">
-                    {fullDate(item.date)}
-                    {item.detail ? `・${item.detail}` : ''}
-                  </AppText>
+        <ListCard>
+          {items.map((item) => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${fullDate(item.date)} ${item.title}${item.verified ? ' 証明付き' : ''}`}
+              onPress={() => router.push({ pathname: '/records/[id]', params: { id: item.id } })}
+              style={({ pressed }) => ({ minHeight: 56, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.md, opacity: pressed ? 0.6 : 1 })}
+            >
+              <View style={{ flex: 1, gap: 2 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs }}>
+                  <AppText style={{ flexShrink: 1 }}>{item.title}</AppText>
+                  {item.verified && <Badge label="証明付き" />}
                 </View>
-                {item.amount != null && <Num style={{ color: colors.text }}>{yen(item.amount)}</Num>}
-              </Pressable>
-            </View>
+                <AppText variant="caption">
+                  {fullDate(item.date)}
+                  {item.detail ? `・${item.detail}` : ''}
+                </AppText>
+              </View>
+              {item.amount != null && <Num style={{ color: colors.text }}>{yen(item.amount)}</Num>}
+            </Pressable>
           ))}
-        </Card>
+        </ListCard>
       )}
     </Screen>
   );

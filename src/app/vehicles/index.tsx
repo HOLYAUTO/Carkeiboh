@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Fragment } from 'react';
-import { AppText, Badge, Card, Divider, ListRow, QueryFallback, Screen, SectionTitle } from '../../components/ui';
+import { AppText, Badge, Card, ListCard, ListRow, QueryFallback, Screen, SectionTitle } from '../../components/ui';
 import { selectVehicle, usePlan, useVehicle, useVehicles } from '../../lib/data';
 import { useColors } from '../../theme';
 
@@ -22,25 +21,23 @@ export default function Vehicles() {
   return (
     <Screen>
       <SectionTitle>登録したクルマ</SectionTitle>
-      <Card style={{ gap: 0, paddingVertical: 4 }}>
-        {list.map((v, i) => {
+      <ListCard>
+        {list.map((v) => {
           const selected = v.id === current.data?.id;
           return (
-            <Fragment key={v.id}>
-              {i > 0 && <Divider />}
-              <ListRow
-                title={v.name}
-                detail={v.plate_number ?? undefined}
-                right={selected ? <Ionicons name="checkmark-circle" size={22} color={colors.accentText} accessibilityLabel="表示中" /> : undefined}
-                onPress={async () => {
-                  await selectVehicle(qc, v.id);
-                  router.back();
-                }}
-              />
-            </Fragment>
+            <ListRow
+              key={v.id}
+              title={v.name}
+              detail={v.plate_number ?? undefined}
+              right={selected ? <Ionicons name="checkmark-circle" size={22} color={colors.accentText} accessibilityLabel="表示中" /> : undefined}
+              onPress={async () => {
+                await selectVehicle(qc, v.id);
+                router.back();
+              }}
+            />
           );
         })}
-      </Card>
+      </ListCard>
 
       <SectionTitle>クルマを追加</SectionTitle>
       <Card>

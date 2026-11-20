@@ -1,18 +1,17 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Linking, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Alert, Linking, View } from 'react-native';
 import { formatDaysLeft } from '@domain/dates.ts';
-import { ANNOUNCEMENT_LABELS } from '@domain/announcements.ts';
+
 import { REMINDER_LABELS, type ReminderKind } from '@domain/reminders.ts';
 import {
   AppText,
-  Badge,
   Button,
   Card,
   Divider,
   IconButton,
+  ListCard,
   ListRow,
   Notice,
   QueryFallback,
@@ -22,11 +21,12 @@ import {
   Skeleton,
   ToggleRow,
 } from '../../components/ui';
+import { AnnouncementRow } from '../../components/AnnouncementRow';
 import { setShopNewsOptIn, useAnnouncements } from '../../lib/announcements';
 import { updateVehicle, useInvalidate, useVehicleBundle, vehicleUnit, type VehicleRow } from '../../lib/data';
-import { fullDate, jstDate, km } from '../../lib/format';
+import { fullDate, km } from '../../lib/format';
 import { getPushStatus, registerForPush, type PushStatus } from '../../lib/push';
-import { fonts, MIN_TAP, spacing, useColors } from '../../theme';
+import { spacing } from '../../theme';
 import { alertError } from '../../lib/alerts';
 
 const ITEMS: { kind: ReminderKind; column: keyof VehicleRow; description: string }[] = [
@@ -39,7 +39,6 @@ const ITEMS: { kind: ReminderKind; column: keyof VehicleRow; description: string
 ];
 
 export default function Notifications() {
-  const colors = useColors();
   const { bundle } = useVehicleBundle();
   const invalidate = useInvalidate();
   const qc = useQueryClient();
@@ -136,50 +135,28 @@ export default function Notifications() {
       )}
 
       <SectionTitle>項目ごとの通知</SectionTitle>
-      <Card style={{ gap: 0, paddingVertical: spacing.sm }}>
-        {ITEMS.map((item, i) => (
-          <View key={item.kind}>
-            {i > 0 && <Divider />}
-            <ToggleRow
-              title={REMINDER_LABELS[item.kind]}
-              description={item.description}
-              value={pending[item.column] ?? (vehicle[item.column] as boolean)}
-              onChange={(v) => toggle(item.column, v)}
-            />
-          </View>
+      <ListCard>
+        {ITEMS.map((item) => (
+          <ToggleRow
+            key={item.kind}
+            title={REMINDER_LABELS[item.kind]}
+            description={item.description}
+            value={pending[item.column] ?? (vehicle[item.column] as boolean)}
+            onChange={(v) => toggle(item.column, v)}
+          />
         ))}
-      </Card>
+      </ListCard>
       <AppText variant="caption" style={{ marginHorizontal: spacing.xs }}>
         通知は日本時間9:00に届きます。通知が届かなくても、期限はホームに必ず表示します。
       </AppText>
 
       <SectionTitle action={{ label: '一覧を見る', onPress: () => router.push('/announcements') }}>お知らせ</SectionTitle>
       {announcements.visible && announcements.visible.length > 0 && (
-        <Card style={{ gap: 0, paddingVertical: spacing.sm }}>
-          {announcements.visible.slice(0, 3).map((a, i) => {
-            const isNew = announcements.unread?.some((u) => u.id === a.id) ?? false;
-            return (
-              <View key={a.id}>
-                {i > 0 && <Divider />}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${isNew ? '未読。' : ''}${ANNOUNCEMENT_LABELS[a.category]}。${a.title}`}
-                  onPress={() => router.push({ pathname: '/announcements/[id]', params: { id: a.id } })}
-                  style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: MIN_TAP + 8, paddingVertical: spacing.sm, opacity: pressed ? 0.6 : 1 })}
-                >
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: spacing.xs }}>
-                      {isNew && <Badge label="NEW" />}
-                      <AppText variant="caption">{ANNOUNCEMENT_LABELS[a.category]}・{jstDate(a.published_at)}</AppText>
-                    </View>
-                    <AppText numberOfLines={2} style={{ fontFamily: fonts.semibold }}>{a.title}</AppText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                </Pressable>
-              </View>
-            );
-          })}
-        </Card>
+        <ListCard>
+          {announcements.visible.slice(0, 3).map((a) => (
+            <AnnouncementRow key={a.id} announcement={a} isNew={announcements.unread?.some((u) => u.id === a.id) ?? false} />
+          ))}
+        </ListCard>
       )}
       <Card style={{ gap: 0, paddingVertical: spacing.sm }}>
         <ToggleRow

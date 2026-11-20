@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { distanceUnitLabel, toKm } from '@domain/units.ts';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { AppText, Button, Card, DateField, Divider, Field, QueryFallback, Screen, SectionTitle } from '../../components/ui';
 import { addMeterReplacement, deleteMeterReplacement, useInvalidate, useVehicleBundle, vehicleUnit } from '../../lib/data';
 import { fullDate, km, parseInteger } from '../../lib/format';
@@ -75,8 +75,12 @@ export default function OdometerSettings() {
                 title="この訂正を削除"
                 variant="plain"
                 onPress={async () => {
-                  await deleteMeterReplacement(m.id).catch((e) => Alert.alert('削除できませんでした', String(e)));
-                  await invalidate();
+                  try {
+                    await deleteMeterReplacement(m.id);
+                    await invalidate();
+                  } catch (e) {
+                    alertError('削除できませんでした', e);
+                  }
                 }}
               />
             </View>

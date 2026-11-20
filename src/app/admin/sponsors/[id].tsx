@@ -3,10 +3,10 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { SPONSOR_IMAGE_ASPECT, SponsorCard } from '../../../components/SponsorSlot';
 import { StaffOnly } from '../../../components/StaffOnly';
-import { AppText, Button, Card, DateField, Divider, ErrorView, Field, QueryFallback, Screen, SectionTitle, Segmented, ToggleRow } from '../../../components/ui';
+import { AppText, Button, Card, ChoiceChips, DateField, Divider, ErrorView, Field, QueryFallback, Screen, SectionTitle, Segmented, ToggleRow } from '../../../components/ui';
 import { todayJst } from '../../../lib/data';
 import { parseInteger } from '../../../lib/format';
 import { SPONSOR_PLACEMENT_LABELS, type SponsorPlacement } from '../../../lib/sponsor-pick';
@@ -20,7 +20,7 @@ import {
   type SponsorAdRow,
 } from '../../../lib/sponsors';
 import { STAFF_ORG_LABELS, type StaffOrg } from '../../../lib/staff';
-import { fonts, MIN_TAP, radius, spacing, useColors } from '../../../theme';
+import { spacing } from '../../../theme';
 import { alertError, confirmDestructive } from '../../../lib/alerts';
 
 /** 画像の横幅。画面いっぱいに出してもきれいに見え、通信量を抑えられる大きさ */
@@ -59,7 +59,6 @@ async function prepareImage(asset: ImagePicker.ImagePickerAsset): Promise<{ uri:
 }
 
 function Form({ org, current }: { org: StaffOrg; current: SponsorAdRow | null }) {
-  const colors = useColors();
   const qc = useQueryClient();
   const [adOrg, setAdOrg] = useState<StaffOrg>(current?.org ?? org);
   const [sponsorName, setSponsorName] = useState(current?.sponsor_name ?? '');
@@ -222,25 +221,7 @@ function Form({ org, current }: { org: StaffOrg; current: SponsorAdRow | null })
         <AppText variant="heading">掲載</AppText>
         <View style={{ gap: 6 }}>
           <AppText variant="label">出す場所</AppText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            {PLACEMENTS.map((p) => {
-              const selected = placements.includes(p);
-              return (
-                <Pressable
-                  key={p}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: selected }}
-                  onPress={() => togglePlacement(p)}
-                  style={{ minHeight: MIN_TAP, paddingHorizontal: spacing.md, borderRadius: radius.control, justifyContent: 'center', backgroundColor: selected ? colors.accent : colors.accentSoft }}
-                >
-                  <Text style={{ fontFamily: fonts.medium, color: selected ? colors.onAccent : colors.accentText }}>
-                    {selected ? '✓ ' : ''}
-                    {SPONSOR_PLACEMENT_LABELS[p]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <ChoiceChips options={PLACEMENTS.map((p) => ({ value: p, label: SPONSOR_PLACEMENT_LABELS[p] }))} value={placements} onChange={togglePlacement} />
         </View>
         <DateField label="掲載の開始日" value={startsOn} onChange={setStartsOn} />
         <DateField label="掲載の終了日（任意・この日まで）" value={endsOn} onChange={setEndsOn} optional />
