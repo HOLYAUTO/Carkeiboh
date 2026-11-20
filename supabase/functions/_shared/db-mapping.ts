@@ -1,6 +1,7 @@
 /**
  * DB の行（snake_case）を domain の VehicleData に詰め替える。アプリとサーバーで共有する。
  */
+import type { MeterReplacement } from './domain/odo.ts';
 import type { VehicleData } from './domain/vehicle.ts';
 import type { DeadlineKind, ReminderKind } from './domain/reminders.ts';
 import { isDistanceUnit, type DistanceUnit } from './domain/units.ts';
@@ -107,6 +108,11 @@ export function reminderSettings(v: VehicleRow): Record<ReminderKind, boolean> {
   };
 }
 
+/** メーター交換の行を、走行距離の計算（@domain/odo）の形にする */
+export function toMeterReplacements(rows: MeterReplacementRow[]): MeterReplacement[] {
+  return rows.map((m) => ({ replacedOn: m.replaced_on, odoBeforeKm: m.odo_before_km, odoAfterKm: m.odo_after_km }));
+}
+
 export function toVehicleData(
   v: VehicleRow,
   rows: {
@@ -132,11 +138,7 @@ export function toVehicleData(
     otherReadings: rows.points
       .filter((p) => p.source !== 'oil_change')
       .map((p) => ({ date: p.date, odoKm: p.odo_km })),
-    meterReplacements: rows.meterReplacements.map((m) => ({
-      replacedOn: m.replaced_on,
-      odoBeforeKm: m.odo_before_km,
-      odoAfterKm: m.odo_after_km,
-    })),
+    meterReplacements: toMeterReplacements(rows.meterReplacements),
     deadlines: rows.deadlines
       .filter((d) => d.status === 'active')
       .map((d) => ({ id: d.id, kind: d.kind, dueOn: d.due_on })),

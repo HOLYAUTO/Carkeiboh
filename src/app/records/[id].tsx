@@ -2,7 +2,8 @@ import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { RecordForm, wearTitle, type EditTarget, type RecordKind } from '../../components/RecordForm';
+import { RecordForm } from '../../components/RecordForm';
+import { wearTitle, type EditTarget, type RecordKind } from '../../lib/record-kinds';
 import { AppText, Badge, Button, Card, ErrorView, Field, Num, QueryFallback, Screen } from '../../components/ui';
 import {
   deleteExpense,

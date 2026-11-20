@@ -5,6 +5,7 @@ import { EXPENSE_CATEGORY_LABELS, summarizeCosts, type CostPeriod } from '@domai
 import { monthKey } from '@domain/dates.ts';
 import { formatKmPerLiter, summarizeFuel } from '@domain/fuel.ts';
 import { distanceUnitLabel, KM_PER_MILE } from '@domain/units.ts';
+import { toMeterReplacements } from '@shared/db-mapping.ts';
 import { MonthlyBarChart } from '../../components/BarChart';
 import { SponsorSlot } from '../../components/SponsorSlot';
 import { AppText, Button, Card, Divider, ErrorView, IconButton, Num, Screen, ScreenHeader, Segmented, Skeleton } from '../../components/ui';
@@ -36,7 +37,7 @@ export default function Costs() {
     if (!bundle.data || !summary) return null;
     const fills = fuelFills(bundle.data.expenses);
     if (fills.length === 0) return null;
-    const replacements = bundle.data.meterReplacements.map((m) => ({ replacedOn: m.replaced_on, odoBeforeKm: m.odo_before_km, odoAfterKm: m.odo_after_km }));
+    const replacements = toMeterReplacements(bundle.data.meterReplacements);
     return summarizeFuel(fills, summary.from, summary.to, replacements);
   }, [bundle.data, summary]);
 

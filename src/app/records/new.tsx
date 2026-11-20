@@ -1,7 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Alert } from 'react-native';
 import { EXPENSE_CATEGORIES } from '@domain/costs.ts';
-import { isWearKind, kindLabel, RecordForm, type RecordKind } from '../../components/RecordForm';
+import { RecordForm } from '../../components/RecordForm';
+import { isWearKind, kindLabel, type RecordKind } from '../../lib/record-kinds';
 import { ErrorView, QueryFallback, Screen } from '../../components/ui';
 import type { RecordDraft } from '@shared/record-draft.ts';
 import { useVehicleBundle } from '../../lib/data';

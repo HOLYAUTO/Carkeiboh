@@ -9,6 +9,16 @@ export function alertError(title: string, e: unknown) {
   Alert.alert(title, errorMessage(e));
 }
 
+/** 確かめてから進む。ok を押したら true、cancel を押したら false */
+export function askToConfirm(title: string, message: string, buttons: { cancel: string; ok: string }): Promise<boolean> {
+  return new Promise((resolve) =>
+    Alert.alert(title, message, [
+      { text: buttons.cancel, style: 'cancel', onPress: () => resolve(false) },
+      { text: buttons.ok, onPress: () => resolve(true) },
+    ]),
+  );
+}
+
 /**
  * 元に戻せない操作（削除・解除など）の前に確かめる。
  * 押されたら action を実行し、失敗したら errorTitle で知らせる。setBusy を渡すと実行中は true にする

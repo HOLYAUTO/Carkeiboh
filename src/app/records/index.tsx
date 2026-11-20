@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
 import { AppText, Badge, Card, ListCard, Num, QueryFallback, Screen } from '../../components/ui';
-import { wearTitle } from '../../components/RecordForm';
+import { wearTitle } from '../../lib/record-kinds';
 import { useVehicleBundle, vehicleUnit } from '../../lib/data';
 import { fullDate, km, yen } from '../../lib/format';
 import { spacing, useColors } from '../../theme';
