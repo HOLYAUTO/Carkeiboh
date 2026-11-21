@@ -11,7 +11,7 @@
 | 2 | 2つを **HOLY のホームページ**に公開し（2026-11-14 決定）、URL をアプリ（`eas.json` の production の `EXPO_PUBLIC_PRIVACY_URL`・`EXPO_PUBLIC_TERMS_URL` と EAS の production の環境変数）とストアに入れる | HOLY | 2つとも公開・`eas.json` に設定済み（https://www.holy-inc.jp/ijilog/privacy、https://www.holy-inc.jp/ijilog/terms）。ストアへの入力は未 |
 | 3 | 定期購入 `ijilog_plus_monthly`（サブスクリプショングループ「複数台プラン」）と消耗型 `ijilog_restore_fee` を作る。最初のバージョンには定期購入だけを付ける（手順は `docs/store/app-store-iap.md`） | HOLY | 未 |
 | 4 | スクリーンショット（6.9インチ：1320×2868 など）を、TestFlight で入れた実機から撮る | HOLY | 未 |
-| 5 | カテゴリを決める（仮：ライフスタイル／ファイナンス） | たにぐち自動車 | 未 |
+| 5 | カテゴリを決める | HOLY | 決定（2026-11-21）：ライフスタイル／ファイナンス（`docs/store/store-listing.md` 5章）。App Store Connect への入力は未 |
 | 6 | 下の「App のプライバシー」「年齢制限」を入れる | HOLY | 未 |
 
 審査用のアカウントは**要らない**：Apple でサインイン、または審査する人のメールアドレスに届くコードでログインでき、初めてのログインでアカウントができる。
