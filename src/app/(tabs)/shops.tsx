@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
 import { SponsorSlot } from '../../components/SponsorSlot';
-import { AppText, Badge, Button, Card, EmptyState, ErrorView, IconButton, Screen, ScreenHeader, Skeleton } from '../../components/ui';
+import { AppText, Badge, Button, Card, EmptyState, IconButton, QueryFallback, Screen, ScreenHeader, Skeleton } from '../../components/ui';
 import { useShops, type ShopRow } from '../../lib/data';
 import { formatDistance, sortByDistance } from '../../lib/geo';
 import { useCurrentPosition } from '../../lib/location';
@@ -34,7 +34,7 @@ export default function Shops() {
       </Screen>
     );
   }
-  if (shops.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => shops.refetch()} />;
+  if (!shops.isSuccess) return <QueryFallback queries={[shops]} />;
 
   return (
     <Screen header={header} refreshControl={<RefreshControl refreshing={shops.isRefetching} onRefresh={() => void shops.refetch()} tintColor={colors.textSecondary} />}>

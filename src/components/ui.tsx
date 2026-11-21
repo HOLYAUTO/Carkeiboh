@@ -1,6 +1,6 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
+import { Children, Fragment, isValidElement, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import {
   ActivityIndicator,
@@ -109,6 +109,18 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
+type QueryState = { isPending: boolean; isError: boolean; refetch: () => unknown };
+
+/**
+ * 読み込みが済んでいないときの表示（読み込み中、または「再読み込み」付きのエラー）。
+ * 画面では `if (!q.isSuccess) return <QueryFallback queries={[q]} />;` と書く。以降は q.data をそのまま使える
+ */
+export function QueryFallback({ queries }: { queries: QueryState[] }) {
+  if (queries.some((q) => q.isPending)) return <Loading />;
+  const failed = queries.filter((q) => q.isError);
+  return <ErrorView message="読み込めませんでした。" onRetry={() => failed.forEach((q) => void q.refetch())} />;
+}
+
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const styles = useStyles();
   return <View style={[styles.card, style]}>{children}</View>;
@@ -202,21 +214,6 @@ export function Badge({ label, tone = 'accent' }: { label: string; tone?: 'accen
   );
 }
 
-export function ProgressBar({ value, tone = 'accent', label }: { value: number; tone?: 'accent' | 'caution'; label: string }) {
-  const colors = useColors();
-  const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
-  return (
-    <View
-      accessibilityRole="progressbar"
-      accessibilityLabel={label}
-      accessibilityValue={{ min: 0, max: 100, now: pct }}
-      style={{ height: 8, borderRadius: 4, backgroundColor: colors.track, overflow: 'hidden' }}
-    >
-      <View style={{ width: `${pct}%`, height: '100%', backgroundColor: tone === 'caution' ? colors.caution : colors.accent }} />
-    </View>
-  );
-}
-
 export function Segmented<T extends string>({
   options,
   value,
@@ -241,6 +238,44 @@ export function Segmented<T extends string>({
             style={[styles.segment, selected && styles.segmentSelected]}
           >
             <Text style={{ fontFamily: selected ? fonts.semibold : fonts.medium, fontSize: 14, color: selected ? colors.text : colors.textSecondary }}>
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * 押して選ぶボタンの並び。value が1つなら1つだけ選ぶ（radio）、配列ならいくつでも選ぶ（checkbox。選んだものに ✓ を付ける）。
+ * 数字の選択肢は等幅の数字の書体で出す
+ */
+export function ChoiceChips<T extends string | number>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { value: T; label: string }[];
+  value: T | null | readonly T[];
+  onChange: (v: T) => void;
+}) {
+  const colors = useColors();
+  const multiple = Array.isArray(value);
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+      {options.map((o) => {
+        const selected = multiple ? (value as readonly T[]).includes(o.value) : value === o.value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole={multiple ? 'checkbox' : 'radio'}
+            accessibilityState={multiple ? { checked: selected } : { selected }}
+            onPress={() => onChange(o.value)}
+            style={{ minHeight: MIN_TAP, paddingHorizontal: spacing.md, borderRadius: radius.control, justifyContent: 'center', backgroundColor: selected ? colors.accent : colors.accentSoft }}
+          >
+            <Text style={{ fontFamily: typeof o.value === 'number' ? fonts.num : fonts.medium, color: selected ? colors.onAccent : colors.accentText }}>
+              {multiple && selected ? '✓ ' : ''}
               {o.label}
             </Text>
           </Pressable>
@@ -397,6 +432,48 @@ export function ListRow({
 export function Divider() {
   const colors = useColors();
   return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />;
+}
+
+/** 行を並べた一覧のカード。行と行のあいだに区切り線を入れる（行には key を付ける） */
+export function ListCard({ children }: { children: ReactNode }) {
+  const rows = Children.toArray(children);
+  return (
+    <Card style={{ gap: 0, paddingVertical: spacing.xs }}>
+      {rows.map((row, i) => (
+        <Fragment key={isValidElement(row) && row.key != null ? row.key : i}>
+          {i > 0 && <Divider />}
+          {row}
+        </Fragment>
+      ))}
+    </Card>
+  );
+}
+
+/** 一覧の押せる行（中身は自由に組む）。右端に「>」を出す。disabled なら押せず「>」も出さない */
+export function PressableRow({
+  children,
+  onPress,
+  disabled,
+  accessibilityLabel,
+}: {
+  children: ReactNode;
+  onPress: () => void;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+}) {
+  const colors = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: MIN_TAP + 16, paddingVertical: spacing.md, opacity: pressed ? 0.6 : 1 })}
+    >
+      <View style={{ flex: 1, gap: 4 }}>{children}</View>
+      {!disabled && <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />}
+    </Pressable>
+  );
 }
 
 const useStyles = themedStyles((colors) => StyleSheet.create({

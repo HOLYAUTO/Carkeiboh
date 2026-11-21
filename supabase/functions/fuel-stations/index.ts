@@ -33,7 +33,7 @@ Deno.serve(
     const keys = [...new Set(tiles as string[])];
     const since = new Date(Date.now() - CACHE_DAYS * 86_400_000).toISOString();
     const { data: cached, error } = await admin.from('fuel_station_tiles').select('tile, stations').in('tile', keys).gte('fetched_at', since);
-    if (error) throw new HttpError(500, 'db_error', error.message);
+    if (error) throw error;
     const result = new Map<string, FuelStation[]>((cached ?? []).map((r) => [r.tile as string, r.stations as FuelStation[]]));
     for (const tile of keys.filter((k) => !result.has(k))) {
       const stations = await fetchTile(tile);

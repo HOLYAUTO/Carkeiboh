@@ -6,13 +6,14 @@ import { Alert, Pressable, View } from 'react-native';
 import { EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from '@domain/costs.ts';
 import { FUEL_TYPE_LABELS } from '@domain/fuel.ts';
 import type { RecordDraft } from '@shared/record-draft.ts';
-import { AppText, Badge, Button, Card, Divider, ErrorView, Loading, Notice, Num, Screen } from '../../components/ui';
+import { AppText, Badge, Button, Card, Divider, Notice, Num, QueryFallback, Screen } from '../../components/ui';
 import { PAID_NOW, saveExpense, useInvalidate, useVehicleBundle, vehicleUnit, type VehicleBundle } from '../../lib/data';
 import { fullDate, yen } from '../../lib/format';
 import { pickPhotos } from '../../lib/photo';
 import { batchStatus, isDuplicate, type BatchStatus } from '../../lib/receipt-batch';
 import { invokeFunction } from '../../lib/supabase';
 import { radius, spacing, useColors } from '../../theme';
+import { errorMessage } from '../../lib/alerts';
 
 const PHOTO_MAX_SIDE = 1600;
 const MAX_PHOTOS = 10;
@@ -34,8 +35,7 @@ interface Item {
  */
 export default function ReceiptsScreen() {
   const { bundle } = useVehicleBundle();
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   return <Receipts bundle={bundle.data} />;
 }
 
@@ -122,7 +122,7 @@ function Receipts({ bundle }: { bundle: VehicleBundle }) {
       Alert.alert('登録しました', `${saved}件を登録しました。`);
     } catch (e) {
       await invalidate();
-      Alert.alert('途中で保存できませんでした', `${saved}件は登録しました。${e instanceof Error ? e.message : String(e)}`);
+      Alert.alert('途中で保存できませんでした', `${saved}件は登録しました。${errorMessage(e)}`);
     } finally {
       setBusy(false);
     }

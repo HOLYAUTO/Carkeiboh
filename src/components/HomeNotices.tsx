@@ -2,14 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { ANNOUNCEMENT_LABELS } from '@domain/announcements.ts';
 import { setShopNewsOptIn, useAnnouncements } from '../lib/announcements';
 import { useAppUpdate } from '../lib/app-updates';
-import { jstDateTime } from '../lib/format';
+import { jstDate } from '../lib/format';
 import { registerForPush } from '../lib/push';
 import { fonts, MIN_TAP, spacing, useColors } from '../theme';
 import { AppText, Button, Card, Divider } from './ui';
+import { alertError } from '../lib/alerts';
 
 /** ホームの上に出すお知らせ：修正の反映待ち／新しいお知らせ／たにぐち自動車の最新情報の案内 */
 export function HomeNotices() {
@@ -71,7 +72,7 @@ function UnreadAnnouncements() {
           >
             <View style={{ flex: 1, gap: 2 }}>
               <AppText variant="caption">
-                {ANNOUNCEMENT_LABELS[a.category]}・{jstDateTime(a.published_at).slice(0, 10)}
+                {ANNOUNCEMENT_LABELS[a.category]}・{jstDate(a.published_at)}
               </AppText>
               <AppText numberOfLines={2} style={{ fontFamily: fonts.semibold }}>{a.title}</AppText>
             </View>
@@ -101,7 +102,7 @@ function ShopNewsInvite() {
       if (optIn) await registerForPush(true).catch(() => {});
       await qc.invalidateQueries({ queryKey: ['announcementPrefs'] });
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }

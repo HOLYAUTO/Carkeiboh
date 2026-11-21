@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { handleRecurringExpense, useInvalidate, useRecurringExpenses, type VehicleBundle } from '../lib/data';
 import { fullDate, yen } from '../lib/format';
 import { dueItems, recurringLabel } from '../lib/recurring';
 import { spacing } from '../theme';
 import { AppText, Button, Card, Divider } from './ui';
+import { alertError } from '../lib/alerts';
 
 /** ホームの「決まった支出」。その日が来た回を、金額を入れた状態で「記録する／飛ばす」だけにする */
 export function RecurringPrompt({ data }: { data: VehicleBundle }) {
@@ -22,7 +23,7 @@ export function RecurringPrompt({ data }: { data: VehicleBundle }) {
       await run();
       await invalidate();
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(null);
     }

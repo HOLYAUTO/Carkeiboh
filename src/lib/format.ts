@@ -32,13 +32,6 @@ export function fullDate(d: IsoDate): string {
 
 export { formatMonthDay as monthDay };
 
-/** 色だけで状態を伝えないよう、残り日数は必ず文字でも書く */
-export function daysLeft(days: number): string {
-  if (days > 0) return `あと${days}日`;
-  if (days === 0) return '今日';
-  return `${-days}日超過`;
-}
-
 /** 端末のローカル日付 ↔ 'YYYY-MM-DD' */
 export function dateToIso(d: Date): IsoDate {
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -91,6 +84,11 @@ export function jstDateTime(iso: string): string {
   const d = new Date(Date.parse(iso) + 9 * 60 * 60 * 1000);
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+}
+
+/** 日時（ISO 8601）→ 日本時間の '2026/10/29' */
+export function jstDate(iso: string): string {
+  return jstDateTime(iso).slice(0, 10);
 }
 
 /** 日時（ISO 8601）→ 日本時間の日付と 'HH:MM'（入力欄に入れ直すため） */

@@ -4,7 +4,8 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './auth';
-import { todayJst, unwrap } from './data';
+import { todayJst } from './data';
+import { base64ToBytes, deleteRow, saveRow, unwrap } from './db';
 import { isSponsorLive, type SponsorPlacement } from './sponsor-pick';
 import { supabase } from './supabase';
 import type { StaffOrg } from './staff';
@@ -146,23 +147,12 @@ export async function saveSponsorAd(input: SponsorAdInput): Promise<{ id: string
     ends_on: input.endsOn,
     weight: input.weight,
   };
-  return unwrap(
-    input.id
-      ? await supabase.from('sponsor_ads').update(row).eq('id', input.id).select('id').single()
-      : await supabase.from('sponsor_ads').insert(row).select('id').single(),
-  ) as { id: string };
+  return saveRow('sponsor_ads', row, input.id);
 }
 
 export async function deleteSponsorAd(ad: Pick<SponsorAdRow, 'id' | 'image_path'>) {
-  unwrap(await supabase.from('sponsor_ads').delete().eq('id', ad.id));
+  await deleteRow('sponsor_ads', ad.id);
   if (ad.image_path) await removeSponsorImage(ad.image_path);
-}
-
-function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }
 
 /** 画像を置き、そのパスを返す。毎回新しい名前で置く（同じ名前で上書きすると、配信のキャッシュで古い画像が出ることがあるため） */

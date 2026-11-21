@@ -13,8 +13,10 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
+import { toJstDate } from '@domain/dates.ts';
 import { nearestStations, shouldNotifyVisit, tilesAround, type FuelStation } from '@shared/fuel-stations.ts';
 import { stationsInTiles } from './fuel-detect';
+import { STORAGE_KEYS } from './storage-keys';
 
 export const FUEL_GEOFENCE_TASK = 'ijilog-fuel-geofence';
 
@@ -27,10 +29,6 @@ const REFRESH_RADIUS_M = 2000;
 /** 近くのスタンドを探す範囲（m）。区画で9つまで（fuel-stations の上限） */
 const SEARCH_RADIUS_M = 3000;
 const REFRESH_ID = 'refresh';
-const ENTER_KEY_PREFIX = 'ijilog.fuelVisit.enter.';
-const NOTIFIED_KEY = 'ijilog.fuelVisit.notified';
-/** 給油を記録した時刻（data.ts の saveExpense が書く）。立ち寄りのあいだに記録していたら通知しない */
-export const LAST_FUEL_SAVED_KEY = 'ijilog.lastFuelSavedAt';
 const CHANNEL_ID = 'fuel-visits';
 
 /** スタンドの円の名前：`st|<id>|<店名>`（出入りのときに店名が要るので、名前に入れておく） */
@@ -41,10 +39,6 @@ function stationRegionId(s: FuelStation): string {
 function parseStationRegionId(id: string | undefined): { id: string; name: string } | null {
   const m = id?.match(/^st\|([^|]+)\|(.*)$/);
   return m ? { id: m[1], name: m[2] } : null;
-}
-
-function jstToday(): string {
-  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 }
 
 /** このアプリの版でアプリを閉じているときの見張りが使えるか（Expo Go・古いストア版では使えない） */
@@ -134,22 +128,22 @@ export async function handleGeofenceEvent(eventType: Location.GeofencingEventTyp
   }
   const station = parseStationRegionId(identifier);
   if (!station) return;
-  const enterKey = ENTER_KEY_PREFIX + station.id;
+  const enterKey = STORAGE_KEYS.fuelVisitEnterPrefix + station.id;
   if (eventType === Location.GeofencingEventType.Enter) {
     await AsyncStorage.setItem(enterKey, String(nowMs));
     return;
   }
   const entered = Number(await AsyncStorage.getItem(enterKey)) || null;
   await AsyncStorage.removeItem(enterKey);
-  const todayKey = `${station.id}@${jstToday()}`;
+  const todayKey = `${station.id}@${toJstDate(new Date())}`;
   const notify = shouldNotifyVisit({
     enteredAtMs: entered,
     exitedAtMs: nowMs,
-    lastFuelSavedAtMs: Number(await AsyncStorage.getItem(LAST_FUEL_SAVED_KEY)) || null,
-    alreadyNotifiedToday: (await AsyncStorage.getItem(NOTIFIED_KEY)) === todayKey,
+    lastFuelSavedAtMs: Number(await AsyncStorage.getItem(STORAGE_KEYS.lastFuelSavedAt)) || null,
+    alreadyNotifiedToday: (await AsyncStorage.getItem(STORAGE_KEYS.fuelVisitNotified)) === todayKey,
   });
   if (!notify) return;
-  await AsyncStorage.setItem(NOTIFIED_KEY, todayKey);
+  await AsyncStorage.setItem(STORAGE_KEYS.fuelVisitNotified, todayKey);
   await notifyVisit(station.name);
 }
 

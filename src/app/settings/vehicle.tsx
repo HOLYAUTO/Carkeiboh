@@ -1,56 +1,25 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
 import { DEFAULT_FILTER_INTERVAL, OIL_INTERVAL_KM_CHOICES, OIL_INTERVAL_MONTH_CHOICES } from '@domain/service.ts';
 import { distanceUnitLabel, fromKm, toKm, type DistanceUnit } from '@domain/units.ts';
-import { AppText, Button, Card, ErrorView, Field, Loading, Screen, SectionTitle, Segmented } from '../../components/ui';
-import { updateVehicle, useInvalidate, useVehicleBundle, type VehicleRow } from '../../lib/data';
-import { km, parseInteger } from '../../lib/format';
-import { fonts, MIN_TAP, radius, spacing, useColors } from '../../theme';
-
-const UNIT_OPTIONS: { value: DistanceUnit; label: string }[] = [
-  { value: 'km', label: 'km' },
-  { value: 'mile', label: 'mile（マイル）' },
-];
-
-function Chips<T extends number>({ options, value, onChange, unit }: { options: readonly T[]; value: number | null; onChange: (v: T) => void; unit: string }) {
-  const colors = useColors();
-  return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-      {options.map((o) => {
-        const selected = value === o;
-        return (
-          <Pressable
-            key={o}
-            accessibilityRole="radio"
-            accessibilityState={{ selected }}
-            onPress={() => onChange(o)}
-            style={{ minHeight: MIN_TAP, paddingHorizontal: spacing.md, borderRadius: radius.control, justifyContent: 'center', backgroundColor: selected ? colors.accent : colors.accentSoft }}
-          >
-            <Text style={{ fontFamily: fonts.num, color: selected ? colors.onAccent : colors.accentText }}>
-              {o.toLocaleString('ja-JP')}
-              {unit}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
+import { AppText, Button, Card, ChoiceChips, Field, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
+import { DISTANCE_UNIT_OPTIONS } from '../../components/VehicleForm';
+import { updateVehicle, useInvalidate, useVehicleBundle, vehicleUnit, type VehicleRow } from '../../lib/data';
+import { km, number, parseInteger } from '../../lib/format';
+import { alertError } from '../../lib/alerts';
 
 export default function VehicleSettings() {
   const { bundle } = useVehicleBundle();
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
-  return <VehicleForm vehicle={bundle.data.vehicle} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
+  return <VehicleSettingsForm vehicle={bundle.data.vehicle} />;
 }
 
-function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
+function VehicleSettingsForm({ vehicle }: { vehicle: VehicleRow }) {
   const invalidate = useInvalidate();
   const [name, setName] = useState(vehicle.name);
   const [plate, setPlate] = useState(vehicle.plate_number ?? '');
   // 距離の入力欄はメーターの単位で見せ、保存するときに km に直す
-  const [unit, setUnit] = useState<DistanceUnit>(vehicle.distance_unit === 'mile' ? 'mile' : 'km');
+  const [unit, setUnit] = useState<DistanceUnit>(vehicleUnit(vehicle));
   const shown = (value: number | null) => (value != null ? String(fromKm(value, unit)) : '');
   const [annual, setAnnual] = useState(shown(vehicle.annual_km_estimate));
   const [oilKm, setOilKm] = useState(shown(vehicle.oil_interval_km));
@@ -102,7 +71,7 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
       await invalidate();
       router.back();
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }
@@ -118,7 +87,7 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
 
       <SectionTitle>メーターの単位</SectionTitle>
       <Card>
-        <Segmented options={UNIT_OPTIONS} value={unit} onChange={changeUnit} />
+        <Segmented options={DISTANCE_UNIT_OPTIONS} value={unit} onChange={changeUnit} />
         <AppText variant="caption">
           走行距離の入力と表示、お知らせの距離をこの単位にします。これまでの記録は同じ距離のまま換算して表示します（1mile = 1.609344km）。燃費は km/L で表示します。
         </AppText>
@@ -128,10 +97,10 @@ function VehicleForm({ vehicle }: { vehicle: VehicleRow }) {
       <Card>
         <AppText variant="label">距離</AppText>
         {/* 選択肢は km のきりのよい値なので、mile のときは入力欄だけにする */}
-        {unit === 'km' && <Chips options={OIL_INTERVAL_KM_CHOICES} value={oilKmN} onChange={(v) => setOilKm(String(v))} unit="km" />}
+        {unit === 'km' && <ChoiceChips options={OIL_INTERVAL_KM_CHOICES.map((v) => ({ value: v, label: `${number(v)}km` }))} value={oilKmN} onChange={(v) => setOilKm(String(v))} />}
         <Field label={unit === 'km' ? '距離を入力（任意の値）' : '距離'} value={oilKm} onChangeText={setOilKm} keyboardType="number-pad" suffix={unitLabel} />
         <AppText variant="label">期間</AppText>
-        <Chips options={OIL_INTERVAL_MONTH_CHOICES} value={oilMonths} onChange={setOilMonths} unit="か月" />
+        <ChoiceChips options={OIL_INTERVAL_MONTH_CHOICES.map((v) => ({ value: v, label: `${v}か月` }))} value={oilMonths} onChange={setOilMonths} />
         <AppText variant="caption">距離と期間の早い方を次回の目安にします。</AppText>
       </Card>
 

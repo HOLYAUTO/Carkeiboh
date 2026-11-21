@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { ANNOUNCEMENT_LABELS, type AnnouncementCategory } from '@domain/announcements.ts';
 import { StaffOnly } from '../../../components/StaffOnly';
-import { AppText, Button, Card, DateField, Divider, ErrorView, Field, Loading, Screen, Segmented, ToggleRow } from '../../../components/ui';
+import { AppText, Button, Card, DateField, Divider, ErrorView, Field, QueryFallback, Screen, Segmented, ToggleRow } from '../../../components/ui';
 import {
   deleteAnnouncement,
   saveAnnouncement,
@@ -14,6 +14,7 @@ import {
 import { jstDateTime, jstParts, jstToIso } from '../../../lib/format';
 import type { StaffOrg } from '../../../lib/staff';
 import { spacing } from '../../../theme';
+import { alertError, confirmDestructive } from '../../../lib/alerts';
 
 /** お知らせを書く・直す（運営スタッフ）。id が 'new' なら新しく書く */
 export default function EditAnnouncement() {
@@ -24,8 +25,7 @@ export default function EditAnnouncement() {
 function Loader({ id, org }: { id: string; org: StaffOrg }) {
   const list = useManagedAnnouncements();
   if (id === 'new') return <Form org={org} current={null} />;
-  if (list.isPending) return <Loading />;
-  if (list.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => list.refetch()} />;
+  if (!list.isSuccess) return <QueryFallback queries={[list]} />;
   const current = list.data.find((a) => a.id === id);
   if (!current) return <ErrorView message="このお知らせは削除されています。" />;
   return <Form org={org} current={current} />;
@@ -91,32 +91,25 @@ function Form({ org, current }: { org: StaffOrg; current: AnnouncementRow | null
       await refresh();
       router.back();
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }
   };
 
   const remove = () =>
-    Alert.alert('このお知らせを削除しますか', '利用者の画面からも消えます。送った通知は取り消せません。', [
-      { text: 'キャンセル', style: 'cancel' },
-      {
-        text: '削除する',
-        style: 'destructive',
-        onPress: async () => {
-          setBusy(true);
-          try {
-            await deleteAnnouncement(current!.id);
-            await refresh();
-            router.back();
-          } catch (e) {
-            Alert.alert('削除できませんでした', e instanceof Error ? e.message : String(e));
-          } finally {
-            setBusy(false);
-          }
-        },
+    confirmDestructive({
+      title: 'このお知らせを削除しますか',
+      message: '利用者の画面からも消えます。送った通知は取り消せません。',
+      confirmText: '削除する',
+      errorTitle: '削除できませんでした',
+      setBusy,
+      action: async () => {
+        await deleteAnnouncement(current!.id);
+        await refresh();
+        router.back();
       },
-    ]);
+    });
 
   return (
     <Screen>

@@ -32,7 +32,7 @@ Deno.serve(
       throw new HttpError(400, 'invalid_released_on', '手放した日を、今日までの日付で選んでください。');
     }
 
-    const { data: vehicle } = await admin
+    const { data: vehicle, error: vehicleError } = await admin
       .from('vehicles')
       .select('id')
       .eq('id', body.vehicleId)
@@ -40,11 +40,12 @@ Deno.serve(
       .eq('status', 'active')
       .is('plan_suspended_at', null)
       .maybeSingle();
+    if (vehicleError) throw vehicleError;
     if (!vehicle) throw new HttpError(404, 'vehicle_not_found', 'このクルマはすでに手放しているか、見つかりません。');
 
     // 先に整備工場からの取り込みを止める。Ledra への通知は届かなければ定期実行（ledra-sync）で再送する
     const scrapped = body.reason === 'scrapped';
-    const { data: link } = await admin
+    const { data: link, error: linkError } = await admin
       .from('ledra_links')
       .update({
         status: 'revoked_by_user',
@@ -56,6 +57,7 @@ Deno.serve(
       .eq('status', 'active')
       .select('id, ledra_link_id')
       .maybeSingle();
+    if (linkError) throw linkError;
 
     const { error } = await admin
       .from('vehicles')
@@ -67,7 +69,16 @@ Deno.serve(
       })
       .eq('id', vehicle.id)
       .eq('status', 'active');
-    if (error) throw error;
+    if (error) {
+      // クルマを手放せなかったので、連携を元に戻す（やり直したときに Ledra へ解除を伝えられるように）
+      if (link) {
+        await admin
+          .from('ledra_links')
+          .update({ status: 'active', revoked_at: null, ...(scrapped ? { scrapped_on: null, scrap_notify_pending: false } : {}) })
+          .eq('id', link.id);
+      }
+      throw error;
+    }
 
     let ledra: { unlinked: boolean; scrapNotified: boolean | null } = { unlinked: false, scrapNotified: null };
     if (link) {

@@ -10,6 +10,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BASES, buildPalette, DEFAULT_THEME, parseThemeChoice, type Palette, type ThemeChoice } from './palettes';
+import { STORAGE_KEYS } from './lib/storage-keys';
 
 export type { Palette, ThemeChoice };
 
@@ -42,8 +43,6 @@ export const cardShadow = {
   elevation: 2,
 } as const;
 
-const THEME_KEY = 'ijilog.theme';
-
 interface ThemeValue {
   choice: ThemeChoice;
   colors: Palette;
@@ -66,14 +65,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [choice, setChoiceState] = useState<ThemeChoice | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(THEME_KEY)
+    AsyncStorage.getItem(STORAGE_KEYS.theme)
       .catch(() => null)
       .then((raw) => setChoiceState((current) => current ?? parseThemeChoice(raw)));
   }, []);
 
   const setChoice = useCallback((next: ThemeChoice) => {
     setChoiceState(next);
-    AsyncStorage.setItem(THEME_KEY, JSON.stringify(next)).catch(() => {});
+    AsyncStorage.setItem(STORAGE_KEYS.theme, JSON.stringify(next)).catch(() => {});
   }, []);
 
   const value = useMemo<ThemeValue | null>(

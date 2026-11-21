@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { distanceUnitLabel, toKm } from '@domain/units.ts';
-import { Alert, View } from 'react-native';
-import { AppText, Button, Card, DateField, Divider, ErrorView, Field, Loading, Screen, SectionTitle } from '../../components/ui';
-import { addMeterReplacement, deleteMeterReplacement, useInvalidate, useVehicleBundle } from '../../lib/data';
+import { View } from 'react-native';
+import { AppText, Button, Card, DateField, Divider, Field, QueryFallback, Screen, SectionTitle } from '../../components/ui';
+import { addMeterReplacement, deleteMeterReplacement, useInvalidate, useVehicleBundle, vehicleUnit } from '../../lib/data';
 import { fullDate, km, parseInteger } from '../../lib/format';
 import { spacing } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 /** メーター交換の訂正履歴。交換後に値が戻っても、実走行距離で予測・集計できるようにする */
 export default function OdometerSettings() {
@@ -15,12 +16,11 @@ export default function OdometerSettings() {
   const [after, setAfter] = useState('0');
   const [busy, setBusy] = useState(false);
 
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   const { vehicle, meterReplacements, state } = bundle.data;
   const latest = state.readings.at(-1);
   // 入力はメーターの単位、保存は km
-  const unit = vehicle.distance_unit === 'mile' ? 'mile' : 'km';
+  const unit = vehicleUnit(vehicle);
   const inKm = (text: string) => {
     const n = parseInteger(text);
     return n == null ? null : toKm(n, unit);
@@ -38,7 +38,7 @@ export default function OdometerSettings() {
       setBefore('');
       setAfter('0');
     } catch (e) {
-      Alert.alert('登録できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('登録できませんでした', e);
     } finally {
       setBusy(false);
     }
@@ -75,8 +75,12 @@ export default function OdometerSettings() {
                 title="この訂正を削除"
                 variant="plain"
                 onPress={async () => {
-                  await deleteMeterReplacement(m.id).catch((e) => Alert.alert('削除できませんでした', String(e)));
-                  await invalidate();
+                  try {
+                    await deleteMeterReplacement(m.id);
+                    await invalidate();
+                  } catch (e) {
+                    alertError('削除できませんでした', e);
+                  }
                 }}
               />
             </View>

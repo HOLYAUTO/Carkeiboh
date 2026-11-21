@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Alert, Share, View } from 'react-native';
+import { Share, View } from 'react-native';
 import { annualBookkeeping, bookkeepingCsv, defaultBookkeepingYear } from '@domain/bookkeeping.ts';
 import { EXPENSE_CATEGORY_LABELS } from '@domain/costs.ts';
-import { AppText, Button, Card, Divider, ErrorView, Field, Loading, Num, Screen, SectionTitle, Segmented } from '../../components/ui';
+import { AppText, Button, Card, Divider, Field, Num, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
 import { bookkeepingExpenses, updateVehicle, useInvalidate, useVehicleBundle, type VehicleBundle } from '../../lib/data';
 import { parseInteger, yen } from '../../lib/format';
 import { spacing } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 /**
  * 確定申告用のまとめ。1年（1月〜12月）の維持費を勘定科目ごとにまとめ、仕事で使う割合を掛けた「経費にする額」を出す。
@@ -13,8 +14,7 @@ import { spacing } from '../../theme';
  */
 export default function TaxReport() {
   const { bundle } = useVehicleBundle();
-  if (bundle.isPending) return <Loading />;
-  if (bundle.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
   return <Report bundle={bundle.data} />;
 }
 
@@ -45,7 +45,7 @@ function Report({ bundle }: { bundle: VehicleBundle }) {
       await updateVehicle(vehicle.id, { business_use_percent: percentN });
       await invalidate();
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }
@@ -57,7 +57,7 @@ function Report({ bundle }: { bundle: VehicleBundle }) {
     try {
       await Share.share({ title, message: csv });
     } catch (e) {
-      Alert.alert('送れませんでした', e instanceof Error ? e.message : String(e));
+      alertError('送れませんでした', e);
     }
   };
 

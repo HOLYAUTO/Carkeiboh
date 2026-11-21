@@ -7,6 +7,7 @@ import { AppText, Button, Card, Divider, ErrorView, Loading, Notice, Screen } fr
 import { useInvalidate, useVehicle } from '../../lib/data';
 import { invokeFunction } from '../../lib/supabase';
 import { spacing } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 /**
  * 連携内容の説明と同意。提供元・提供先・受け取る項目・解除方法を明記する。
@@ -41,7 +42,7 @@ export default function Consent() {
         { text: 'OK', onPress: () => router.dismissTo('/settings') },
       ]);
     } catch (e) {
-      Alert.alert('連携できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('連携できませんでした', e);
     } finally {
       setBusy(false);
     }

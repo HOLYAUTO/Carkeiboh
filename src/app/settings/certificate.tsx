@@ -7,7 +7,7 @@ import { maskCertificate, taxPrefecture, type VehicleCertificate } from '@domain
 import { automobileTaxFor, fiscalYearOf, vehicleTaxSpecLabel, weightTaxFor } from '@domain/vehicle-tax.ts';
 import { vehicleTaxSpec } from '@shared/db-mapping.ts';
 import { yen } from '../../lib/format';
-import { AppText, Button, Card, Divider, ErrorView, Field, Loading, Notice, Num, Screen, SectionTitle, Segmented } from '../../components/ui';
+import { AppText, Button, Card, Divider, Field, Notice, Num, QueryFallback, Screen, SectionTitle, Segmented } from '../../components/ui';
 import {
   ALL_FIELDS,
   CERTIFICATE_SECTIONS,
@@ -21,6 +21,7 @@ import {
 import { saveVehicleCertificate, useInvalidate, useVehicleBundle, useVehicleCertificate, type VehicleBundle } from '../../lib/data';
 import { invokeFunction } from '../../lib/supabase';
 import { spacing } from '../../theme';
+import { alertError } from '../../lib/alerts';
 
 /** 車検証の写真は細かい字が多いので、レシートより大きめにして送る */
 const PHOTO_MAX_SIDE = 2000;
@@ -33,8 +34,7 @@ const PHOTO_MAX_SIDE = 2000;
 export default function CertificateScreen() {
   const { vehicle, bundle } = useVehicleBundle();
   const cert = useVehicleCertificate(vehicle.data);
-  if (bundle.isPending || cert.isPending) return <Loading />;
-  if (bundle.isError || cert.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => (bundle.isError ? bundle.refetch() : cert.refetch())} />;
+  if (!bundle.isSuccess || !cert.isSuccess) return <QueryFallback queries={[bundle, cert]} />;
   return <Certificate bundle={bundle.data} saved={cert.data} />;
 }
 
@@ -108,7 +108,7 @@ function Certificate({ bundle, saved }: { bundle: VehicleBundle; saved: VehicleC
       if (!photo.base64) throw new Error('写真を読み込めませんでした。');
       applyDraft(await invokeFunction<CertificateDraft>('read-vehicle-certificate', { image: photo.base64 }));
     } catch (e) {
-      Alert.alert('読み取れませんでした', e instanceof Error ? e.message : String(e));
+      alertError('読み取れませんでした', e);
     } finally {
       setReading(false);
     }
@@ -131,7 +131,7 @@ function Certificate({ bundle, saved }: { bundle: VehicleBundle; saved: VehicleC
       setEditing(false);
       setNotice(null);
     } catch (e) {
-      Alert.alert('保存できませんでした', e instanceof Error ? e.message : String(e));
+      alertError('保存できませんでした', e);
     } finally {
       setBusy(false);
     }

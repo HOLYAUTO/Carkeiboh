@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { ANNOUNCEMENT_LABELS } from '@domain/announcements.ts';
-import { AppText, Badge, Button, Card, EmptyState, ErrorView, Loading, Screen } from '../../components/ui';
+import { AppText, Badge, Button, Card, EmptyState, QueryFallback, Screen } from '../../components/ui';
 import { useAnnouncement } from '../../lib/announcements';
 import { jstDateTime } from '../../lib/format';
 import { spacing } from '../../theme';
@@ -10,8 +10,7 @@ export default function AnnouncementDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const announcement = useAnnouncement(id);
 
-  if (announcement.isPending) return <Loading />;
-  if (announcement.isError) return <ErrorView message="読み込めませんでした。" onRetry={() => announcement.refetch()} />;
+  if (!announcement.isSuccess) return <QueryFallback queries={[announcement]} />;
   const a = announcement.data;
   if (!a) {
     return (

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { KindPicker } from '../../components/RecordForm';
+import { KindPicker } from '../../components/KindPicker';
 import { AppText, Card, Divider, IconButton, ListRow, Screen, ScreenHeader } from '../../components/ui';
 
 /** 項目を選ぶと入力画面（/records/new）を開く。入力画面からは「戻る」やスワイプでここに戻れる */
