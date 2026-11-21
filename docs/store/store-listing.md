@@ -124,4 +124,4 @@ reminders and costs. The "Multi-vehicle plan" (auto-renewable subscription) is n
 | App Store | App のプライバシー | 位置情報の分：「おおよその位置情報」を「アプリの機能」で収集・ユーザーに紐づけない（サーバーは区画と利用者を結びつけて保存しない）・トラッキングに使わない。正確な位置情報は収集しない。ほかの項目（メールアドレス・写真など）は、プライバシーポリシーの第2項にあわせて入れる |
 | Google Play | データ セーフティ | `docs/store/play-location-declaration.md` の3章 |
 | Google Play | 位置情報の権限 | `docs/store/play-location-declaration.md` の1章・2章 |
-| 両方 | カテゴリ | 仮：プライマリ「ライフスタイル」・セカンダリ「ファイナンス」（App Store）、「自動車」（Google Play の「自動車・乗り物」）。【要確認】 |
+| 両方 | カテゴリ | **決定（2026-11-21）**：App Store はプライマリ「ライフスタイル」・セカンダリ「ファイナンス」、Google Play は「自動車・乗り物」。App Store には自動車の区分が無いため、カーライフとして「ライフスタイル」を主にし、家計簿・維持費・確定申告の面を「ファイナンス」で補う（主を「ファイナンス」にすると、銀行・家計簿の専業アプリと並び、オイル交換・期限という強みが伝わりにくい） |
