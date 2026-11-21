@@ -4,7 +4,8 @@ App Store Connect・Play Console の「ストアの掲載情報」に入れる�
 
 - 位置情報の書き方は、アプリの中の説明（`src/app/fuel-detect.tsx`）・プライバシーポリシー（`docs/legal/privacy-policy-draft.md` 第6項）・
   Google Play の申告（`docs/store/play-location-declaration.md`）とそろえてある。どれかを変えたら、ほかもあわせて直す
-- 料金はまだ仮（`docs/open-questions.md` 30）なので、説明文には書かない（ストアが料金を表示する）
+- 料金は利用規約（https://www.holy-inc.jp/ijilog/terms 第4条・特定商取引法に基づく表記）と同じにする。複数台プラン 月額500円（税込）、復旧の事務手数料 1,000円（税込）。
+  ストアの商品の価格を変えたら、ここと利用規約もあわせて直す
 - 「必ず」「No.1」「税理士いらず」のような言い切り・比べる表現は使わない。税の計算は「目安」と書く
 - 【要確認】のところは、決まってから埋める
 
@@ -70,7 +71,7 @@ App Store Connect・Play Console の「ストアの掲載情報」に入れる�
 
 ■ 複数台プラン
 ・1台目は無料でお使いいただけます
-・家族や仕事のクルマをまとめて登録したいときは、複数台プラン（最大5台・月額・自動更新）をご利用ください
+・家族や仕事のクルマをまとめて登録したいときは、複数台プラン（最大5台・月額500円（税込）・1か月ごとの自動更新）をご利用ください
 ・お支払いは購入の確定時にストアのアカウントに請求されます。期間が終わる24時間前までに解約しない限り、自動的に更新されます。解約はストアのアカウントの設定から行えます
 
 ■ プライバシー
@@ -118,8 +119,8 @@ reminders and costs. The "Multi-vehicle plan" (auto-renewable subscription) is n
 
 | ストア | 欄 | 入れるもの |
 | --- | --- | --- |
-| 両方 | プライバシーポリシーの URL | 公開したプライバシーポリシーの URL（アプリの `EXPO_PUBLIC_PRIVACY_URL` と同じもの） |
-| App Store | 利用規約（EULA） | 独自の利用規約を使うなら URL を説明文と「使用許諾契約」に入れる（自動更新のサブスクリプションがあるため必須） |
+| 両方 | プライバシーポリシーの URL | https://www.holy-inc.jp/ijilog/privacy（アプリの `EXPO_PUBLIC_PRIVACY_URL` と同じ）。App Store は「App 情報」、Google Play は「アプリのコンテンツ → プライバシー ポリシー」 |
+| App Store | 利用規約（EULA） | https://www.holy-inc.jp/ijilog/terms を「App 情報 → 使用許諾契約」に入れる（説明文の最後にも記載済み）。自動更新のサブスクリプションがあるため必須 |
 | App Store | App のプライバシー | 位置情報の分：「おおよその位置情報」を「アプリの機能」で収集・ユーザーに紐づけない（サーバーは区画と利用者を結びつけて保存しない）・トラッキングに使わない。正確な位置情報は収集しない。ほかの項目（メールアドレス・写真など）は、プライバシーポリシーの第2項にあわせて入れる |
 | Google Play | データ セーフティ | `docs/store/play-location-declaration.md` の3章 |
 | Google Play | 位置情報の権限 | `docs/store/play-location-declaration.md` の1章・2章 |
