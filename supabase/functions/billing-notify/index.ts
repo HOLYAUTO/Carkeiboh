@@ -77,7 +77,8 @@ Deno.serve(
   handle(async (req) => {
     requirePost(req);
     const url = new URL(req.url);
-    if (!timingSafeEqual(url.searchParams.get('key') ?? '', requireEnv('BILLING_NOTIFY_SECRET'))) throw new HttpError(401, 'unauthorized');
+    // 管理画面に貼るときに入りがちな前後の空白・改行は無視する（URL に入れる値と食い違わないように）
+    if (!timingSafeEqual(url.searchParams.get('key') ?? '', requireEnv('BILLING_NOTIFY_SECRET').trim())) throw new HttpError(401, 'unauthorized');
 
     const admin = adminClient();
     const stores = new StoreClients();
