@@ -78,7 +78,7 @@ App Store Connect・Play Console の「ストアの掲載情報」に入れる�
 ・外部の広告配信サービスは使っていません。アプリ内の広告には「PR」と広告主の名前を表示します
 ・アカウントは、アプリの設定からいつでも削除できます
 
-利用規約：https://www.holy-inc.jp/ijilog/terms
+利用規約（EULA）：https://www.holy-inc.jp/ijilog/terms
 プライバシーポリシー：https://www.holy-inc.jp/ijilog/privacy
 
 ガソリンスタンドの場所：© OpenStreetMap contributors
@@ -120,7 +120,7 @@ reminders and costs. The "Multi-vehicle plan" (auto-renewable subscription) is n
 | ストア | 欄 | 入れるもの |
 | --- | --- | --- |
 | 両方 | プライバシーポリシーの URL | https://www.holy-inc.jp/ijilog/privacy（アプリの `EXPO_PUBLIC_PRIVACY_URL` と同じ）。App Store は「App 情報」、Google Play は「アプリのコンテンツ → プライバシー ポリシー」 |
-| App Store | 利用規約（EULA） | https://www.holy-inc.jp/ijilog/terms を「App 情報 → 使用許諾契約」に入れる（説明文の最後にも記載済み）。自動更新のサブスクリプションがあるため必須 |
+| App Store | 利用規約（EULA） | 自動更新のサブスクリプションがあるため必須（ガイドライン 3.1.2）。**説明文の最後の「利用規約（EULA）：https://www.holy-inc.jp/ijilog/terms」を、App Store Connect の説明文に必ず入れる**（ローカリゼーションを足したら、そのすべてに入れる）。「App 情報 → 使用許諾契約」は「Apple 標準」のままでよい（ここは URL ではなく契約の本文を入れる欄。カスタムにするなら利用規約の全文を貼る）。2026-11-23、説明文にリンクが無いとして審査が止まった（`docs/store/app-store-review.md` 5章） |
 | App Store | App のプライバシー | 位置情報の分：「おおよその位置情報」を「アプリの機能」で収集・ユーザーに紐づけない（サーバーは区画と利用者を結びつけて保存しない）・トラッキングに使わない。正確な位置情報は収集しない。ほかの項目（メールアドレス・写真など）は、プライバシーポリシーの第2項にあわせて入れる |
 | Google Play | データ セーフティ | `docs/store/play-location-declaration.md` の3章 |
 | Google Play | 位置情報の権限 | `docs/store/play-location-declaration.md` の1章・2章 |
