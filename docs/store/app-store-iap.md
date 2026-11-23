@@ -67,7 +67,7 @@ This one-time fee appears only for vehicles that were paused more than 90 days a
 
 ## 4. 審査用のスクリーンショットの撮り方
 
-1. TestFlight のビルド8を入れた iPhone で、1台目のクルマを登録したアカウントでログインする
+1. TestFlight のビルド11を入れた iPhone で、1台目のクルマを登録したアカウントでログインする
 2. 設定 → クルマの切り替え・追加 → 複数台プランを見る
 3. 料金と「申し込む（¥500／月）」が見えるところで撮る（商品を作ってから数分〜数時間で、サンドボックスの料金が出るようになる）
 
