@@ -53,3 +53,31 @@
 ユーザーどうしのやりとり（チャット・投稿）：なし。制限のない Web アクセス：なし（規約などを開くだけ）。
 広告：あり（スポンサー広告。整備工場・カー用品などで、年齢に関わる内容は載せない）。
 → 4+（または 4+ 相当）になる見込み。
+
+## 5. 差し戻しの記録
+
+### 2026-11-23：利用規約（EULA）のリンクが無い（ガイドライン 3.1.2）
+
+自動のメッセージで「複数台プラン(月額) は自動更新のサブスクリプションなのに、ストアのページに利用規約（EULA）の使えるリンクが無い」として審査が止まった。
+ビルドの問題ではないので、**新しいビルドは要らない**。App Store Connect の入力だけを直す。
+
+1. 「App Store」タブ → バージョン 0.1.0 →「説明」の最後に、次の2行が入っていることを確かめる（無ければ足して保存）
+   ```
+   利用規約（EULA）：https://www.holy-inc.jp/ijilog/terms
+   プライバシーポリシー：https://www.holy-inc.jp/ijilog/privacy
+   ```
+   日本語のほかにローカリゼーションがあれば、そのすべてに入れる
+2. 「App 情報」→「プライバシーポリシー URL」に https://www.holy-inc.jp/ijilog/privacy が入っていることを確かめる
+3. 2つの URL をブラウザで開き、ログインなしで表示されることを確かめる
+4. App Review のメッセージに返信し、「審査へ再提出」する
+
+返信の文面：
+```
+Thank you for your review.
+We have added a functional link to our Terms of Use (EULA) to the App Description:
+Terms of Use (EULA): https://www.holy-inc.jp/ijilog/terms
+Privacy Policy: https://www.holy-inc.jp/ijilog/privacy
+The same links are also available in the app, at the bottom of the subscription screen
+(Settings > クルマの切り替え・追加 > 複数台プランを見る) and in Settings.
+We have resubmitted the app for review.
+```
