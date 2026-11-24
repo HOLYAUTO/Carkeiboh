@@ -29,7 +29,7 @@ export default function ReleaseVehicle() {
   const vehicle = useVehicle();
   const vehicles = useVehicles();
   if (vehicle.isPending || vehicles.isPending) return <Loading />;
-  if (vehicle.isError || !vehicle.data) return <ErrorView message="読み込めませんでした。" onRetry={() => vehicle.refetch()} />;
+  if (vehicle.isError || !vehicle.data) return <ErrorView message="読み込めませんでした。" error={vehicle.error} code="IJ-DB-009" onRetry={() => vehicle.refetch()} />;
   const others = (vehicles.data ?? []).filter((v) => v.id !== vehicle.data!.id);
   return <Form vehicleId={vehicle.data.id} vehicleName={vehicle.data.name} nextVehicleId={others[0]?.id ?? null} />;
 }

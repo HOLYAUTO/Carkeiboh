@@ -17,6 +17,7 @@ import { invokeFunction } from '../lib/supabase';
 import { fonts, MIN_TAP, radius, spacing, useColors } from '../theme';
 import { AppText, Button, Card } from './ui';
 import { alertError } from '../lib/alerts';
+import { withCode } from '../lib/error-codes';
 
 /** 読み取りに送る写真の長辺。レシートの小さな文字が読める程度に残し、通信量を抑える */
 const PHOTO_MAX_SIDE = 1600;
@@ -143,12 +144,12 @@ export function QuickInput({
     const module = speech.current ?? (await loadSpeech());
     speech.current = module;
     if (!module || !module.isRecognitionAvailable()) {
-      Alert.alert('音声入力を使えません', 'この端末では音声認識を使えません。手で入力してください。');
+      Alert.alert('音声入力を使えません', withCode('この端末では音声認識を使えません。手で入力してください。', 'IJ-PERM-004'));
       return;
     }
     const permission = await module.requestPermissionsAsync();
     if (!permission.granted) {
-      if (!permission.canAskAgain) askOpenSettings('マイクを使えません', '設定でマイクと音声認識の使用を許可してください。');
+      if (!permission.canAskAgain) askOpenSettings('マイクを使えません', withCode('設定でマイクと音声認識の使用を許可してください。', 'IJ-PERM-004'));
       return;
     }
 
@@ -164,7 +165,7 @@ export function QuickInput({
         if (e.error === 'aborted') return;
         Alert.alert(
           '聞き取れませんでした',
-          e.error === 'no-speech' || e.error === 'speech-timeout' ? 'もう一度、マイクに向かって話してください。' : e.message,
+          withCode(e.error === 'no-speech' || e.error === 'speech-timeout' ? 'もう一度、マイクに向かって話してください。' : `${e.message}（${e.error}）`, 'IJ-VOICE-001'),
         );
       }),
       module.addListener('end', () => {

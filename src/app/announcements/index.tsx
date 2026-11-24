@@ -35,7 +35,7 @@ export default function Announcements() {
   );
 
   if (isPending) return <Loading />;
-  if (isError || !visible || !prefs) return <ErrorView message="読み込めませんでした。" onRetry={() => void refetch()} />;
+  if (isError || !visible || !prefs) return <ErrorView message="読み込めませんでした。" code="IJ-DB-009" onRetry={() => void refetch()} />;
 
   const optedIn = prefs.shopNewsOptIn === true;
   const items = filter === 'all' ? visible : visible.filter((a) => a.category === filter);

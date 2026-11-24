@@ -1,12 +1,16 @@
 import { Alert } from 'react-native';
+import { describeError, type ErrorCode } from './error-codes';
 
 export function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-/** 失敗を知らせる。title は「保存できませんでした」など、何ができなかったか */
-export function alertError(title: string, e: unknown) {
-  Alert.alert(title, errorMessage(e));
+/**
+ * 失敗を知らせる。title は「保存できませんでした」など、何ができなかったか。
+ * 本文の最後にエラーコードを付ける（原因と対処は docs/error-codes.md）。fallback はコードを推し量れないときのコード
+ */
+export function alertError(title: string, e: unknown, fallback?: ErrorCode) {
+  Alert.alert(title, describeError(e, fallback));
 }
 
 /** 確かめてから進む。ok を押したら true、cancel を押したら false */

@@ -27,7 +27,7 @@ function Loader({ id, org }: { id: string; org: StaffOrg }) {
   if (id === 'new') return <Form org={org} current={null} />;
   if (!list.isSuccess) return <QueryFallback queries={[list]} />;
   const current = list.data.find((a) => a.id === id);
-  if (!current) return <ErrorView message="このお知らせは削除されています。" />;
+  if (!current) return <ErrorView message="このお知らせは削除されています。" code="IJ-DB-004" />;
   return <Form org={org} current={current} />;
 }
 

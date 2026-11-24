@@ -22,6 +22,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cardShadow, fonts, MIN_TAP, radius, spacing, themedStyles, useColors, useTheme } from '../theme';
 import { dateToIso, fullDate, isoToDate } from '../lib/format';
+import { codeOf, type ErrorCode } from '../lib/error-codes';
 
 type Variant = 'title' | 'heading' | 'body' | 'label' | 'caption';
 
@@ -99,17 +100,23 @@ export function Loading() {
   );
 }
 
-export function ErrorView({ message, onRetry }: { message: string; onRetry?: () => void }) {
+/**
+ * 画面を出せないときの表示。必ずエラーコード（docs/error-codes.md）を添える。
+ * error があればそこからコードを推し量り、無ければ code を使う
+ */
+export function ErrorView({ message, onRetry, error, code }: { message: string; onRetry?: () => void; error?: unknown; code?: ErrorCode }) {
   const styles = useStyles();
+  const shown = codeOf(error, code ?? 'IJ-UNK-000');
   return (
     <View style={[styles.center, { padding: spacing.xl, gap: spacing.md }]}>
       <AppText style={{ textAlign: 'center' }}>{message}</AppText>
+      <AppText variant="caption" style={{ textAlign: 'center' }}>{`エラーコード：${shown}`}</AppText>
       {onRetry && <Button title="再読み込み" variant="secondary" onPress={onRetry} />}
     </View>
   );
 }
 
-type QueryState = { isPending: boolean; isError: boolean; refetch: () => unknown };
+type QueryState = { isPending: boolean; isError: boolean; error?: unknown; refetch: () => unknown };
 
 /**
  * 読み込みが済んでいないときの表示（読み込み中、または「再読み込み」付きのエラー）。
@@ -118,7 +125,14 @@ type QueryState = { isPending: boolean; isError: boolean; refetch: () => unknown
 export function QueryFallback({ queries }: { queries: QueryState[] }) {
   if (queries.some((q) => q.isPending)) return <Loading />;
   const failed = queries.filter((q) => q.isError);
-  return <ErrorView message="読み込めませんでした。" onRetry={() => failed.forEach((q) => void q.refetch())} />;
+  return (
+    <ErrorView
+      message="読み込めませんでした。"
+      error={failed[0]?.error}
+      code="IJ-DB-009"
+      onRetry={() => failed.forEach((q) => void q.refetch())}
+    />
+  );
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {

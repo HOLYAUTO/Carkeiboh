@@ -59,7 +59,7 @@ export default function EditRecord() {
       kind = 'odometer';
     }
   }
-  if (!target || !kind) return <ErrorView message="記録が見つかりません。" />;
+  if (!target || !kind) return <ErrorView message="記録が見つかりません。" code="IJ-DB-004" />;
 
   if (target.type === 'oil' && target.row.source === 'ledra') {
     return <LedraRecord bundle={data} row={target.row} expense={target.expense} />;

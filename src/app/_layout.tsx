@@ -86,7 +86,7 @@ function RootNavigator() {
   if (loading || checkingVehicle) return <Loading />;
   // 通信エラーを「車両なし」と取り違えて初回設定に進ませない
   if (signedIn && vehicle.isError) {
-    return <ErrorView message="読み込めませんでした。通信状態を確認してください。" onRetry={() => vehicle.refetch()} />;
+    return <ErrorView message="読み込めませんでした。通信状態を確認してください。" error={vehicle.error} code="IJ-NET-001" onRetry={() => vehicle.refetch()} />;
   }
 
   return (

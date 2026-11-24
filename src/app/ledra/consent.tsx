@@ -48,7 +48,7 @@ export default function Consent() {
     }
   };
 
-  if (!qr) return <ErrorView message="QRコードを読み取れませんでした。" />;
+  if (!qr) return <ErrorView message="QRコードを読み取れませんでした。" code="IJ-QR-001" />;
   if (preview.isPending) return <Loading />;
   if (preview.isError) {
     return (

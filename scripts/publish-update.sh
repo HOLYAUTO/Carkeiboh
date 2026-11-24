@@ -9,10 +9,12 @@
 #
 # 使い方: ./scripts/publish-update.sh "変更の内容"
 #   DRY_RUN=1 を付けると、書き出しと確認だけを行い、配らない
+#   CHANNEL=preview を付けると、ad hoc 版（eas.json の preview ビルド）に配る。接続先の確認は同じ
 set -euo pipefail
 
 MESSAGE="${1:?使い方: ./scripts/publish-update.sh \"変更の内容\"}"
-CHANNEL=production
+CHANNEL="${CHANNEL:-production}"
+case "$CHANNEL" in production|preview) ;; *) echo "CHANNEL は production か preview です。" >&2; exit 1;; esac
 # イジログ専用の Supabase（公開してよい値。eas.json の production ビルドにも同じ値を書いている）
 SUPABASE_URL=https://ympxgzyvjujnfuoyhilu.supabase.co
 SUPABASE_REF=ympxgzyvjujnfuoyhilu

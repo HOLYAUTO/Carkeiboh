@@ -20,7 +20,7 @@ export default function ShopDetail() {
   }, [shop?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!shops.isSuccess) return <QueryFallback queries={[shops]} />;
-  if (!shop) return <ErrorView message="この整備工場は現在掲載されていません。" />;
+  if (!shop) return <ErrorView message="この整備工場は現在掲載されていません。" code="IJ-DB-004" />;
 
   return (
     <Screen>

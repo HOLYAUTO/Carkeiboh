@@ -8,18 +8,19 @@ import { AppText, Badge, Button, Card, QueryFallback, Screen, SectionTitle } fro
 import {
   buyPlus,
   buyRestoreFee,
+  isJapanStorefront,
   isPurchaseCancelled,
   openSubscriptionSettings,
-  purchaseErrorDetail,
   restorePurchases,
+  toBillingError,
   useBillingProducts,
 } from '../lib/billing';
+import { AppError, describeError } from '../lib/error-codes';
 import { config } from '../lib/config';
 import { restoreSuspendedVehicles, usePlan } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { fullDate } from '../lib/format';
 import { spacing, useColors } from '../theme';
-import { errorMessage } from '../lib/alerts';
 
 const BENEFITS = [
   '家族や仕事のクルマをまとめて登録（最大5台）',
@@ -28,6 +29,7 @@ const BENEFITS = [
 ];
 
 const STORE = Platform.OS === 'ios' ? 'Apple ID' : 'Google アカウント';
+const STORE_NAME = Platform.OS === 'ios' ? 'App Store' : 'Google Play';
 const STORE_SETTINGS = Platform.OS === 'ios' ? 'App Store のサブスクリプションの設定' : 'Google Play の定期購入の設定';
 
 /**
@@ -41,7 +43,7 @@ export default function Plan() {
   const plan = usePlan();
   const products = useBillingProducts();
   const [busy, setBusy] = useState<'buy' | 'fee' | 'restore' | 'unsuspend' | null>(null);
-  /** ストアの画面が閉じられたときの、ストアからの返事（お知らせはせず、小さく表示して原因を確かめられるようにする） */
+  /** ストアの手続きが途中で終わったときの説明（エラーコード付き。お知らせはせず、画面に小さく出す） */
   const [cancelDetail, setCancelDetail] = useState<string | null>(null);
 
   if (!plan.isSuccess) return <QueryFallback queries={[plan]} />;
@@ -51,6 +53,8 @@ export default function Plan() {
   const fee = products.data?.restoreFee ?? null;
   const subscribed = s.subscription?.active === true;
   const price = plus?.displayPrice ?? config.plusPriceLabel;
+  const storefront = products.data?.storefront ?? null;
+  const storefrontIsJapan = isJapanStorefront(storefront);
 
   const run = async (kind: NonNullable<typeof busy>, fn: () => Promise<void>) => {
     setBusy(kind);
@@ -58,11 +62,12 @@ export default function Plan() {
     try {
       await fn();
     } catch (e) {
+      const err = toBillingError(e, storefront);
       if (isPurchaseCancelled(e)) {
-        setCancelDetail(purchaseErrorDetail(e));
+        setCancelDetail(describeError(err));
         return;
       }
-      Alert.alert('うまくいきませんでした', e instanceof Error ? purchaseErrorDetail(e) : '時間をおいてお試しください。');
+      Alert.alert('うまくいきませんでした', describeError(err));
     } finally {
       setBusy(null);
     }
@@ -96,11 +101,22 @@ export default function Plan() {
           <>
             <AppText variant="caption">
               {products.isError
-                ? `ストアにつながりませんでした（${errorMessage(products.error)}）。`
-                : 'ストアに複数台プランが見つかりませんでした。時間をおいて、もう一度読み込んでください。'}
+                ? describeError(products.error, 'IJ-BIL-001')
+                : describeError(new AppError('IJ-BIL-002', 'ストアに複数台プランが見つかりませんでした。時間をおいて、もう一度読み込んでください。'))}
             </AppText>
             <Button title="もう一度読み込む" variant="plain" loading={products.isFetching} onPress={() => products.refetch()} />
           </>
+        )}
+        {storefrontIsJapan === false && (
+          <AppText variant="caption">
+            {describeError(
+              new AppError(
+                'IJ-BIL-003',
+                `${STORE_NAME}の国・地域が日本になっていないため、料金が日本円で表示されず、申し込みもできないことがあります。`,
+                `ストアの国・地域：${storefront}`,
+              ),
+            )}
+          </AppText>
         )}
         {subscribed && s.subscription?.entitledUntil && (
           <AppText variant="caption">
@@ -124,7 +140,7 @@ export default function Plan() {
       )}
       {cancelDetail && (
         <AppText variant="caption">
-          {`${Platform.OS === 'ios' ? 'App Store' : 'Google Play'}の手続きが途中で終わりました。もう一度お試しください。（ストアからの返事：${cancelDetail}）`}
+          {cancelDetail}
         </AppText>
       )}
       <Button

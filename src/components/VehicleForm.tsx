@@ -7,6 +7,7 @@ import { createVehicle } from '../lib/data';
 import { km, number, parseInteger } from '../lib/format';
 import { AppText, Button, Card, ChoiceChips, DateField, Field, Segmented } from './ui';
 import { errorMessage } from '../lib/alerts';
+import { describeError } from '../lib/error-codes';
 
 /** 年間走行距離の選択肢（メーターの単位の値）。mile は km の選択肢に近いきりのよい値 */
 const ANNUAL_PRESETS: Record<DistanceUnit, { values: number[]; initial: number }> = {
@@ -66,7 +67,7 @@ export function VehicleForm({ submitTitle, onCreated }: { submitTitle: string; o
           { text: 'プランを見る', onPress: () => router.push('/plan') },
         ]);
       } else {
-        Alert.alert('登録できませんでした', message);
+        Alert.alert('登録できませんでした', describeError(e));
       }
     } finally {
       setBusy(false);

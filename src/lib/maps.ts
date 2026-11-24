@@ -1,9 +1,10 @@
 import { Alert, Linking, Platform } from 'react-native';
 import { logShopAction, type ShopRow } from './data';
 import { routeUrl, telUrl, type MapApp } from './geo';
+import { withCode } from './error-codes';
 
 function open(url: string) {
-  Linking.openURL(url).catch(() => Alert.alert('開けませんでした', '地図アプリまたはブラウザで開けませんでした。'));
+  Linking.openURL(url).catch(() => Alert.alert('開けませんでした', withCode('地図アプリまたはブラウザで開けませんでした。', 'IJ-APP-001')));
 }
 
 /**

@@ -13,7 +13,7 @@ import { pickPhotos } from '../../lib/photo';
 import { batchStatus, isDuplicate, type BatchStatus } from '../../lib/receipt-batch';
 import { invokeFunction } from '../../lib/supabase';
 import { radius, spacing, useColors } from '../../theme';
-import { errorMessage } from '../../lib/alerts';
+import { describeError } from '../../lib/error-codes';
 
 const PHOTO_MAX_SIDE = 1600;
 const MAX_PHOTOS = 10;
@@ -122,7 +122,7 @@ function Receipts({ bundle }: { bundle: VehicleBundle }) {
       Alert.alert('登録しました', `${saved}件を登録しました。`);
     } catch (e) {
       await invalidate();
-      Alert.alert('途中で保存できませんでした', `${saved}件は登録しました。${errorMessage(e)}`);
+      Alert.alert('途中で保存できませんでした', `${saved}件は登録しました。${describeError(e)}`);
     } finally {
       setBusy(false);
     }
