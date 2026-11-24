@@ -9,6 +9,23 @@ App Store Connect・Play Console の「ストアの掲載情報」に入れる�
 - 「必ず」「No.1」「税理士いらず」のような言い切り・比べる表現は使わない。税の計算は「目安」と書く
 - 【要確認】のところは、決まってから埋める
 
+## 0. App Store へまとめて入れる（`store.config.json`）
+
+App Store Connect の入力の多くは、リポジトリの `store.config.json`（EAS Metadata）からまとめて送れる。
+文面はこのファイル（1章・2章・4章）から作ってあるので、**ここを直したら `store.config.json` も同じに直す**。
+
+```sh
+npx eas-cli@latest metadata:lint   # 書式の確認（送らない）
+npx eas-cli@latest metadata:pull   # 今の App Store Connect の内容を書き出して見比べる（上書きされるので、先に差分を確認する）
+npx eas-cli@latest metadata:push   # App Store Connect へ送る
+```
+
+- 送るもの：アプリ名・サブタイトル・概要・キーワード・プロモーションテキスト・プライバシーポリシーの URL・カテゴリ（ライフスタイル／ファイナンス）・著作権・年齢制限の回答（4章の内容）・App Review の連絡先とメモ（4章）
+- 送らないもの：スクリーンショット、App 内課金、App のプライバシー（データの収集）、使用許諾契約（EULA）、サポート URL。これらは画面で入れる。Google Play も対象外
+- **審査中のバージョンには送らない**（審査中は多くの欄を変えられず、通っても内容が混ざる）。審査が終わってから、または次のバージョンを作ってから送る
+- App Store Connect の認証は、EAS に登録した API キーを使うか、Apple ID でのログインを求められる。Mac など、App Store Connect に接続できる場所で実行する
+- App Review の連絡先は、運営の窓口（株式会社HOLY・堀越）にしてある。変えるときは `apple.review` を直す
+
 ## 1. アプリ名・短い説明
 
 | 欄 | 上限 | 文面 | 字数 |
