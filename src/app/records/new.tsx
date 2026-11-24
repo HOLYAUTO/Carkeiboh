@@ -33,7 +33,7 @@ export default function NewRecord() {
   const initialDraft = parseDraft(draft);
   const { bundle } = useVehicleBundle();
 
-  if (!isKind(kind)) return <ErrorView message="記録する項目が見つかりません。" onRetry={() => router.back()} />;
+  if (!isKind(kind)) return <ErrorView message="記録する項目が見つかりません。" code="IJ-NAV-001" onRetry={() => router.back()} />;
   if (!bundle.isSuccess) return <QueryFallback queries={[bundle]} />;
 
   // 保存したら、開く前の画面（「記録する」タブかホーム）にすぐ戻り、そこで「記録しました」と知らせる。

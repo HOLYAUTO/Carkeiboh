@@ -28,6 +28,7 @@ import { fullDate, km } from '../../lib/format';
 import { getPushStatus, registerForPush, type PushStatus } from '../../lib/push';
 import { spacing } from '../../theme';
 import { alertError } from '../../lib/alerts';
+import { withCode } from '../../lib/error-codes';
 
 const ITEMS: { kind: ReminderKind; column: keyof VehicleRow; description: string }[] = [
   { kind: 'oil', column: 'notify_oil', description: '推定の残りが500km、目安日の1か月前・2週間前・当日（距離と期間の早い方）' },
@@ -103,7 +104,7 @@ export default function Notifications() {
     const status = await registerForPush(true);
     setPush(status);
     if (status === 'denied') {
-      Alert.alert('通知がオフになっています', '端末の設定アプリから、イジログの通知を許可してください。', [
+      Alert.alert('通知がオフになっています', withCode('端末の設定アプリから、イジログの通知を許可してください。', 'IJ-PERM-003'), [
         { text: '閉じる', style: 'cancel' },
         { text: '設定を開く', onPress: () => Linking.openSettings() },
       ]);

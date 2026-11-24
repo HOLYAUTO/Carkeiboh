@@ -10,7 +10,8 @@ import { fullDate, yen } from '../../lib/format';
 import { pickPhotos } from '../../lib/photo';
 import { invokeFunction } from '../../lib/supabase';
 import { spacing, useColors } from '../../theme';
-import { alertError, errorMessage } from '../../lib/alerts';
+import { alertError } from '../../lib/alerts';
+import { describeError } from '../../lib/error-codes';
 
 /** 明細の写真は字が細かいので大きめにして送る */
 const PHOTO_MAX_SIDE = 2000;
@@ -118,7 +119,7 @@ function FuelStatement({ bundle }: { bundle: VehicleBundle }) {
       Alert.alert('登録しました', `${saved}件の給油を登録しました。`, [{ text: 'OK', onPress: () => router.back() }]);
     } catch (e) {
       await invalidate();
-      Alert.alert('途中で保存できませんでした', `${saved}件は登録しました。${errorMessage(e)}`);
+      Alert.alert('途中で保存できませんでした', `${saved}件は登録しました。${describeError(e)}`);
       setLines((prev) => prev.filter((l) => !selected.slice(0, saved).some((s) => s.key === l.key)));
     } finally {
       setBusy(false);

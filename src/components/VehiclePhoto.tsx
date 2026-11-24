@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } 
 import { removeVehiclePhoto, saveVehiclePhoto, useInvalidate, useVehiclePhotoUrl, type VehicleRow } from '../lib/data';
 import { cardShadow, fonts, radius, spacing, themedStyles, useColors } from '../theme';
 import { alertError, confirmDestructive } from '../lib/alerts';
+import { withCode } from '../lib/error-codes';
 
 /** 保存する写真の長辺。ホームの横幅いっぱいに出してもきれいに見え、通信量を抑えられる大きさ */
 const PHOTO_MAX_SIDE = 1600;
@@ -28,7 +29,7 @@ export function VehiclePhoto({ vehicle }: { vehicle: VehicleRow }) {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
         if (!permission.canAskAgain) {
-          Alert.alert('カメラを使えません', '設定でカメラの使用を許可してください。', [
+          Alert.alert('カメラを使えません', withCode('設定でカメラの使用を許可してください。', 'IJ-PERM-001'), [
             { text: 'キャンセル', style: 'cancel' },
             { text: '設定を開く', onPress: () => Linking.openSettings() },
           ]);

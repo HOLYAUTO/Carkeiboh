@@ -4,6 +4,7 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Linking } from 'react-native';
+import { withCode } from './error-codes';
 
 export interface PickedPhoto {
   uri: string;
@@ -16,7 +17,7 @@ export async function pickPhotos(source: 'camera' | 'library', opts: { maxSide: 
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       if (!permission.canAskAgain)
-        Alert.alert('カメラを使えません', '設定でカメラの使用を許可してください。', [
+        Alert.alert('カメラを使えません', withCode('設定でカメラの使用を許可してください。', 'IJ-PERM-001'), [
           { text: 'キャンセル', style: 'cancel' },
           { text: '設定を開く', onPress: () => Linking.openSettings() },
         ]);

@@ -7,6 +7,7 @@ import { useFuelDetectMode, useSetFuelDetectMode, type FuelDetectMode } from '..
 import { isGeofencingSupported, refreshFuelGeofences, requestAlwaysPermission, stopFuelGeofences } from '../lib/fuel-geofence';
 import { registerForPush } from '../lib/push';
 import { fonts, radius, spacing, useColors } from '../theme';
+import { withCode } from '../lib/error-codes';
 
 const OPTIONS: { mode: FuelDetectMode; title: string; body: string; note: string }[] = [
   {
@@ -71,7 +72,7 @@ export default function FuelDetectChoice() {
       if (!permission.granted && permission.canAskAgain) permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
         await setMode('off');
-        Alert.alert('位置情報が使えません', 'スタンドに来たことを知らせるには、位置情報の許可が要ります。あとから「設定 → 給油の記録のしかた」で変えられます。', [
+        Alert.alert('位置情報が使えません', withCode('スタンドに来たことを知らせるには、位置情報の許可が要ります。あとから「設定 → 給油の記録のしかた」で変えられます。', 'IJ-PERM-002'), [
           { text: 'OK', onPress: done },
           ...(!permission.canAskAgain ? [{ text: '設定を開く', onPress: () => Linking.openSettings() }] : []),
         ]);

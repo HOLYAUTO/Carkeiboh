@@ -12,6 +12,7 @@ import {
   fetchProducts,
   finishTransaction,
   getAvailablePurchases,
+  getStorefront,
   initConnection,
   purchaseErrorListener,
   purchaseUpdatedListener,
@@ -24,6 +25,7 @@ import {
 import { useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useAuth } from './auth';
+import { AppError, describeError, type ErrorCode as AppErrorCode } from './error-codes';
 import { invokeFunction } from './supabase';
 
 export { BILLING_PRODUCTS };
@@ -42,6 +44,42 @@ function ensureConnected() {
 export interface BillingProducts {
   plus: ProductSubscription | null;
   restoreFee: Product | null;
+  /** ストアの国・地域（iOS は JPN、Android は JP など）。読めなければ null */
+  storefront: string | null;
+}
+
+/** ストアの国・地域が日本か（JPN・JP）。null（読めない）は判断しない */
+export function isJapanStorefront(storefront: string | null): boolean | null {
+  if (!storefront) return null;
+  return ['JPN', 'JP'].includes(storefront.trim().toUpperCase());
+}
+
+/** ストアからのエラーの元の文（ストアのコードと文）。原因を調べるため画面にも出す */
+function storeDetail(e: unknown): string | null {
+  if (typeof e !== 'object' || e === null) return e == null ? null : String(e);
+  const { code, message, debugMessage } = e as { code?: unknown; message?: unknown; debugMessage?: unknown };
+  const parts = [code, message, debugMessage !== message ? debugMessage : null].filter((v) => v != null && v !== '').map(String);
+  return parts.length ? `ストア：${parts.join(' / ')}` : null;
+}
+
+/** ストアのエラーを、エラーコード（docs/error-codes.md）付きのエラーにする */
+export function toBillingError(e: unknown, storefront?: string | null): AppError {
+  if (e instanceof AppError) return e;
+  const storeCode = typeof e === 'object' && e !== null ? (e as { code?: unknown }).code : null;
+  let code: AppErrorCode = 'IJ-BIL-008';
+  let message = 'ストアでエラーが起きました。時間をおいてお試しください。';
+  if (storeCode === ErrorCode.UserCancelled) {
+    code = 'IJ-BIL-004';
+    message = 'ストアの手続きが途中で終わりました。もう一度お試しください。';
+  } else if (storeCode === ErrorCode.DeferredPayment || storeCode === ErrorCode.Pending) {
+    code = 'IJ-BIL-005';
+    message = 'お支払いの完了を待っています。お支払いが済むと、自動で有効になります。';
+  } else if (storeCode === ErrorCode.NetworkError) {
+    code = 'IJ-NET-001';
+    message = '通信できませんでした。電波の良いところでお試しください。';
+  }
+  const where = storefront ? `ストアの国・地域：${storefront}` : null;
+  return new AppError(code, message, [storeDetail(e), where].filter(Boolean).join('／') || null);
 }
 
 /** ストアに登録した商品（料金はストアの表示をそのまま使う） */
@@ -56,8 +94,13 @@ export function useBillingProducts() {
         fetchProducts({ skus: [BILLING_PRODUCTS.plusMonthly], type: 'subs' }),
         fetchProducts({ skus: [BILLING_PRODUCTS.restoreFee], type: 'in-app' }),
       ]);
-      if (subs.status === 'rejected') throw subs.reason;
+      if (subs.status === 'rejected') {
+        throw new AppError('IJ-BIL-001', 'ストアにつながりませんでした。', storeDetail(subs.reason));
+      }
+      // 料金がドルで出る・購入が進まないときの手がかり（ストアの国・地域が日本以外だと、日本だけで配信しているアプリは買えない）
+      const storefront = await getStorefront().catch(() => null);
       return {
+        storefront,
         plus: ((subs.value ?? []) as ProductSubscription[]).find((p) => p.id === BILLING_PRODUCTS.plusMonthly) ?? null,
         restoreFee:
           items.status === 'fulfilled'
@@ -72,7 +115,7 @@ export function useBillingProducts() {
 export async function buyPlus(product: ProductSubscription, userId: string) {
   await ensureConnected();
   const offerToken = product.subscriptionOffers?.find((o) => o.offerTokenAndroid)?.offerTokenAndroid ?? null;
-  if (Platform.OS === 'android' && !offerToken) throw new Error('料金プランを読み込めませんでした。時間をおいてお試しください。');
+  if (Platform.OS === 'android' && !offerToken) throw new AppError('IJ-BIL-007', '料金プランを読み込めませんでした。時間をおいてお試しください。');
   await requestPurchase({
     type: 'subs',
     request: {
@@ -90,21 +133,6 @@ export async function buyPlus(product: ProductSubscription, userId: string) {
 /** 利用者が購入の画面を閉じた（取り消した）ときのエラーか。このときは何も知らせない */
 export function isPurchaseCancelled(e: unknown): boolean {
   return typeof e === 'object' && e !== null && (e as { code?: unknown }).code === ErrorCode.UserCancelled;
-}
-
-/** ストアから返ってきたエラーの中身（code・message・debugMessage）を1行にする。取り消しでも原因を確かめられるよう、画面に小さく出す */
-export function purchaseErrorDetail(e: unknown): string {
-  if (typeof e !== 'object' || e === null) return String(e);
-  const { code, message, debugMessage, responseCode } = e as {
-    code?: unknown;
-    message?: unknown;
-    debugMessage?: unknown;
-    responseCode?: unknown;
-  };
-  return [code, responseCode, message, debugMessage !== message ? debugMessage : null]
-    .filter((v) => v != null && v !== '')
-    .map(String)
-    .join(' / ');
 }
 
 /** 復旧の事務手数料を払う。結果は useBillingListener に届く */
@@ -142,6 +170,9 @@ async function verifyAndFinish(purchase: Purchase, qc: QueryClient): Promise<Ver
       platform: Platform.OS,
       productId: purchase.productId,
       storeRef,
+    }).catch((e: unknown) => {
+      const inner = e instanceof AppError ? `${e.code} ${e.message}${e.detail ? `（${e.detail}）` : ''}` : String(e);
+      throw new AppError('IJ-BIL-006', '購入を確認できませんでした。時間をおいて「購入を復元」をお試しください。', inner);
     });
     if (result.status === 'saved') {
       // 事務手数料は消費型（何度でも買える）。定期購入は消費しない
@@ -183,12 +214,12 @@ export function useBillingListener() {
           else Alert.alert('事務手数料のお支払いを確認しました', '休止中のクルマの表示を戻しました。');
         })
         .catch((e: unknown) => {
-          Alert.alert('購入を確認できませんでした', e instanceof Error ? e.message : '時間をおいて「購入を復元」をお試しください。');
+          Alert.alert('購入を確認できませんでした', describeError(e, 'IJ-BIL-006'));
         });
     });
     const failed = purchaseErrorListener((error) => {
       if (!active || error.code === ErrorCode.UserCancelled) return;
-      Alert.alert('購入できませんでした', error.message || '時間をおいてお試しください。');
+      Alert.alert('購入できませんでした', describeError(toBillingError(error)));
     });
     ensureConnected().catch(() => {});
     return () => {

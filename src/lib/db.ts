@@ -1,9 +1,10 @@
 /** Supabase を読み書きするときの共通の手順 */
+import { AppError, codeForDbError } from './error-codes';
 import { supabase } from './supabase';
 
-/** 結果から data を取り出す。エラーなら例外にする */
-export function unwrap<T>(res: { data: T | null; error: { message: string } | null }): T {
-  if (res.error) throw new Error(res.error.message);
+/** 結果から data を取り出す。エラーなら、エラーコード（docs/error-codes.md）付きの例外にする */
+export function unwrap<T>(res: { data: T | null; error: { message: string; code?: string | null } | null }): T {
+  if (res.error) throw new AppError(codeForDbError(res.error), res.error.message, res.error.code ? `DB ${res.error.code}` : null);
   return res.data as T;
 }
 

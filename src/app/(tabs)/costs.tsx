@@ -50,7 +50,7 @@ export default function Costs() {
       </Screen>
     );
   }
-  if (bundle.isError || !summary) return <ErrorView message="読み込めませんでした。" onRetry={() => bundle.refetch()} />;
+  if (bundle.isError || !summary) return <ErrorView message="読み込めませんでした。" error={bundle.error} code="IJ-DB-009" onRetry={() => bundle.refetch()} />;
   const unit = vehicleUnit(bundle.data.vehicle);
   // 1kmあたりの維持費を、mile の車両は1mileあたりに直す
   const perUnitYen = summary.perKmYen != null ? Math.round(summary.perKmYen * (unit === 'mile' ? KM_PER_MILE : 1) * 10) / 10 : null;

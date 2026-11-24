@@ -74,6 +74,7 @@ export function useVehicle() {
     data,
     isPending: vehicles.isPending || selected.isPending,
     isError: vehicles.isError,
+    error: vehicles.error,
     refetch: vehicles.refetch,
   };
 }

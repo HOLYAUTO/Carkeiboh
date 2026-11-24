@@ -22,6 +22,7 @@ import { saveVehicleCertificate, useInvalidate, useVehicleBundle, useVehicleCert
 import { invokeFunction } from '../../lib/supabase';
 import { spacing } from '../../theme';
 import { alertError } from '../../lib/alerts';
+import { withCode } from '../../lib/error-codes';
 
 /** 車検証の写真は細かい字が多いので、レシートより大きめにして送る */
 const PHOTO_MAX_SIDE = 2000;
@@ -86,7 +87,7 @@ function Certificate({ bundle, saved }: { bundle: VehicleBundle; saved: VehicleC
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
         if (!permission.canAskAgain)
-          Alert.alert('カメラを使えません', '設定でカメラの使用を許可してください。', [
+          Alert.alert('カメラを使えません', withCode('設定でカメラの使用を許可してください。', 'IJ-PERM-001'), [
             { text: 'キャンセル', style: 'cancel' },
             { text: '設定を開く', onPress: () => Linking.openSettings() },
           ]);

@@ -7,6 +7,7 @@ import { Alert } from 'react-native';
 import { AppText, Button, ListCard, ListRow, Notice, QueryFallback, Screen, SectionTitle } from '../components/ui';
 import { keepVehicle, selectVehicle, useVehicles } from '../lib/data';
 import { useColors } from '../theme';
+import { describeError, withCode } from '../lib/error-codes';
 
 /**
  * 複数台プランの期限が切れて、無料プランの上限（1台）を超えているときに出す。
@@ -40,7 +41,7 @@ export default function KeepVehicle() {
               await selectVehicle(qc, chosen.id);
               await Promise.all([qc.invalidateQueries({ queryKey: ['vehicles'] }), qc.invalidateQueries({ queryKey: ['plan'] })]);
             } catch (e) {
-              Alert.alert('選べませんでした', e instanceof Error && e.message.includes('vehicle_not_found') ? 'このクルマは見つかりません。' : '時間をおいてお試しください。');
+              Alert.alert('選べませんでした', e instanceof Error && e.message.includes('vehicle_not_found') ? withCode('このクルマは見つかりません。', 'IJ-DB-004') : describeError(e));
             } finally {
               setBusy(false);
             }

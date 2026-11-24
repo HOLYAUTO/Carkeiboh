@@ -38,8 +38,8 @@ function Loader({ id, org }: { id: string; org: StaffOrg }) {
   if (id === 'new') return <Form org={org} current={null} />;
   if (!ads.isSuccess) return <QueryFallback queries={[ads]} />;
   const current = ads.data.find((a) => a.id === id);
-  if (!current) return <ErrorView message="この広告は削除されています。" />;
-  if (org !== 'holy' && current.org !== org) return <ErrorView message="他社が管理する広告は編集できません。" />;
+  if (!current) return <ErrorView message="この広告は削除されています。" code="IJ-DB-004" />;
+  if (org !== 'holy' && current.org !== org) return <ErrorView message="他社が管理する広告は編集できません。" code="IJ-DB-001" />;
   return <Form org={org} current={current} />;
 }
 
