@@ -73,7 +73,7 @@ This one-time fee appears only for vehicles that were paused more than 90 days a
 
 ## 5. バージョンに付ける
 
-「App Store」タブ → バージョン 0.1.0 →「App 内課金とサブスクリプション」→ `ijilog_plus_monthly` を選ぶ。
+「配信」タブ → 左の列の「iOSアプリ」のバージョン（1.0）→「App 内課金とサブスクリプション」→ `ijilog_plus_monthly` を選ぶ。
 状態が「送信準備完了」になっていないと選べない（スクリーンショット・説明・価格が足りないと「メタデータが不足」のまま）。
 
 ## 6. サーバー側（購入を確かめる仕組み）

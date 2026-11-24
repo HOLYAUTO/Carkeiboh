@@ -63,7 +63,7 @@ EAS が Google Play に提出するには、Google Play のサービスアカウ
    （または `npx eas-cli@latest credentials --platform android` → production → Google Service Account → Upload）
 5. 最初の1回だけは、Play Console に AAB を手でアップロードしてあること（Google の API が、まだリリースの無いアプリには提出させないため）
 
-- ストア上の販売元は HOLY と表示されるため、アプリ名・説明文でたにぐち自動車のアプリであることが分かるようにする（`app.json` の `description`、ストアの説明文）
+- ストア上の販売元は HOLY と表示されるため、アプリ名・概要でたにぐち自動車のアプリであることが分かるようにする（`app.json` の `description`、App Store の概要・Google Play の説明）
 - 利用規約・プライバシーポリシー（名義はたにぐち自動車、HOLY は開発・管理の委託先）の URL を、アプリ（`EXPO_PUBLIC_TERMS_URL` / `EXPO_PUBLIC_PRIVACY_URL`）とストアの両方に設定する
 
 ### 画面や計算の修正だけを配る（EAS Update）

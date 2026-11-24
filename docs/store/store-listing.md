@@ -1,4 +1,4 @@
-# ストアの説明文（App Store・Google Play）
+# ストアに載せる文面（App Store・Google Play）
 
 App Store Connect・Play Console の「ストアの掲載情報」に入れる文面。字数は各欄の上限に収めてある（`python3` で数えた。下の表）。
 
@@ -19,7 +19,7 @@ App Store Connect・Play Console の「ストアの掲載情報」に入れる�
 | プロモーションテキスト（App Store） | 170字 | 給油のあと、記録を忘れないようにお知らせできるようになりました。スタンドでアプリを開いたとき、またはスタンドを出たときに「給油しましたか？」とお知らせします（知らせ方は選べます）。 | 90 |
 | キーワード（App Store） | 100字 | 車,家計簿,維持費,燃費,給油,オイル交換,車検,自動車税,重量税,整備,記録,ガソリン,確定申告,経費,メンテナンス,走行距離,タイヤ | 68 |
 
-## 2. 詳しい説明（両ストア共通・4000字まで）
+## 2. 概要（App Store）・詳しい説明（Google Play）（両ストア共通・4000字まで）
 
 ```
 イジログは、株式会社たにぐち自動車がつくった、クルマの家計簿アプリです。
@@ -120,7 +120,7 @@ reminders and costs. The "Multi-vehicle plan" (auto-renewable subscription) is n
 | ストア | 欄 | 入れるもの |
 | --- | --- | --- |
 | 両方 | プライバシーポリシーの URL | https://www.holy-inc.jp/ijilog/privacy（アプリの `EXPO_PUBLIC_PRIVACY_URL` と同じ）。App Store は「App 情報」、Google Play は「アプリのコンテンツ → プライバシー ポリシー」 |
-| App Store | 利用規約（EULA） | 自動更新のサブスクリプションがあるため必須（ガイドライン 3.1.2）。**説明文の最後の「利用規約（EULA）：https://www.holy-inc.jp/ijilog/terms」を、App Store Connect の説明文に必ず入れる**（ローカリゼーションを足したら、そのすべてに入れる）。「App 情報 → 使用許諾契約」は「Apple 標準」のままでよい（ここは URL ではなく契約の本文を入れる欄。カスタムにするなら利用規約の全文を貼る）。2026-11-23、説明文にリンクが無いとして審査が止まった（`docs/store/app-store-review.md` 5章） |
+| App Store | 利用規約（EULA） | 自動更新のサブスクリプションがあるため必須（ガイドライン 3.1.2）。**2章の最後の「利用規約（EULA）：https://www.holy-inc.jp/ijilog/terms」を、App Store Connect の「概要」に必ず入れる**（「配信」→「iOSアプリ」のバージョン →「プロダクトページ情報」。言語を足したら、そのすべてに入れる）。「アプリ情報 → 使用許諾契約」は「Apple 標準」のままでよい（ここは URL ではなく契約の本文を入れる欄。カスタムにするなら利用規約の全文を貼る）。2026-11-23、概要にリンクが無いとして審査が止まった（`docs/store/app-store-review.md` 5章） |
 | App Store | App のプライバシー | 位置情報の分：「おおよその位置情報」を「アプリの機能」で収集・ユーザーに紐づけない（サーバーは区画と利用者を結びつけて保存しない）・トラッキングに使わない。正確な位置情報は収集しない。ほかの項目（メールアドレス・写真など）は、プライバシーポリシーの第2項にあわせて入れる |
 | Google Play | データ セーフティ | `docs/store/play-location-declaration.md` の3章 |
 | Google Play | 位置情報の権限 | `docs/store/play-location-declaration.md` の1章・2章 |
