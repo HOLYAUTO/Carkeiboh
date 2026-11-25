@@ -78,6 +78,8 @@ jobs:
             else
               echo "\`-\` がリポジトリの内容、\`+\` が今の App Store Connect の内容です。「送る」と \`-\` の内容になります。"
               echo
+              echo "ただし \`screenshots\`（スクリーンショット）は、リポジトリの store.config.json に書いていないので「送る」でも変わりません（消えません）。"
+              echo
               echo '```diff'
               git diff -- store.config.json
               echo '```'
