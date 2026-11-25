@@ -14,6 +14,13 @@ App Store Connect・Play Console の「ストアの掲載情報」に入れる�
 App Store Connect の入力の多くは、リポジトリの `store.config.json`（EAS Metadata）からまとめて送れる。
 文面はこのファイル（1章・2章・4章）から作ってあるので、**ここを直したら `store.config.json` も同じに直す**。
 
+**パソコンが無くても**、GitHub の「Actions」タブ →「EAS Metadata」→「Run workflow」から実行できる（スマホのブラウザでもよい）。
+
+- 「確認だけ」：書式を確かめ、今の App Store Connect の内容との違いを実行結果の Summary に出す（何も変えない）
+- 「送る」：App Store Connect へ送る。「審査中のバージョンが無いことを確かめた」にチェックを入れないと止まる
+
+パソコンで実行するとき（Mac でも Windows でもよい。Node.js が要る）：
+
 ```sh
 npx eas-cli@latest metadata:lint   # 書式の確認（送らない）
 npx eas-cli@latest metadata:pull   # 今の App Store Connect の内容を書き出して見比べる（上書きされるので、先に差分を確認する）
@@ -23,7 +30,7 @@ npx eas-cli@latest metadata:push   # App Store Connect へ送る
 - 送るもの：アプリ名・サブタイトル・概要・キーワード・プロモーションテキスト・プライバシーポリシーの URL・カテゴリ（ライフスタイル／ファイナンス）・著作権・年齢制限の回答（4章の内容）・App Review の連絡先とメモ（4章）
 - 送らないもの：スクリーンショット、App 内課金、App のプライバシー（データの収集）、使用許諾契約（EULA）、サポート URL。これらは画面で入れる。Google Play も対象外
 - **審査中のバージョンには送らない**（審査中は多くの欄を変えられず、通っても内容が混ざる）。審査が終わってから、または次のバージョンを作ってから送る
-- App Store Connect の認証は、EAS に登録した API キーを使うか、Apple ID でのログインを求められる。Mac など、App Store Connect に接続できる場所で実行する
+- App Store Connect の認証は、EAS に登録済みの App Store Connect API キー（`eas submit` と同じもの）を使う。パソコンで実行してキーが見つからないときは Apple ID でのログインを求められる
 - App Review の連絡先は、運営の窓口（株式会社HOLY・堀越）にしてある。変えるときは `apple.review` を直す
 
 ## 1. アプリ名・短い説明
