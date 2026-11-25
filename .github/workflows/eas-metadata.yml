@@ -1,0 +1,82 @@
+name: EAS Metadata
+
+# GitHub の Actions タブ →「EAS Metadata」→「Run workflow」で手動実行する（スマホのブラウザからでもよい）。
+# store.config.json（App Store の掲載情報）を App Store Connect と見比べたり、送ったりする。
+# 手順と注意は docs/store/store-listing.md の0章。
+#
+# - 「確認だけ」：書式を確かめ、今の App Store Connect の内容との違いを実行結果（Summary）に出す。何も変えない
+# - 「送る」：App Store Connect へ送る。審査中のバージョンには送らない（下の確認にチェックが無いと止まる）
+#
+# App Store Connect の認証は、EAS に登録済みの App Store Connect API キー（eas submit と同じもの）を使う。
+# リポジトリの Secrets に EXPO_TOKEN が要る。
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 何をするか
+        type: choice
+        options: [確認だけ, 送る]
+        default: 確認だけ
+      not_in_review:
+        description: 「送る」とき：審査中のバージョンが無いことを確かめた
+        type: boolean
+        default: false
+
+concurrency:
+  group: eas-metadata
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: EXPO_TOKEN の確認
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::リポジトリの Secrets に EXPO_TOKEN を登録してください"
+            exit 1
+          fi
+      - name: 送る前の確認
+        if: inputs.mode == '送る' && !inputs.not_in_review
+        run: |
+          echo "::error::審査中のバージョンが無いことを確かめてから、「審査中のバージョンが無いことを確かめた」にチェックを入れて実行してください"
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: 書式の確認
+        run: eas metadata:lint
+      - name: App Store Connect との違い
+        # 今の内容を store.config.json に書き出し、リポジトリの内容との違いを Summary に出す（コミットはしない）
+        run: |
+          cp store.config.json "$RUNNER_TEMP/store.config.repo.json"
+          eas metadata:pull --non-interactive
+          {
+            echo "## App Store Connect との違い"
+            echo
+            if git diff --quiet -- store.config.json; then
+              echo "違いはありません（リポジトリの store.config.json と同じです）。"
+            else
+              echo "\`-\` がリポジトリの内容、\`+\` が今の App Store Connect の内容です。「送る」と \`-\` の内容になります。"
+              echo
+              echo '```diff'
+              git diff -- store.config.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cp "$RUNNER_TEMP/store.config.repo.json" store.config.json
+      - name: App Store Connect へ送る
+        if: inputs.mode == '送る'
+        run: |
+          eas metadata:push --non-interactive
+          echo "App Store Connect へ送りました。App Store Connect の画面で内容を確かめてください。" >> "$GITHUB_STEP_SUMMARY"
