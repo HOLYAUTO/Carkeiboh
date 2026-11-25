@@ -7,7 +7,7 @@
 
 | # | やること | 誰が | 状態 |
 | --- | --- | --- | --- |
-| 1 | プライバシーポリシー・利用規約の【要確認】（住所の番地・代表者・連絡先・制定日など）を埋め、たにぐち自動車の確認を受ける（`docs/legal/`） | たにぐち自動車・HOLY | 【要確認】は埋めて公開済み（2026-11-19、制定日 2026年12月1日。公開版の文面は holy-auto/holy-inc の `src/content/ijilog/`）。たにぐち自動車と専門家の確認は未 |
+| 1 | プライバシーポリシー・利用規約の【要確認】（住所の番地・代表者・連絡先・制定日など）を埋め、たにぐち自動車の確認を受ける（`社内資料/法務/`） | たにぐち自動車・HOLY | 【要確認】は埋めて公開済み（2026-11-19、制定日 2026年12月1日。公開版の文面は holy-auto/holy-inc の `src/content/ijilog/`）。たにぐち自動車と専門家の確認は未 |
 | 2 | 2つを **HOLY のホームページ**に公開し（2026-11-14 決定）、URL をアプリ（`eas.json` の production の `EXPO_PUBLIC_PRIVACY_URL`・`EXPO_PUBLIC_TERMS_URL` と EAS の production の環境変数）とストアに入れる | HOLY | 2つとも公開・`eas.json` に設定済み（https://www.holy-inc.jp/ijilog/privacy、https://www.holy-inc.jp/ijilog/terms）。ストアへの入力は未 |
 | 3 | 定期購入 `ijilog_plus_monthly`（サブスクリプショングループ「複数台プラン」）と消耗型 `ijilog_restore_fee` を作る。最初のバージョンには定期購入だけを付ける（手順は `docs/store/app-store-iap.md`） | HOLY | 未 |
 | 4 | スクリーンショット（6.9インチ：1320×2868 など）を、TestFlight で入れた実機から撮る | HOLY | 未 |

@@ -2,7 +2,7 @@
 
 App Store Connect・Play Console の「ストアの掲載情報」に入れる文面。字数は各欄の上限に収めてある（`python3` で数えた。下の表）。
 
-- 位置情報の書き方は、アプリの中の説明（`src/app/fuel-detect.tsx`）・プライバシーポリシー（`docs/legal/privacy-policy-draft.md` 第6項）・
+- 位置情報の書き方は、アプリの中の説明（`src/app/fuel-detect.tsx`）・プライバシーポリシー（`社内資料/法務/プライバシーポリシー下書き.md` 第6項）・
   Google Play の申告（`docs/store/play-location-declaration.md`）とそろえてある。どれかを変えたら、ほかもあわせて直す
 - 料金は利用規約（https://www.holy-inc.jp/ijilog/terms 第4条・特定商取引法に基づく表記）と同じにする。複数台プラン 月額500円（税込）、復旧の事務手数料 1,000円（税込）。
   ストアの商品の価格を変えたら、ここと利用規約もあわせて直す

@@ -3,7 +3,7 @@
  * 車検証の項目（種別・用途・自家用/事業用・総排気量・初度登録年月・燃料・乗車定員・最大積載量・車両重量・車両総重量）を
  * 一度入れてもらえば、毎回の計算はアプリで行う。
  *
- * 税額は 2026-11 時点の標準税率（docs/open-questions.md の 66・67・70）。
+ * 税額は 2026-11 時点の標準税率（社内資料/要確認一覧.md の 66・67・70）。
  * - 自動車税：自家用乗用は 2019-10-01 以後に初度登録した車と、それより前の車で税額が違う。
  *   13年超（ディーゼルは11年超）は、乗用が約15%、貨物・バスが約10%の重課（100円未満切り捨て）
  *   （2026-04-01 に名称が「自動車税種別割」から「自動車税」に変わったが、税額は変わらない）
@@ -97,7 +97,7 @@ const KEI_TAX: Record<'privatePassenger' | 'commercialPassenger' | 'privateCargo
 /**
  * 都道府県ごとの税率（標準税率に掛ける倍率）。標準税率と違う県があれば行を足す。
  * 2026-11 時点で調べた県（石川・静岡・福井・埼玉・千葉・京都・栃木・和歌山・沖縄・北海道ほか）はいずれも標準税率。
- * 47都道府県すべては確かめられていない（docs/open-questions.md の 70）
+ * 47都道府県すべては確かめられていない（社内資料/要確認一覧.md の 70）
  */
 export const PREFECTURE_TAX_RATE: Partial<Record<Prefecture, number>> = {};
 
@@ -182,7 +182,7 @@ export function automobileTaxFor(spec: VehicleTaxSpec, fiscalYear: number): Vehi
     if (usage !== 'passenger' && usage !== 'cargo') return null;
     const commercial = spec.businessClass === 'commercial';
     const t = KEI_TAX[`${commercial ? 'commercial' : 'private'}${usage === 'cargo' ? 'Cargo' : 'Passenger'}`];
-    // 軽自動車税は市町村税。標準税率を超える市町村は無い（docs/open-questions.md の 70）
+    // 軽自動車税は市町村税。標準税率を超える市町村は無い（社内資料/要確認一覧.md の 70）
     return { amountYen: heavy ? t.heavy : spec.firstRegisteredOn >= '2015-04-01' ? t.since2015Apr : t.before, heavy };
   }
   const amount = standardAutomobileTax(spec, heavy);

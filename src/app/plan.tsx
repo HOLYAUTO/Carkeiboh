@@ -34,7 +34,7 @@ const STORE_SETTINGS = Platform.OS === 'ios' ? 'App Store のサブスクリプ�
 
 /**
  * 複数台プランの申し込み・状態・解約の案内と、休止中のクルマの表示の戻し。
- * 料金はストアに登録した値を表示する（仮に月額500円・事務手数料1,000円。docs/open-questions.md 30）。利用規約の下書き 第4条
+ * 料金はストアに登録した値を表示する（仮に月額500円・事務手数料1,000円。社内資料/要確認一覧.md 30）。利用規約の下書き 第4条
  */
 export default function Plan() {
   const colors = useColors();
