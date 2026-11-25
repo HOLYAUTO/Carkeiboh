@@ -33,6 +33,11 @@ concurrency:
 jobs:
   metadata:
     runs-on: ubuntu-latest
+    env:
+      # EAS に登録した App Store Connect API キーにはチームの情報が付いていないため、聞かれないよう渡す
+      # （eas.json の submit.production.ios.appleTeamId と同じ値。秘密の値ではない）
+      EXPO_APPLE_TEAM_ID: T43978PBAA
+      EXPO_APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION
     steps:
       - name: EXPO_TOKEN の確認
         env:
