@@ -2,12 +2,29 @@
 
 App Store Connect・Play Console の「ストアの掲載情報」に入れる文面。字数は各欄の上限に収めてある（`python3` で数えた。下の表）。
 
-- 位置情報の書き方は、アプリの中の説明（`src/app/fuel-detect.tsx`）・プライバシーポリシー（`docs/legal/privacy-policy-draft.md` 第6項）・
+- 位置情報の書き方は、アプリの中の説明（`src/app/fuel-detect.tsx`）・プライバシーポリシー（`社内資料/法務/プライバシーポリシー下書き.md` 第6項）・
   Google Play の申告（`docs/store/play-location-declaration.md`）とそろえてある。どれかを変えたら、ほかもあわせて直す
 - 料金は利用規約（https://www.holy-inc.jp/ijilog/terms 第4条・特定商取引法に基づく表記）と同じにする。複数台プラン 月額500円（税込）、復旧の事務手数料 1,000円（税込）。
   ストアの商品の価格を変えたら、ここと利用規約もあわせて直す
 - 「必ず」「No.1」「税理士いらず」のような言い切り・比べる表現は使わない。税の計算は「目安」と書く
 - 【要確認】のところは、決まってから埋める
+
+## 0. App Store へまとめて入れる（`store.config.json`）
+
+App Store Connect の入力の多くは、リポジトリの `store.config.json`（EAS Metadata）からまとめて送れる。
+文面はこのファイル（1章・2章・4章）から作ってあるので、**ここを直したら `store.config.json` も同じに直す**。
+
+```sh
+npx eas-cli@latest metadata:lint   # 書式の確認（送らない）
+npx eas-cli@latest metadata:pull   # 今の App Store Connect の内容を書き出して見比べる（上書きされるので、先に差分を確認する）
+npx eas-cli@latest metadata:push   # App Store Connect へ送る
+```
+
+- 送るもの：アプリ名・サブタイトル・概要・キーワード・プロモーションテキスト・プライバシーポリシーの URL・カテゴリ（ライフスタイル／ファイナンス）・著作権・年齢制限の回答（4章の内容）・App Review の連絡先とメモ（4章）
+- 送らないもの：スクリーンショット、App 内課金、App のプライバシー（データの収集）、使用許諾契約（EULA）、サポート URL。これらは画面で入れる。Google Play も対象外
+- **審査中のバージョンには送らない**（審査中は多くの欄を変えられず、通っても内容が混ざる）。審査が終わってから、または次のバージョンを作ってから送る
+- App Store Connect の認証は、EAS に登録した API キーを使うか、Apple ID でのログインを求められる。Mac など、App Store Connect に接続できる場所で実行する
+- App Review の連絡先は、運営の窓口（株式会社HOLY・堀越）にしてある。変えるときは `apple.review` を直す
 
 ## 1. アプリ名・短い説明
 

@@ -139,7 +139,7 @@ select s.name, r.action, count(*) as times, count(distinct r.user_id) as users
 
 ### ストアに登録する商品
 
-App Store Connect と Google Play Console で、**同じ商品ID** を使う（`supabase/functions/_shared/domain/billing.ts`）。料金は仮の値（`docs/open-questions.md` 30）。
+App Store Connect と Google Play Console で、**同じ商品ID** を使う（`supabase/functions/_shared/domain/billing.ts`）。料金は仮の値（`社内資料/要確認一覧.md` 30）。
 
 | 商品ID | 種類 | 料金（仮） |
 | --- | --- | --- |

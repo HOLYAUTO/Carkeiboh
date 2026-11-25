@@ -4,7 +4,7 @@ import { logInputSession } from '../../lib/data';
 type Method = 'manual' | 'photo' | 'voice';
 
 /**
- * 入力の計測（実証実験の KPI 用。docs/open-questions.md 50）。
+ * 入力の計測（実証実験の KPI 用。社内資料/要確認一覧.md 50）。
  * 画面を開いてから保存・離脱までと、写真・音声で埋まった項目のうち、あとで直されたものの数を送る。
  * values は計測で比べる入力欄の今の値（表示している文字のまま）
  */

@@ -1,4 +1,4 @@
-/** 入力の計測（実証実験の KPI 用。docs/open-questions.md 50） */
+/** 入力の計測（実証実験の KPI 用。社内資料/要確認一覧.md 50） */
 import Constants from 'expo-constants';
 import { supabase } from '../supabase';
 

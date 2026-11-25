@@ -1,0 +1,74 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "copyright": "2026 株式会社たにぐち自動車",
+    "categories": [
+      "LIFESTYLE",
+      "FINANCE"
+    ],
+    "info": {
+      "ja": {
+        "title": "イジログ - クルマの家計簿",
+        "subtitle": "オイル交換の目安と維持費をひと目で",
+        "description": "イジログは、株式会社たにぐち自動車がつくった、クルマの家計簿アプリです。\nオイル交換の目安、車検や保険の期限、毎月の維持費が、ひと目で分かります。\n計算はアプリにおまかせ。入力した数字と、計算したあとの数字だけをお見せします。\n\n■ 次のオイル交換が分かる\n・前回の交換と走行距離から、次の交換の目安をホームに表示します\n・オイル・フィルター・タイヤ・ブレーキの記録を残せます\n・走行距離は、これまでの走り方から今の距離を見積もって入れておきます（確かめてから保存）\n\n■ 期限を忘れない\n・車検・点検・保険などの期限を登録すると、近づいたときに通知でお知らせします\n・車検証の満了日を入れると、車検の期限も自動で登録します\n\n■ 入力はかんたん\n・レシートやメーターを撮るだけで、金額・日付・走行距離を読み取ります\n・レシートをまとめて撮って、一度に登録できます\n・話しかけて入力することもできます\n・掛けカードの月の明細を撮ると、給油をまとめて登録できます（登録ずみと思われる給油は、はじめから外しておきます）\n・保険・ローン・駐車場・自動車税など、毎月・毎年決まった支出は、時期が来たら下書きを用意します\n・ホーム画面のアイコンを長押しすると、「給油を記録」「レシートを撮る」をすぐ開けます\n\n■ 給油の記録を忘れない（知らせ方を選べます）\n・アプリを開いたときに知らせる：ガソリンスタンドでアプリを開くと、スタンド名を入れた給油の記録をすぐ開けます\n・スタンドを出たら通知する：スタンドに数分いて出たときに「給油しましたか？」とお知らせします（位置情報を「常に許可」にしたときだけ）\n・使わない：位置情報は使いません\n位置情報は端末の中だけで使い、正確な位置はサーバーに送りません。あとから設定でいつでも変えられます。\n\n■ 維持費と燃費をまとめる\n・給油・整備・税金・保険など、項目ごと・月ごとの維持費をグラフで表示します\n・給油の記録から燃費を計算します\n・かけ（掛けカード）で払った給油は、税抜の金額を入れると消費税を足して税込にします\n\n■ 税金と確定申告\n・車検証の内容から、自動車税（種別割）と自動車重量税の目安を自動で計算します\n・自家用・事業用、乗用・貨物・軽自動車、13年超の重課にも対応します\n・仕事で使う割合（家事按分）を入れると、経費にできる額を計算します\n・1年分の経費の集計と、明細の表（CSV）を作れます。確定申告の準備にお使いください\n※税金の計算は目安です。申告や納税の内容は、ご自身または税理士などの専門家にご確認ください\n\n■ 車検証をまるごと記録\n・車検証を撮ると、記載内容を読み取って記録します\n・氏名・住所・車台番号は、伏せて表示します（見たいときだけ表示）\n\n■ 整備工場とつながる\n・近くの整備工場を探して、ルート検索や電話での予約ができます\n・連携した整備工場で受けたオイル交換・タイヤ・ブレーキ・整備・車検の記録を、自動で取り込めます（QRコードを読み取って連携。いつでも解除できます）\n\n■ 複数台プラン\n・1台目は無料でお使いいただけます\n・家族や仕事のクルマをまとめて登録したいときは、複数台プラン（最大5台・月額500円（税込）・1か月ごとの自動更新）をご利用ください\n・お支払いは購入の確定時にストアのアカウントに請求されます。期間が終わる24時間前までに解約しない限り、自動的に更新されます。解約はストアのアカウントの設定から行えます\n\n■ プライバシー\n・外部の広告配信サービスは使っていません。アプリ内の広告には「PR」と広告主の名前を表示します\n・アカウントは、アプリの設定からいつでも削除できます\n\n利用規約（EULA）：https://www.holy-inc.jp/ijilog/terms\nプライバシーポリシー：https://www.holy-inc.jp/ijilog/privacy\n\nガソリンスタンドの場所：© OpenStreetMap contributors",
+        "keywords": [
+          "車",
+          "家計簿",
+          "維持費",
+          "燃費",
+          "給油",
+          "オイル交換",
+          "車検",
+          "自動車税",
+          "重量税",
+          "整備",
+          "記録",
+          "ガソリン",
+          "確定申告",
+          "経費",
+          "メンテナンス",
+          "走行距離",
+          "タイヤ"
+        ],
+        "promoText": "給油のあと、記録を忘れないようにお知らせできるようになりました。スタンドでアプリを開いたとき、またはスタンドを出たときに「給油しましたか？」とお知らせします（知らせ方は選べます）。",
+        "privacyPolicyUrl": "https://www.holy-inc.jp/ijilog/privacy"
+      }
+    },
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gamblingSimulated": "NONE",
+      "gunsOrOtherWeapons": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "gambling": false,
+      "unrestrictedWebAccess": false,
+      "kidsAgeBand": null,
+      "seventeenPlus": false,
+      "lootBox": false,
+      "advertising": true,
+      "ageAssurance": false,
+      "healthOrWellnessTopics": false,
+      "messagingAndChat": false,
+      "parentalControls": false,
+      "userGeneratedContent": false,
+      "ageRatingOverride": "NONE",
+      "koreaAgeRatingOverride": "NONE"
+    },
+    "review": {
+      "firstName": "友輔",
+      "lastName": "堀越",
+      "email": "info@holy-inc.jp",
+      "phone": "+81 3-4363-3234",
+      "demoRequired": false,
+      "notes": "Background location is used only by the optional \"Notify me when I leave a gas station\" feature\n(Settings > 給油の記録のしかた > スタンドを出たら通知する).\nThe app registers up to 19 nearby gas stations with region monitoring (geofencing) and shows a local\nnotification \"Did you refuel?\" when the user stayed 2–60 minutes at a station and then left.\nPrecise location never leaves the device; only a ~5 km grid cell name is sent to our server to download\nthe list of nearby gas stations (OpenStreetMap data).\nBefore requesting \"Always\" permission, the app shows an in-app explanation and asks for consent.\nThe default choice is \"When I open the app\" (when-in-use only), and the user can choose \"Off\".\n\nSign-in: No demo account is needed. An account is created on first sign-in.\nPlease use \"Sign in with Apple\", or enter any email address you can receive and type the 6-digit code sent to it.\nAfter signing in, register a vehicle (name and current odometer reading are enough) to see the home screen,\nreminders and costs. The \"Multi-vehicle plan\" (auto-renewable subscription) is needed only to register a second vehicle."
+    }
+  }
+}

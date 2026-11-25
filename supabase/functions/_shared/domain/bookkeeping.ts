@@ -7,7 +7,7 @@
  * - 仕事で使う割合（家事按分）を掛けて、経費にする額を出す
  * - 年（1月〜12月）ごとに勘定科目でまとめ、表（CSV）にする
  *
- * 区分・科目・端数はいずれも仮の値（docs/open-questions.md の 59〜63）。税理士の確認で変わりうる。
+ * 区分・科目・端数はいずれも仮の値（社内資料/要確認一覧.md の 59〜63）。税理士の確認で変わりうる。
  */
 import type { ExpenseCategory } from './costs.ts';
 import type { IsoDate } from './dates.ts';
@@ -39,7 +39,7 @@ export const CATEGORY_BOOKKEEPING: Record<ExpenseCategory, { account: string; ta
   insurance: { account: '損害保険料', taxable: false },
   car_tax: { account: '租税公課', taxable: false },
   parking_toll: { account: '旅費交通費', taxable: true },
-  // ローンの元金は経費にならない（利息は支払利息）。仮にリース料として数える（docs/open-questions.md の 61）
+  // ローンの元金は経費にならない（利息は支払利息）。仮にリース料として数える（社内資料/要確認一覧.md の 61）
   loan_lease: { account: 'リース料', taxable: true },
   other: { account: '雑費', taxable: true },
 };

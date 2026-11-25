@@ -1,7 +1,7 @@
 /**
  * 複数台プランの課金（App Store / Google Play のアプリ内課金）。
  * アプリの購入画面と、購入を確かめる Edge Functions（billing-verify など）の両方で使う。
- * 料金は各ストアで設定する（仮に月額500円・事務手数料1,000円。docs/open-questions.md 30）。
+ * 料金は各ストアで設定する（仮に月額500円・事務手数料1,000円。社内資料/要確認一覧.md 30）。
  */
 
 /** ストアに登録する商品ID（App Store Connect と Google Play Console で同じIDにする） */

@@ -43,7 +43,7 @@ export interface FuelTaxRates {
  * 税率の履歴（その日から適用）。いちばん古い行より前の日付には、いちばん古い行を使う。
  * - 2025-12-31 ガソリンの暫定税率を廃止（揮発油税 48.6→24.3円、地方揮発油税 5.2→4.4円）
  * - 2026-04-01 軽油引取税の暫定税率を廃止（32.1→15.0円）
- * 税率が変わったら、この表に行を足す（docs/open-questions.md の 53）
+ * 税率が変わったら、この表に行を足す（社内資料/要確認一覧.md の 53）
  */
 export const FUEL_TAX_HISTORY: readonly { from: IsoDate; rates: FuelTaxRates }[] = [
   { from: '2014-04-01', rates: { gasolineTax: 4860, localGasolineTax: 520, petroleumCoalTax: 254, dieselDeliveryTax: 3210, consumptionTaxPercent: 8 } },
@@ -92,7 +92,7 @@ export interface FuelCost {
 }
 
 /**
- * 給油量と単価から、合計と税の内訳を出す。端数はすべて切り捨て（docs/open-questions.md の 53）。
+ * 給油量と単価から、合計と税の内訳を出す。端数はすべて切り捨て（社内資料/要確認一覧.md の 53）。
  * 浮動小数の誤差を避けるため、給油量は 0.01L、単価は 0.1円、税率は 0.01円の整数にして計算する。
  */
 export function calculateFuelCost(input: FuelCostInput): FuelCost {
