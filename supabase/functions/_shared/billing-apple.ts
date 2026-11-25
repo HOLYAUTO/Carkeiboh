@@ -49,7 +49,11 @@ export function appleClientFromEnv(): AppleClient {
     return token.value;
   };
 
-  /** 本番で見つからなければサンドボックス（TestFlight・審査の購入）をたずねる */
+  /**
+   * 本番で見つからなければサンドボックス（TestFlight・ad hoc・審査の購入）をたずねる。
+   * 公開前のアプリには、本番は鍵が正しくても 401 を返す（2026-11-25 に確認。docs/error-codes.md の IJ-BIL-006）ので、
+   * 本番の 401 もサンドボックスへ進む。鍵が本当に間違っていれば、サンドボックスも 401 になって失敗する
+   */
   const get = async <T>(path: string): Promise<T | null> => {
     for (const host of [HOSTS.production, HOSTS.sandbox]) {
       const res = await fetch(`${host}${path}`, {
@@ -57,7 +61,7 @@ export function appleClientFromEnv(): AppleClient {
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
       if (res.ok) return (await res.json()) as T;
-      if (res.status === 404) continue;
+      if (res.status === 404 || (res.status === 401 && host === HOSTS.production)) continue;
       const text = await res.text().catch(() => '');
       throw new Error(`App Store Server API が失敗しました（HTTP ${res.status}）${text.slice(0, 200)}`);
     }
