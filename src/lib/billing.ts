@@ -112,22 +112,35 @@ export function useBillingProducts() {
 }
 
 /** 複数台プランを申し込む。結果は useBillingListener に届く */
+/**
+ * 利用者が「申し込む」「事務手数料を払う」を押してから、その結果が届くまでの商品ID。
+ * アプリを開いたときに届く購入（定期購入の自動更新・前に確かめられなかった購入）は、知らせずに確かめるだけにする
+ * （開くたびに「お申し込みいただきました」と出ないように。2026-11-25）
+ */
+let awaitingProductId: string | null = null;
+
 export async function buyPlus(product: ProductSubscription, userId: string) {
   await ensureConnected();
   const offerToken = product.subscriptionOffers?.find((o) => o.offerTokenAndroid)?.offerTokenAndroid ?? null;
   if (Platform.OS === 'android' && !offerToken) throw new AppError('IJ-BIL-007', '料金プランを読み込めませんでした。時間をおいてお試しください。');
-  await requestPurchase({
-    type: 'subs',
-    request: {
-      // 購入にイジログの利用者IDを付け、サーバーで「このアカウントの購入か」を確かめる
-      apple: { sku: product.id, appAccountToken: userId },
-      google: {
-        skus: [product.id],
-        obfuscatedAccountId: userId,
-        subscriptionOffers: offerToken ? [{ sku: product.id, offerToken }] : null,
+  awaitingProductId = product.id;
+  try {
+    await requestPurchase({
+      type: 'subs',
+      request: {
+        // 購入にイジログの利用者IDを付け、サーバーで「このアカウントの購入か」を確かめる
+        apple: { sku: product.id, appAccountToken: userId },
+        google: {
+          skus: [product.id],
+          obfuscatedAccountId: userId,
+          subscriptionOffers: offerToken ? [{ sku: product.id, offerToken }] : null,
+        },
       },
-    },
-  });
+    });
+  } catch (e) {
+    awaitingProductId = null;
+    throw e;
+  }
 }
 
 /** 利用者が購入の画面を閉じた（取り消した）ときのエラーか。このときは何も知らせない */
@@ -138,13 +151,19 @@ export function isPurchaseCancelled(e: unknown): boolean {
 /** 復旧の事務手数料を払う。結果は useBillingListener に届く */
 export async function buyRestoreFee(product: Product, userId: string) {
   await ensureConnected();
-  await requestPurchase({
-    type: 'in-app',
-    request: {
-      apple: { sku: product.id, appAccountToken: userId },
-      google: { skus: [product.id], obfuscatedAccountId: userId },
-    },
-  });
+  awaitingProductId = product.id;
+  try {
+    await requestPurchase({
+      type: 'in-app',
+      request: {
+        apple: { sku: product.id, appAccountToken: userId },
+        google: { skus: [product.id], obfuscatedAccountId: userId },
+      },
+    });
+  } catch (e) {
+    awaitingProductId = null;
+    throw e;
+  }
 }
 
 interface VerifyResult {
@@ -202,23 +221,31 @@ export function useBillingListener() {
     let active = true;
     const updated = purchaseUpdatedListener((purchase) => {
       if (!active) return;
+      // 利用者がいま申し込んだ購入だけを知らせる。それ以外（自動更新・開いたときに届き直した購入）は黙って確かめる
+      const requested = awaitingProductId !== null && awaitingProductId === purchase.productId;
       if (purchase.purchaseState === 'pending') {
-        Alert.alert('お支払いの完了をお待ちしています', 'お支払いが済むと、自動で有効になります。');
+        if (requested) Alert.alert('お支払いの完了をお待ちしています', 'お支払いが済むと、自動で有効になります。');
         return;
       }
       verifyAndFinish(purchase, qc)
         .then((r) => {
-          if (!r) return;
+          if (!r || !requested) return;
+          awaitingProductId = null;
           if (r.status === 'pending') Alert.alert('お支払いの完了をお待ちしています', 'お支払いが済むと、自動で有効になります。');
           else if (purchase.productId === BILLING_PRODUCTS.plusMonthly) Alert.alert('複数台プランをお申し込みいただきました', '2台目以降のクルマを登録できます。');
           else Alert.alert('事務手数料のお支払いを確認しました', '休止中のクルマの表示を戻しました。');
         })
         .catch((e: unknown) => {
+          // 申し込んだ直後でなければ知らせない（次に開いたとき・定期実行で確かめ直す）
+          if (!requested) return;
+          awaitingProductId = null;
           Alert.alert('購入を確認できませんでした', describeError(e, 'IJ-BIL-006'));
         });
     });
     const failed = purchaseErrorListener((error) => {
-      if (!active || error.code === ErrorCode.UserCancelled) return;
+      if (!active) return;
+      awaitingProductId = null;
+      if (error.code === ErrorCode.UserCancelled) return;
       Alert.alert('購入できませんでした', describeError(toBillingError(error)));
     });
     ensureConnected().catch(() => {});
