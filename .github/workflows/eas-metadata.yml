@@ -22,6 +22,10 @@ on:
         type: boolean
         default: false
 
+# リポジトリは読むだけ（store.config.json の違いは Summary に出し、コミットしない）
+permissions:
+  contents: read
+
 concurrency:
   group: eas-metadata
   cancel-in-progress: false
