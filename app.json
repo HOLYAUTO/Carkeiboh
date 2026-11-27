@@ -19,7 +19,7 @@
     "android": {
       "package": "app.ijilog",
       "adaptiveIcon": {
-        "backgroundColor": "#0b0b0d",
+        "backgroundColor": "#f5f5f7",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
